@@ -1,1 +1,30 @@
- 
+{
+  "name": "ts-google-login",
+  "version": "1.0.0",
+  "description": "TypeScript Google Login Web Component",
+  "main": "src/inf-google-login.js",
+  "scripts": {
+    "start": "live-server --port=8080 --host=localhost",
+    "dev": "live-server --port=8080 --host=localhost --watch=src",
+    "build": "terser src/inf-google-login.js -o dist/inf-google-login.min.js --compress --mangle",
+    "demo": "live-server --port=8080 --host=localhost --open=demo.html"
+  },
+  "keywords": [
+    "google",
+    "login",
+    "oauth2",
+    "web-component",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "terser": "^5.25.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lmybs112/ts-g-login.git"
+  },
+  "homepage": "https://github.com/lmybs112/ts-g-login#readme"
+}
