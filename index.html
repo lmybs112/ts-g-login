@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>infFITS Google Login Web Component 測試</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            background-color: #f8f9fa;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>infFITS Google Login Web Component 測試</h1>
+        
+        <div class="demo-section">
+            <h2>Google 登入組件</h2>
+            <p>請使用以下組件測試 Google OAuth2 登入功能：</p>
+            
+            <!-- Google 登入 Web Component -->
+            <google-login 
+                client-id="785256216646-i639hdbheaor3ecest29j48hp6neai4f.apps.googleusercontent.com"
+                auto-select="true">
+            </google-login>
+            
+            <div class="status" id="loginStatus">
+                等待登入...
+            </div>
+            
+            <div class="status" id="userInfo" style="display: none;">
+                <h3>登入用戶信息：</h3>
+                <pre id="userDetails"></pre>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>使用說明</h2>
+            <p>1. 將 YOUR_GOOGLE_CLIENT_ID 替換為您的 Google OAuth2 客戶端 ID</p>
+            <p>2. 組件支援以下屬性：</p>
+            <ul>
+                <li><code>client-id</code>: Google OAuth2 客戶端 ID（必填）</li>
+                <li><code>auto-select</code>: 啟用自動登入（預設：true）</li>
+            </ul>
+            <p>3. 監聽事件：</p>
+            <ul>
+                <li><code>google-login-success</code>: 登入成功事件</li>
+                <li><code>google-login-failure</code>: 登入失敗事件</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 載入 Google 登入 Web Component -->
+    <script src="src/inf-google-login.js"></script>
+
+    <script>
+        // 監聽登入成功事件
+        document.addEventListener('google-login-success', (event) => {
+            console.log('登入成功！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            const userInfoEl = document.getElementById('userInfo');
+            const userDetailsEl = document.getElementById('userDetails');
+            
+            statusEl.textContent = '✅ 登入成功！';
+            statusEl.style.backgroundColor = '#d4edda';
+            statusEl.style.color = '#155724';
+            
+            // 解析 JWT token
+            try {
+                const payload = JSON.parse(atob(event.detail.credential.split('.')[1]));
+                userDetailsEl.textContent = JSON.stringify(payload, null, 2);
+                userInfoEl.style.display = 'block';
+            } catch (error) {
+                console.error('解析 JWT 失敗:', error);
+            }
+        });
+
+        // 監聽登入失敗事件
+        document.addEventListener('google-login-failure', (event) => {
+            console.log('登入失敗！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            statusEl.textContent = '❌ 登入失敗: ' + (event.detail.error || '未知錯誤');
+            statusEl.style.backgroundColor = '#f8d7da';
+            statusEl.style.color = '#721c24';
+        });
+    </script>
+</body>
+</html> 

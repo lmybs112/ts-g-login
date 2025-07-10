@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>infFITS Google Login Web Component 示例</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            background-color: #f8f9fa;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #3367d6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>infFITS Google Login Web Component 示例</h1>
+        
+        <div class="warning">
+            <strong>⚠️ 注意：</strong> 這是一個示例文件。要正常運作，您需要：
+            <br>1. 將下方的 client-id 替換為您的 Google OAuth2 客戶端 ID
+            <br>2. 在 Google Cloud Console 中設置正確的授權來源
+        </div>
+        
+        <div class="demo-section">
+            <h2>Google 登入組件</h2>
+            <p>請使用以下組件測試 Google OAuth2 登入功能：</p>
+            
+            <!-- Google 登入 Web Component -->
+            <google-login
+                client-id="785256216646-i639hdbheaor3ecest29j48hp6neai4f.apps.googleusercontent.com"
+                auto-select="true"
+            />
+            
+            <div class="status" id="loginStatus">
+                等待登入...
+            </div>
+            
+            <div class="status" id="userInfo" style="display: none;">
+                <h3>登入用戶信息：</h3>
+                <pre id="userDetails"></pre>
+            </div>
+            
+            <!-- 控制按鈕 -->
+            <div style="margin-top: 20px;">
+                <button class="btn" onclick="manualSignIn()">手動登入</button>
+                <button class="btn" onclick="signOut()">登出</button>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>使用說明</h2>
+            <p><strong>設置步驟：</strong></p>
+            <ol>
+                <li>前往 <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li>建立或選擇專案</li>
+                <li>啟用 Google Identity Services API</li>
+                <li>建立 OAuth 2.0 客戶端 ID</li>
+                <li>在「授權的 JavaScript 來源」中添加：<code>http://localhost:3000</code></li>
+                <li>將產生的客戶端 ID 替換到上方組件的 <code>client-id</code> 屬性</li>
+            </ol>
+            
+            <p><strong>組件屬性：</strong></p>
+            <ul>
+                <li><code>client-id</code>: Google OAuth2 客戶端 ID（必填）</li>
+                <li><code>auto-select</code>: 啟用自動登入（預設：true）</li>
+            </ul>
+            
+            <p><strong>監聽事件：</strong></p>
+            <ul>
+                <li><code>google-login-success</code>: 登入成功事件</li>
+                <li><code>google-login-failure</code>: 登入失敗事件</li>
+                <li><code>google-logout</code>: 登出事件</li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h2>控制台日誌</h2>
+            <p>請開啟瀏覽器的開發者工具查看詳細的控制台輸出。</p>
+            <div id="console-log" style="background: #000; color: #0f0; padding: 10px; border-radius: 4px; font-family: monospace; min-height: 100px; overflow-y: auto;">
+                <div>Console log will appear here...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入 Google 登入 Web Component -->
+    <script src="src/inf-google-login.js"></script>
+
+    <script>
+        // 取得組件實例
+        let googleLoginComponent = null;
+        
+        // 等待組件載入
+        document.addEventListener('DOMContentLoaded', () => {
+            googleLoginComponent = document.querySelector('google-login');
+        });
+        
+        // 控制台日誌顯示
+        const consoleLogDiv = document.getElementById('console-log');
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        
+        function addToConsoleDisplay(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f44' : type === 'warn' ? '#fa4' : '#0f0';
+            consoleLogDiv.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            consoleLogDiv.scrollTop = consoleLogDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            addToConsoleDisplay(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            addToConsoleDisplay(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalConsoleWarn.apply(console, args);
+            addToConsoleDisplay(args.join(' '), 'warn');
+        };
+        
+        // 手動登入
+        function manualSignIn() {
+            if (googleLoginComponent) {
+                googleLoginComponent.signIn();
+                addToConsoleDisplay('手動觸發登入', 'log');
+            } else {
+                addToConsoleDisplay('組件尚未載入', 'error');
+            }
+        }
+        
+        // 登出
+        function signOut() {
+            if (googleLoginComponent) {
+                googleLoginComponent.signOut();
+                addToConsoleDisplay('觸發登出', 'log');
+            } else {
+                addToConsoleDisplay('組件尚未載入', 'error');
+            }
+        }
+
+        // 監聽登入成功事件
+        document.addEventListener('google-login-success', (event) => {
+            console.log('登入成功！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            const userInfoEl = document.getElementById('userInfo');
+            const userDetailsEl = document.getElementById('userDetails');
+            
+            statusEl.textContent = '✅ 登入成功！';
+            statusEl.style.backgroundColor = '#d4edda';
+            statusEl.style.color = '#155724';
+            
+            // 解析 JWT token
+            try {
+                const payload = JSON.parse(atob(event.detail.credential.split('.')[1]));
+                userDetailsEl.textContent = JSON.stringify(payload, null, 2);
+                userInfoEl.style.display = 'block';
+            } catch (error) {
+                console.error('解析 JWT 失敗:', error);
+            }
+        });
+
+        // 監聽登入失敗事件
+        document.addEventListener('google-login-failure', (event) => {
+            console.log('登入失敗！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            statusEl.textContent = '❌ 登入失敗: ' + (event.detail.error || '未知錯誤');
+            statusEl.style.backgroundColor = '#f8d7da';
+            statusEl.style.color = '#721c24';
+        });
+        
+        // 監聽登出事件
+        document.addEventListener('google-logout', (event) => {
+            console.log('已登出！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            const userInfoEl = document.getElementById('userInfo');
+            
+            statusEl.textContent = '已登出';
+            statusEl.style.backgroundColor = '#f8f9fa';
+            statusEl.style.color = '#666';
+            userInfoEl.style.display = 'none';
+        });
+        
+        // 初始化日誌
+        addToConsoleDisplay('頁面載入完成，組件初始化中...', 'log');
+    </script>
+</body>
+</html> 
