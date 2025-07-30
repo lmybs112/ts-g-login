@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView 相容性測試</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .component-area {
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 WebView 相容性測試</h1>
+        
+        <div class="test-info">
+            <h3>測試環境</h3>
+            <p><strong>User Agent:</strong> <span id="user-agent"></span></p>
+            <p><strong>WebView 檢測:</strong> <span id="webview-detection"></span></p>
+            <p><strong>平台:</strong> <span id="platform"></span></p>
+        </div>
+        
+        <div class="component-area">
+            <h3>Google 登入組件</h3>
+            <google-login
+                client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com">
+            </google-login>
+        </div>
+        
+        <div id="status-container">
+            <div class="status info" id="initial-status">
+                等待測試開始...
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入 Google Login Web Component -->
+    <script src="src/inf-google-login.js"></script>
+    
+    <script>
+        // 顯示環境資訊
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('platform').textContent = navigator.platform;
+        
+        // 檢測 WebView
+        function detectWebView() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isWebView = (
+                userAgent.includes('wv') || // Android WebView
+                (userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome')) || // iOS WebView
+                userAgent.includes('webview') || // 其他 WebView
+                window.ReactNativeWebView || // React Native WebView
+                (window.webkit && window.webkit.messageHandlers) // iOS WKWebView
+            );
+            
+            document.getElementById('webview-detection').textContent = isWebView ? '✅ 檢測到 WebView' : '❌ 未檢測到 WebView';
+            return isWebView;
+        }
+        
+        detectWebView();
+        
+        // 狀態管理
+        function updateStatus(message, type = 'info') {
+            const statusContainer = document.getElementById('status-container');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            statusContainer.appendChild(statusDiv);
+            
+            // 保持最新的 5 個狀態
+            const statuses = statusContainer.querySelectorAll('.status');
+            if (statuses.length > 5) {
+                statuses[0].remove();
+            }
+        }
+        
+        // 監聽組件事件
+        document.addEventListener('google-login-success', (event) => {
+            console.log('✅ 登入成功！', event.detail);
+            updateStatus('✅ Google 登入成功', 'success');
+            updateStatus(`用戶: ${event.detail.user?.name || '未知'}`, 'success');
+        });
+        
+        document.addEventListener('google-login-failure', (event) => {
+            console.log('❌ 登入失敗！', event.detail);
+            updateStatus(`❌ 登入失敗: ${event.detail.error}`, 'error');
+        });
+        
+        document.addEventListener('google-logout', (event) => {
+            console.log('👋 登出成功！');
+            updateStatus('👋 用戶已登出', 'info');
+        });
+        
+        document.addEventListener('navigate-to-profile', (event) => {
+            console.log('📱 導航到個人資料頁', event.detail);
+            updateStatus('📱 導航到個人資料頁', 'info');
+        });
+        
+        // 頁面載入完成
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus('🚀 頁面已載入，開始測試', 'info');
+            
+            if (detectWebView()) {
+                updateStatus('🌐 檢測到 WebView 環境，使用特殊配置', 'info');
+            } else {
+                updateStatus('💻 檢測到桌面瀏覽器環境', 'info');
+            }
+        });
+        
+        // 監聽錯誤
+        window.addEventListener('error', (event) => {
+            updateStatus(`❌ 頁面錯誤: ${event.error?.message || event.message}`, 'error');
+        });
+        
+        // 監聽未處理的 Promise 拒絕
+        window.addEventListener('unhandledrejection', (event) => {
+            updateStatus(`❌ 未處理的 Promise 拒絕: ${event.reason}`, 'error');
+        });
+    </script>
+</body>
+</html> 
