@@ -890,12 +890,12 @@ class GoogleLoginComponent extends HTMLElement {
                     if (notification.isNotDisplayed()) {
                         console.log('Google 登入提示未顯示:', notification.getNotDisplayedReason());
                         
-                        // 針對空會話問題，直接使用備用方法
+                        // 針對空會話問題，直接使用 OAuth2 方法
                         if (notification.getNotDisplayedReason() === 'no_session' || 
                             notification.getNotDisplayedReason() === 'browser_not_supported' ||
                             notification.getNotDisplayedReason() === 'invalid_client') {
-                            console.log('檢測到會話問題，使用備用登入方法');
-                            this.useDirectGoogleSignIn();
+                            console.log('檢測到會話問題，使用 OAuth2 登入方法');
+                            this.triggerDirectGoogleSignIn();
                         } else {
                             // 如果無法顯示，嘗試其他方式
                             this.fallbackGoogleSignIn();
@@ -960,20 +960,58 @@ class GoogleLoginComponent extends HTMLElement {
     useDirectGoogleSignIn() {
         console.log('使用直接 Google 登入方法');
         try {
-            // 創建一個新的 Google 登入按鈕
-            const googleSignInButton = document.createElement('div');
-            googleSignInButton.id = 'google-signin-button';
-            googleSignInButton.style.cssText = `
+            // 創建一個容器來放置 Google 登入按鈕
+            const container = document.createElement('div');
+            container.id = 'google-signin-container';
+            container.style.cssText = `
                 position: fixed;
-                top: -1000px;
-                left: -1000px;
-                width: 1px;
-                height: 1px;
-                opacity: 0;
-                pointer-events: none;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10001;
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
             `;
             
-            document.body.appendChild(googleSignInButton);
+            // 添加標題
+            const title = document.createElement('div');
+            title.textContent = 'Google 登入';
+            title.style.cssText = `
+                font-size: 18px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 8px;
+            `;
+            container.appendChild(title);
+            
+            // 創建 Google 登入按鈕容器
+            const googleSignInButton = document.createElement('div');
+            googleSignInButton.id = 'google-signin-button';
+            container.appendChild(googleSignInButton);
+            
+            // 添加關閉按鈕
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '取消';
+            closeButton.style.cssText = `
+                padding: 8px 16px;
+                border: 1px solid #ddd;
+                background: white;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+            `;
+            closeButton.onclick = () => {
+                document.body.removeChild(container);
+            };
+            container.appendChild(closeButton);
+            
+            document.body.appendChild(container);
             
             // 使用 Google 的 renderButton 方法
             if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -987,24 +1025,23 @@ class GoogleLoginComponent extends HTMLElement {
                     width: 300
                 });
                 
-                // 模擬點擊按鈕
-                setTimeout(() => {
-                    const button = googleSignInButton.querySelector('div[role="button"]');
-                    if (button) {
-                        button.click();
-                    } else {
-                        console.log('無法找到 Google 登入按鈕，使用最後備用方法');
-                        this.triggerDirectGoogleSignIn();
+                // 監聽登入成功事件
+                const checkLoginSuccess = setInterval(() => {
+                    if (this.getUserInfo()) {
+                        clearInterval(checkLoginSuccess);
+                        document.body.removeChild(container);
                     }
-                    
-                    // 清理臨時按鈕
-                    setTimeout(() => {
-                        if (googleSignInButton.parentNode) {
-                            googleSignInButton.parentNode.removeChild(googleSignInButton);
-                        }
-                    }, 1000);
-                }, 100);
+                }, 500);
+                
+                // 5秒後自動清理
+                setTimeout(() => {
+                    clearInterval(checkLoginSuccess);
+                    if (container.parentNode) {
+                        document.body.removeChild(container);
+                    }
+                }, 5000);
             } else {
+                document.body.removeChild(container);
                 this.triggerDirectGoogleSignIn();
             }
         } catch (error) {
@@ -1067,27 +1104,81 @@ class GoogleLoginComponent extends HTMLElement {
     triggerDirectGoogleSignIn() {
         console.log('使用直接觸發方法');
         try {
-            // 創建一個隱藏的 iframe 來觸發 Google 登入
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = `https://accounts.google.com/gsi/select?client_id=${this.clientId}&ux_mode=popup&context=signin&prompt=select_account`;
+            // 構建 OAuth2 授權 URL
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${encodeURIComponent(this.clientId)}` +
+                `&redirect_uri=${encodeURIComponent(window.location.origin)}` +
+                `&response_type=token` +
+                `&scope=${encodeURIComponent('openid email profile')}` +
+                `&state=${encodeURIComponent('google_signin')}` +
+                `&prompt=select_account`;
             
-            iframe.onload = () => {
-                console.log('Google 登入 iframe 已載入');
-            };
+            // 在新視窗中打開授權頁面
+            const authWindow = window.open(authUrl, 'google_auth', 
+                'width=500,height=600,scrollbars=yes,resizable=yes');
             
-            document.body.appendChild(iframe);
-            
-            // 5秒後移除 iframe
-            setTimeout(() => {
-                if (document.body.contains(iframe)) {
-                    document.body.removeChild(iframe);
+            // 監聽授權結果
+            const checkAuthResult = setInterval(() => {
+                try {
+                    if (authWindow.closed) {
+                        clearInterval(checkAuthResult);
+                        // 檢查 URL 中是否有 access_token
+                        const urlParams = new URLSearchParams(window.location.hash.substring(1));
+                        const accessToken = urlParams.get('access_token');
+                        if (accessToken) {
+                            // 處理授權成功
+                            this.handleAuthSuccess(accessToken);
+                        }
+                    }
+                } catch (error) {
+                    // 視窗可能已經關閉
+                    clearInterval(checkAuthResult);
                 }
-            }, 5000);
+            }, 1000);
             
         } catch (error) {
-            console.error('直接觸發方法失敗:', error);
-            this.handleLoginFailure(error);
+            console.error('直接 Google 登入失敗:', error);
+            // 顯示錯誤訊息給用戶
+            alert('Google 登入暫時無法使用，請稍後再試。');
+        }
+    }
+    
+    // 處理 OAuth2 授權成功
+    async handleAuthSuccess(accessToken) {
+        console.log('OAuth2 授權成功，處理 access token');
+        try {
+            // 使用 access token 獲取用戶資訊
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+            
+            if (response.ok) {
+                const userInfo = await response.json();
+                
+                // 保存用戶資訊
+                this.saveUserInfo(userInfo);
+                
+                // 隱藏登入畫面
+                this.hideLoginModal();
+                
+                // 觸發成功事件
+                this.dispatchEvent(new CustomEvent('google-login-success', {
+                    detail: {
+                        user: userInfo,
+                        accessToken: accessToken,
+                        timestamp: new Date().toISOString()
+                    },
+                    bubbles: true,
+                    composed: true
+                }));
+            } else {
+                throw new Error('無法獲取用戶資訊');
+            }
+        } catch (error) {
+            console.error('處理 OAuth2 授權失敗:', error);
+            alert('登入成功但無法獲取用戶資訊，請重試。');
         }
     }
     
@@ -1944,7 +2035,15 @@ class GoogleLoginComponent extends HTMLElement {
                 flow: 'implicit',
                 response_type: 'token',
                 include_granted_scopes: true,
-                access_type: 'offline'
+                access_type: 'offline',
+                // WebView 特殊配置
+                disable_auto_sign_in: true,
+                disable_auto_focus: true,
+                disable_instant_gsi_loading: true,
+                // 強制使用 One Tap 模式
+                auto_select: false,
+                cancel_on_tap_outside: true,
+                prompt_parent_id: 'google-signin-container'
             };
             
             // 在 WebKit WebView 中使用特殊配置
