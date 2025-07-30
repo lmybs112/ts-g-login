@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView 登入測試</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        
+        .webview-info {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button.danger {
+            background-color: #dc3545;
+        }
+        
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 WebView 登入測試</h1>
+        
+        <div class="demo-section">
+            <h2>環境檢測</h2>
+            <div class="status webview-info" id="environmentInfo">
+                正在檢測環境...
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Google 登入組件</h2>
+            <p>點擊頭像進行登入測試：</p>
+            
+            <google-login 
+                client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com">
+            </google-login>
+            
+            <div class="status" id="loginStatus">
+                等待登入...
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>使用說明</h2>
+            <p>在 WebView 環境中，組件會自動檢測並使用備用方案：</p>
+            <ul>
+                <li>點擊頭像時會觸發 <code>webview-google-login</code> 事件</li>
+                <li>原生應用需要監聽此事件並處理 Google 登入</li>
+                <li>登入完成後調用 <code>handleWebViewLoginResult()</code> 回傳結果</li>
+            </ul>
+            
+            <button onclick="clearLog()" class="danger">清除日誌</button>
+        </div>
+        
+        <div class="demo-section">
+            <h2>事件日誌</h2>
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+
+    <!-- 載入 Google Login Web Component -->
+    <script src="src/inf-google-login.js"></script>
+
+    <script>
+        const logElement = document.getElementById('log');
+        const environmentInfo = document.getElementById('environmentInfo');
+        const loginStatus = document.getElementById('loginStatus');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLog() {
+            logElement.textContent = '';
+        }
+        
+        // 檢測環境
+        function detectEnvironment() {
+            const userAgent = navigator.userAgent;
+            const isWebView = userAgent.toLowerCase().includes('wv') || 
+                             userAgent.toLowerCase().includes('webview') ||
+                             window !== window.top;
+            
+            const environment = isWebView ? 'WebView 環境' : '一般瀏覽器環境';
+            environmentInfo.textContent = `環境: ${environment} | User-Agent: ${userAgent}`;
+            
+            log(`環境檢測: ${environment}`);
+            return isWebView;
+        }
+        
+
+        
+        // 監聽組件事件
+        document.addEventListener('google-login-success', (event) => {
+            log('🎉 Google 登入成功');
+            log(`用戶: ${event.detail.user?.name || '未知'}`);
+            loginStatus.textContent = '✅ 登入成功！';
+            loginStatus.style.backgroundColor = '#d4edda';
+            loginStatus.style.color = '#155724';
+        });
+        
+        document.addEventListener('google-login-failure', (event) => {
+            log('❌ Google 登入失敗: ' + event.detail.error);
+            loginStatus.textContent = '❌ 登入失敗: ' + event.detail.error;
+            loginStatus.style.backgroundColor = '#f8d7da';
+            loginStatus.style.color = '#721c24';
+        });
+        
+        document.addEventListener('google-logout', (event) => {
+            log('👋 Google 登出成功');
+            loginStatus.textContent = '👋 已登出';
+            loginStatus.style.backgroundColor = '#f8f9fa';
+            loginStatus.style.color = '#6c757d';
+        });
+        
+        document.addEventListener('navigate-to-profile', (event) => {
+            log('📱 導航到個人資料頁');
+            log(`用戶資訊: ${JSON.stringify(event.detail.user)}`);
+        });
+        
+        // WebView 特定事件
+        document.addEventListener('webview-google-login', (event) => {
+            log('🌐 WebView 登入請求');
+            log(`Client ID: ${event.detail.clientId}`);
+            log(`Action: ${event.detail.action}`);
+        });
+        
+        document.addEventListener('webview-google-logout', (event) => {
+            log('🌐 WebView 登出請求');
+            log(`Action: ${event.detail.action}`);
+        });
+        
+        // 頁面載入
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 頁面已載入');
+            detectEnvironment();
+            log('請點擊頭像進行測試');
+        });
+    </script>
+</body>
+</html> 

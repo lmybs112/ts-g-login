@@ -42,6 +42,7 @@ class GoogleLoginComponent extends HTMLElement {
         if (storedCredential) {
             this.credential = storedCredential;
             this.isAuthenticated = true;
+            this.getUserInfo(); // 載入用戶資訊
         }
     }
 
@@ -57,8 +58,83 @@ class GoogleLoginComponent extends HTMLElement {
     // 清除憑證
     clearCredential() {
         localStorage.removeItem('google_auth_credential');
+        localStorage.removeItem('google_user_info');
+        localStorage.removeItem('inffits_api_response'); // 清除 API 回應數據
         this.credential = null;
+        this.userInfo = null;
         this.isAuthenticated = false;
+        this.apiResponse = null;
+        this.updateAvatar();
+    }
+    
+    // 保存用戶資訊
+    saveUserInfo(userInfo) {
+        if (userInfo) {
+            localStorage.setItem('google_user_info', JSON.stringify(userInfo));
+            this.userInfo = userInfo;
+            this.updateAvatar();
+        }
+    }
+
+    // 獲取用戶資訊
+    getUserInfo() {
+        if (!this.userInfo) {
+            const stored = localStorage.getItem('google_user_info');
+            if (stored) {
+                this.userInfo = JSON.parse(stored);
+            }
+        }
+        return this.userInfo;
+    }
+    
+    // 更新頭像顯示
+    updateAvatar() {
+        const defaultAvatar = this.shadowRoot.getElementById('default-avatar');
+        const avatarImage = this.shadowRoot.getElementById('avatar-image');
+        
+        if (this.isAuthenticated && this.userInfo && this.userInfo.picture) {
+            // 顯示用戶頭像
+            avatarImage.src = this.userInfo.picture;
+            avatarImage.style.display = 'block';
+            defaultAvatar.style.display = 'none';
+        } else {
+            // 顯示預設頭像
+            avatarImage.style.display = 'none';
+            defaultAvatar.style.display = 'flex';
+        }
+        
+        // 隱藏下拉選單（如果用戶登出）
+        if (!this.isAuthenticated) {
+            this.hideDropdown();
+        }
+    }
+    
+    // 解析 Google 憑證
+    parseCredential(credential) {
+        try {
+            // JWT 憑證格式：header.payload.signature
+            const parts = credential.split('.');
+            if (parts.length !== 3) {
+                throw new Error('無效的 JWT 格式');
+            }
+            
+            // 解碼 payload 部分
+            const payload = JSON.parse(atob(parts[1]));
+            
+            return {
+                sub: payload.sub,
+                name: payload.name,
+                given_name: payload.given_name,
+                family_name: payload.family_name,
+                picture: payload.picture,
+                email: payload.email,
+                email_verified: payload.email_verified,
+                locale: payload.locale
+            };
+        } catch (error) {
+            console.error('解析 Google 憑證失敗:', error);
+            return null;
+        }
     }
     
     // 監聽的屬性變更
@@ -93,7 +169,150 @@ class GoogleLoginComponent extends HTMLElement {
     // 組件掛載到 DOM 時
     connectedCallback() {
         this.render();
+        this.updateAvatar(); // 初始化頭像顯示
+        this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
         this.loadGoogleIdentityServices();
+    }
+    
+    // 設置事件監聽器
+    setupEventListeners() {
+        const avatarContainer = this.shadowRoot.getElementById('avatar-container');
+        const dropdownMenu = this.shadowRoot.getElementById('dropdown-menu');
+        const profileItem = this.shadowRoot.getElementById('profile-item');
+        const logoutItem = this.shadowRoot.getElementById('logout-item');
+        
+        if (avatarContainer) {
+            console.log('設置頭像點擊事件監聽器');
+            avatarContainer.addEventListener('click', (event) => {
+                console.log('頭像被點擊');
+                event.preventDefault();
+                event.stopPropagation();
+                this.handleAvatarClick();
+            });
+        } else {
+            console.error('找不到頭像容器元素');
+        }
+        
+        // 設置下拉選單項目點擊事件
+        if (profileItem) {
+            profileItem.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                console.log('點擊個人資料');
+                this.navigateToProfile();
+                this.hideDropdown();
+            });
+        }
+        
+        if (logoutItem) {
+            logoutItem.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                console.log('點擊登出');
+                this.signOut();
+                this.hideDropdown();
+            });
+        }
+        
+        // 點擊外部關閉下拉選單（WebView 環境下可能不支援，使用更寬鬆的檢測）
+        this.setupOutsideClickHandler();
+    }
+    
+    // 設置外部點擊處理器（WebView 相容）
+    setupOutsideClickHandler() {
+        // 使用 setTimeout 確保在當前事件循環後執行
+        setTimeout(() => {
+            document.addEventListener('click', (event) => {
+                // 檢查點擊是否在組件外部
+                if (!this.shadowRoot.contains(event.target)) {
+                    this.hideDropdown();
+                }
+            }, true); // 使用捕獲階段
+            
+            // WebView 環境下，也監聽 touchstart 事件
+            document.addEventListener('touchstart', (event) => {
+                if (!this.shadowRoot.contains(event.target)) {
+                    this.hideDropdown();
+                }
+            }, true);
+        }, 0);
+    }
+    
+    // 處理頭像點擊
+    handleAvatarClick() {
+        console.log('處理頭像點擊，登入狀態:', this.isAuthenticated);
+        
+        if (this.isAuthenticated) {
+            // 已登入：顯示下拉選單
+            console.log('用戶已登入，顯示下拉選單');
+            this.toggleDropdown();
+        } else {
+            // 未登入：觸發 Google 登入
+            console.log('用戶未登入，觸發 Google 登入');
+            this.triggerGoogleSignIn();
+        }
+    }
+    
+    // 切換下拉選單顯示
+    toggleDropdown() {
+        const dropdownMenu = this.shadowRoot.getElementById('dropdown-menu');
+        if (dropdownMenu) {
+            dropdownMenu.classList.toggle('show');
+        }
+    }
+    
+    // 隱藏下拉選單
+    hideDropdown() {
+        const dropdownMenu = this.shadowRoot.getElementById('dropdown-menu');
+        if (dropdownMenu) {
+            dropdownMenu.classList.remove('show');
+        }
+    }
+    
+    // 進入個人資料頁
+    navigateToProfile() {
+        // 觸發事件，讓父組件處理導航
+        this.dispatchEvent(new CustomEvent('navigate-to-profile', {
+            detail: {
+                user: this.getUserInfo(),
+                apiResponse: this.getApiResponse()
+            },
+            bubbles: true,
+            composed: true
+        }));
+    }
+    
+    // 觸發 Google 登入
+    triggerGoogleSignIn() {
+        console.log('觸發 Google 登入');
+        
+        // 檢查是否在 WebView 環境
+        if (this.detectWebView()) {
+            console.log('WebView 環境下觸發登入');
+            this.handleWebViewFallback();
+            return;
+        }
+        
+        if (window.google && window.google.accounts) {
+            console.log('Google 服務已載入，調用 prompt()');
+            try {
+                window.google.accounts.id.prompt();
+            } catch (error) {
+                console.error('Google prompt() 調用失敗:', error);
+                // 如果 prompt() 失敗，嘗試備用方案
+                this.handleWebViewFallback();
+            }
+        } else {
+            console.error('Google 服務尚未載入');
+            // 等待一段時間後重試
+            setTimeout(() => {
+                if (window.google && window.google.accounts) {
+                    this.triggerGoogleSignIn();
+                } else {
+                    this.handleWebViewFallback();
+                }
+            }, 1000);
+        }
     }
     
     // 處理 localStorage 變更
@@ -103,31 +322,15 @@ class GoogleLoginComponent extends HTMLElement {
                 // 其他頁面登入了
                 this.credential = event.newValue;
                 this.isAuthenticated = true;
-                this.handleCredentialResponse({ credential: event.newValue });
+                this.getUserInfo();
+                this.updateAvatar();
             } else {
                 // 其他頁面登出了
                 this.credential = null;
                 this.isAuthenticated = false;
-                this.showLoginButton();
-                this.updateStatus('其他分頁已登出', 'ready');
+                this.userInfo = null;
+                this.updateAvatar();
             }
-        }
-    }
-    
-    // 顯示登入按鈕
-    showLoginButton() {
-        const buttonContainer = this.shadowRoot.getElementById('google-signin-button');
-        if (buttonContainer) {
-            buttonContainer.style.display = 'block';
-            this.renderSignInButton();
-        }
-    }
-    
-    // 隱藏登入按鈕
-    hideLoginButton() {
-        const buttonContainer = this.shadowRoot.getElementById('google-signin-button');
-        if (buttonContainer) {
-            buttonContainer.style.display = 'none';
         }
     }
 
@@ -144,80 +347,96 @@ class GoogleLoginComponent extends HTMLElement {
             <style>
                 :host {
                     display: inline-block;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    cursor: pointer;
                 }
                 
-                .google-login-container {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 10px;
-                }
-                
-                .login-button-wrapper {
+                .avatar-container {
                     position: relative;
-                }
-                
-                .status-message {
-                    font-size: 14px;
-                    color: #666;
-                    text-align: center;
-                    padding: 8px 12px;
-                    border-radius: 4px;
-                    background-color: #f8f9fa;
-                    border: 1px solid #e0e0e0;
-                    max-width: 300px;
-                }
-                
-                .status-loading {
-                    color: #007bff;
-                    border-color: #007bff;
-                    background-color: #e7f3ff;
-                }
-                
-                .status-error {
-                    color: #dc3545;
-                    border-color: #dc3545;
-                    background-color: #ffedef;
-                }
-                
-                .status-success {
-                    color: #28a745;
-                    border-color: #28a745;
-                    background-color: #edf7ee;
-                }
-                
-                /* Google 按鈕容器樣式 */
-                #google-signin-button {
-                    min-height: 40px;
-                    min-width: 200px;
-                }
-                
-                /* 載入動畫 */
-                .loading-spinner {
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid #f3f3f3;
-                    border-top: 2px solid #4285f4;
+                    width: 40px;
+                    height: 40px;
                     border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    display: inline-block;
-                    margin-right: 8px;
+                    overflow: hidden;
+                    border: 2px solid #e0e0e0;
+                    transition: border-color 0.3s ease;
                 }
                 
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
+                .avatar-container:hover {
+                    border-color: #4285f4;
+                }
+                
+                .avatar-image {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                
+                .default-avatar {
+                    width: 100%;
+                    height: 100%;
+                    background-color: #f0f0f0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #666;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+                
+                .dropdown-menu {
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    background: white;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    min-width: 150px;
+                    z-index: 1000;
+                    display: none;
+                    margin-top: 5px;
+                }
+                
+                .dropdown-menu.show {
+                    display: block;
+                }
+                
+                .dropdown-item {
+                    padding: 10px 15px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #f0f0f0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                }
+                
+                .dropdown-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .dropdown-item:hover {
+                    background-color: #f8f9fa;
+                }
+                
+                .dropdown-item.logout {
+                    color: #dc3545;
+                }
+                
+                .dropdown-item.logout:hover {
+                    background-color: #f8d7da;
                 }
             </style>
             
-            <div class="google-login-container">
-                <div class="login-button-wrapper">
-                    <div id="google-signin-button"></div>
-                </div>
-                <div class="status-message status-loading" id="status-message">
-                    <span class="loading-spinner"></span>
-                    正在載入 Google 登入服務...
+            <div class="avatar-container" id="avatar-container">
+                <div class="default-avatar" id="default-avatar">👤</div>
+                <img class="avatar-image" id="avatar-image" style="display: none;" alt="用戶頭像">
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-item" id="profile-item">
+                        👤 個人資料
+                    </div>
+                    <div class="dropdown-item logout" id="logout-item">
+                        🚪 登出
+                    </div>
                 </div>
             </div>
         `;
@@ -233,6 +452,10 @@ class GoogleLoginComponent extends HTMLElement {
                 return;
             }
             
+            // 檢查是否在 WebView 環境
+            const isWebView = this.detectWebView();
+            console.log('WebView 檢測結果:', isWebView);
+            
             // 動態載入 Google Identity Services 腳本
             const script = document.createElement('script');
             script.src = 'https://accounts.google.com/gsi/client';
@@ -247,36 +470,124 @@ class GoogleLoginComponent extends HTMLElement {
             
             // 腳本載入失敗
             script.onerror = () => {
-                this.handleError('無法載入 Google Identity Services');
+                console.error('Google Identity Services 載入失敗');
+                if (isWebView) {
+                    // WebView 環境下，嘗試使用備用方案
+                    this.handleWebViewFallback();
+                } else {
+                    this.handleError('無法載入 Google Identity Services');
+                }
             };
             
             // 添加到文檔頭部
             document.head.appendChild(script);
             
+            // WebView 環境下設置超時處理
+            if (isWebView) {
+                setTimeout(() => {
+                    if (!this.isGoogleLoaded) {
+                        console.warn('WebView 環境下 Google 服務載入超時，使用備用方案');
+                        this.handleWebViewFallback();
+                    }
+                }, 5000); // 5秒超時
+            }
+            
         } catch (error) {
-            this.handleError('載入 Google 服務時發生錯誤: ' + error.message);
+            console.error('載入 Google 服務時發生錯誤:', error);
+            if (this.detectWebView()) {
+                this.handleWebViewFallback();
+            } else {
+                this.handleError('載入 Google 服務時發生錯誤: ' + error.message);
+            }
         }
+    }
+    
+    // 檢測是否在 WebView 環境
+    detectWebView() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        
+        // 檢測常見的 WebView 標識
+        const webViewPatterns = [
+            'wv', // Android WebView
+            'webview',
+            'mobile safari',
+            'safari/',
+            'chrome/',
+            'firefox/',
+            'edge/',
+            'opera/',
+            'ucbrowser',
+            'micromessenger', // 微信內建瀏覽器
+            'qq/', // QQ 內建瀏覽器
+            'alipay', // 支付寶內建瀏覽器
+            'baiduboxapp', // 百度 App 內建瀏覽器
+            'toutiao', // 今日頭條內建瀏覽器
+            'weibo', // 微博內建瀏覽器
+        ];
+        
+        const isWebView = webViewPatterns.some(pattern => userAgent.includes(pattern));
+        
+        // 額外檢測：檢查是否在 iframe 中
+        const isInIframe = window !== window.top;
+        
+        return isWebView || isInIframe;
+    }
+    
+    // WebView 環境下的備用處理方案
+    handleWebViewFallback() {
+        console.log('使用 WebView 備用方案');
+        
+        // 觸發事件通知父組件或原生應用
+        this.dispatchEvent(new CustomEvent('webview-google-login', {
+            detail: {
+                clientId: this.clientId,
+                action: 'login',
+                timestamp: new Date().toISOString()
+            },
+            bubbles: true,
+            composed: true
+        }));
+        
+        // 顯示提示訊息
+        this.showWebViewMessage('請在原生應用中完成 Google 登入');
+    }
+    
+    // 顯示 WebView 提示訊息
+    showWebViewMessage(message) {
+        // 創建提示元素
+        const messageEl = document.createElement('div');
+        messageEl.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 14px;
+            text-align: center;
+            max-width: 80%;
+        `;
+        messageEl.textContent = message;
+        
+        document.body.appendChild(messageEl);
+        
+        // 3秒後自動移除
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, 3000);
     }
     
     // Google 服務載入完成後的回調
     onGoogleLoaded() {
-        this.updateStatus('Google 服務已載入，正在初始化...', 'loading');
+        console.log('Google Identity Services 已載入');
         
-        // 稍微延遲初始化，確保 Google API 完全準備就緒
-        setTimeout(() => {
-            this.initializeGoogleSignIn();
-        }, 100);
-    }
-    
-    // 初始化 Google Sign-In
-    initializeGoogleSignIn() {
         if (!this.clientId) {
-            this.handleError('缺少 client-id 屬性，請設置您的 Google OAuth2 客戶端 ID');
-            return;
-        }
-        
-        if (!window.google || !window.google.accounts) {
-            this.handleError('Google Identity Services 未正確載入');
+            console.error('缺少 client-id 屬性，請設置您的 Google OAuth2 客戶端 ID');
             return;
         }
         
@@ -285,90 +596,19 @@ class GoogleLoginComponent extends HTMLElement {
             window.google.accounts.id.initialize({
                 client_id: this.clientId,
                 callback: this.handleCredentialResponse,
-                auto_select: this.autoSelect,
-                cancel_on_tap_outside: false,
-                use_fedcm_for_prompt: true,
-                login_uri: this.loginUri || window.location.origin,
-                ux_mode: 'popup',
-                itp_support: true,
-                state_cookie_domain: window.location.hostname
+                auto_select: false, // 不自動選擇，讓用戶點擊頭像觸發
+                cancel_on_tap_outside: false
             });
             
-            // 渲染登入按鈕
-            this.renderSignInButton();
-            
-            // 如果已經有存儲的憑證，直接觸發登入成功
-            if (this.isAuthenticated && this.credential) {
-                this.handleCredentialResponse({ credential: this.credential });
-            }
-            // 否則，如果啟用自動選擇，嘗試自動登入
-            else if (this.autoSelect) {
-                this.attemptAutoSignIn();
-            } else {
-                this.updateStatus('請點擊下方按鈕登入', 'ready');
-            }
+            console.log('Google Identity Services 初始化完成');
             
         } catch (error) {
-            this.handleError('初始化 Google 登入失敗: ' + error.message);
-        }
-    }
-    
-    // 渲染 Google 登入按鈕
-    renderSignInButton() {
-        const buttonContainer = this.shadowRoot.getElementById('google-signin-button');
-        
-        if (!buttonContainer) {
-            console.error('找不到按鈕容器');
-            return;
-        }
-        
-        try {
-            // 清空容器
-            buttonContainer.innerHTML = '';
-            
-            // 渲染 Google 登入按鈕
-            window.google.accounts.id.renderButton(buttonContainer, {
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-                logo_alignment: 'left',
-                width: 250
-            });
-            
-            console.log('Google 登入按鈕已渲染');
-            
-        } catch (error) {
-            this.handleError('渲染登入按鈕失敗: ' + error.message);
-        }
-    }
-    
-    // 嘗試自動登入
-    attemptAutoSignIn() {
-        try {
-            this.updateStatus('檢查登入狀態...', 'loading');
-            
-            // 使用 Google Identity Services 的 prompt 方法嘗試自動登入
-            window.google.accounts.id.prompt((notification) => {
-                console.log('Auto sign-in notification:', notification);
-                
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    // 沒有可用的自動登入，顯示按鈕
-                    this.updateStatus('請點擊下方按鈕登入', 'ready');
-                } else if (notification.isDismissedMoment()) {
-                    // 用戶取消了自動登入
-                    this.updateStatus('請點擊下方按鈕登入', 'ready');
-                }
-            });
-            
-        } catch (error) {
-            console.warn('自動登入嘗試失敗:', error);
-            this.updateStatus('請點擊下方按鈕登入', 'ready');
+            console.error('初始化 Google 登入失敗:', error);
         }
     }
     
     // 處理 Google 登入回調
-    handleCredentialResponse(response) {
+    async handleCredentialResponse(response) {
         console.log('Google 登入回調收到 credential');
         
         if (!response.credential) {
@@ -377,19 +617,23 @@ class GoogleLoginComponent extends HTMLElement {
         }
         
         try {
+            // 解析 Google 憑證獲取用戶資訊
+            const payload = this.parseCredential(response.credential);
+            if (payload) {
+                this.saveUserInfo(payload);
+            }
+            
             // 保存憑證
             this.saveCredential(response.credential);
             
-            // 更新狀態
-            this.updateStatus('登入成功！', 'success');
-            
-            // 隱藏登入按鈕
-            this.hideLoginButton();
+            // 調用 infFITS API
+            await this.callInfFitsAPI(response.credential);
             
             // 觸發成功事件
             this.dispatchEvent(new CustomEvent('google-login-success', {
                 detail: {
                     credential: response.credential,
+                    user: payload,
                     timestamp: new Date().toISOString()
                 },
                 bubbles: true,
@@ -401,9 +645,66 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
+    // 調用 infFITS API
+    async callInfFitsAPI(credential) {
+        try {
+            console.log('🔄 調用 infFITS API...');
+            
+            const payload = {
+                credential: credential,
+                IDTYPE: "Google"  // ✅ 關鍵欄位：Lambda 會根據它分辨平台
+            };
+            
+            const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log("✅ infFITS API 回應:", data);
+            
+            // 保存 API 回應數據
+            this.saveApiResponse(data);
+            
+            return data;
+            
+        } catch (error) {
+            console.error("❌ 調用 infFITS API 失敗:", error);
+            throw error;
+        }
+    }
+    
+    // 保存 API 回應數據
+    saveApiResponse(data) {
+        try {
+            localStorage.setItem('inffits_api_response', JSON.stringify(data));
+            this.apiResponse = data;
+        } catch (error) {
+            console.warn('保存 API 回應數據失敗:', error);
+        }
+    }
+    
+    // 獲取 API 回應數據
+    getApiResponse() {
+        if (!this.apiResponse) {
+            const stored = localStorage.getItem('inffits_api_response');
+            if (stored) {
+                this.apiResponse = JSON.parse(stored);
+            }
+        }
+        return this.apiResponse;
+    }
+    
     // 處理登入失敗
     handleLoginFailure(error) {
-        this.handleError('登入失敗: ' + (error.message || error));
+        console.error('Google 登入失敗:', error);
         
         // 觸發失敗事件
         this.dispatchEvent(new CustomEvent('google-login-failure', {
@@ -416,75 +717,82 @@ class GoogleLoginComponent extends HTMLElement {
         }));
     }
     
-    // 處理錯誤
-    handleError(message) {
-        console.error('Google Login Component Error:', message);
-        this.updateStatus(message, 'error');
-    }
-    
-    // 更新狀態訊息
-    updateStatus(message, type = 'loading') {
-        const statusEl = this.shadowRoot.getElementById('status-message');
-        if (!statusEl) return;
-        
-        // 清除所有狀態類別
-        statusEl.className = 'status-message';
-        
-        // 添加新的狀態類別
-        switch (type) {
-            case 'loading':
-                statusEl.className += ' status-loading';
-                statusEl.innerHTML = `<span class="loading-spinner"></span>${message}`;
-                break;
-            case 'error':
-                statusEl.className += ' status-error';
-                statusEl.innerHTML = `❌ ${message}`;
-                break;
-            case 'success':
-                statusEl.className += ' status-success';
-                statusEl.innerHTML = `✅ ${message}`;
-                break;
-            case 'ready':
-                statusEl.className += ' status-loading';
-                statusEl.innerHTML = message;
-                break;
-            default:
-                statusEl.innerHTML = message;
-        }
-    }
-    
     // 清理資源
     cleanup() {
-        // 目前沒有特別的清理需求，但保留此方法以備未來使用
         console.log('Google Login Component 已清理');
     }
     
     // 公開方法：手動觸發登入
     signIn() {
-        if (window.google && window.google.accounts) {
-            window.google.accounts.id.prompt();
-        } else {
-            this.handleError('Google 服務尚未載入');
+        this.triggerGoogleSignIn();
+    }
+    
+    // 公開方法：處理 WebView 登入結果（由原生應用調用）
+    handleWebViewLoginResult(credential, userInfo) {
+        console.log('收到 WebView 登入結果:', { credential, userInfo });
+        
+        try {
+            // 保存憑證和用戶資訊
+            this.saveCredential(credential);
+            this.saveUserInfo(userInfo);
+            
+            // 調用 infFITS API
+            this.callInfFitsAPI(credential);
+            
+            // 觸發登入成功事件
+            this.dispatchEvent(new CustomEvent('google-login-success', {
+                detail: {
+                    credential: credential,
+                    user: userInfo,
+                    timestamp: new Date().toISOString()
+                },
+                bubbles: true,
+                composed: true
+            }));
+            
+        } catch (error) {
+            console.error('處理 WebView 登入結果失敗:', error);
+            this.handleLoginFailure(error);
         }
+    }
+    
+    // 公開方法：處理 WebView 登入失敗（由原生應用調用）
+    handleWebViewLoginFailure(error) {
+        console.error('WebView 登入失敗:', error);
+        this.handleLoginFailure(error);
     }
     
     // 公開方法：登出
     signOut() {
-        if (window.google && window.google.accounts) {
-            window.google.accounts.id.disableAutoSelect();
-            this.clearCredential();
-            
-            // 顯示登入按鈕
-            this.showLoginButton();
-            
-            this.updateStatus('已登出', 'ready');
-            
-            // 觸發登出事件
-            this.dispatchEvent(new CustomEvent('google-logout', {
+        // 檢查是否在 WebView 環境
+        if (this.detectWebView()) {
+            console.log('WebView 環境下觸發登出');
+            // 觸發 WebView 登出事件
+            this.dispatchEvent(new CustomEvent('webview-google-logout', {
+                detail: {
+                    action: 'logout',
+                    timestamp: new Date().toISOString()
+                },
                 bubbles: true,
                 composed: true
             }));
         }
+        
+        if (window.google && window.google.accounts) {
+            try {
+                window.google.accounts.id.disableAutoSelect();
+            } catch (error) {
+                console.warn('Google disableAutoSelect() 調用失敗:', error);
+            }
+        }
+        
+        this.clearCredential();
+        
+        // 觸發登出事件
+        this.dispatchEvent(new CustomEvent('google-logout', {
+            bubbles: true,
+            composed: true
+        }));
     }
 }
 
