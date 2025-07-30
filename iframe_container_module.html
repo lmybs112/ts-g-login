@@ -608,11 +608,12 @@
         class="intro-content intro-coupon-modal__content"
         style="display: none"
       >
-        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative;margin-bottom: 6px;">
           <p class="intro-coupon-modal__title">專屬資訊</p>
           <google-login 
             client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
-            auto-select="true">
+            auto-select="true"
+            style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
           </google-login>
         </div>
         <div class="intro-coupon-modal__header" style="max-width: 100%;">
@@ -680,15 +681,13 @@
       
       /* 確保 Google Login 組件在專屬資訊中正確顯示 */
       .intro-coupon-modal__content google-login {
-        flex-shrink: 0;
-        margin-left: 16px;
+        z-index: 10;
       }
       
       /* 響應式設計 */
       @media screen and (min-width: 480px) {
         .intro-coupon-modal__content google-login {
-          --google-login-size: 24px;
-          margin-left: 12px;
+          --google-login-size: 32px;
         }
       }
     </style>

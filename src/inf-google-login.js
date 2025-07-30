@@ -175,6 +175,9 @@ class GoogleLoginComponent extends HTMLElement {
     
     // 組件掛載到 DOM 時
     connectedCallback() {
+        // 載入 Google Fonts
+        this.loadGoogleFonts();
+        
         this.render();
         this.updateAvatar(); // 初始化頭像顯示
         this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
@@ -184,6 +187,32 @@ class GoogleLoginComponent extends HTMLElement {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             this.addDebugButtons();
         }
+    }
+    
+    // 載入 Google Fonts
+    loadGoogleFonts() {
+        // 檢查是否已經載入過字體
+        if (document.querySelector('link[href*="fonts.googleapis.com"]')) {
+            return;
+        }
+        
+        // 創建 Google Fonts 連結
+        const fontLink = document.createElement('link');
+        fontLink.rel = 'stylesheet';
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Figtree:wght@300;400;500;600;700&display=swap';
+        fontLink.crossOrigin = 'anonymous';
+        
+        // 添加到 document head
+        document.head.appendChild(fontLink);
+        
+        // 監聽字體載入完成事件
+        fontLink.onload = () => {
+            console.log('Google Fonts 載入完成：Noto Sans TC, Figtree');
+        };
+        
+        fontLink.onerror = () => {
+            console.warn('Google Fonts 載入失敗，將使用系統預設字體');
+        };
     }
     
     // 設置事件監聽器
@@ -346,8 +375,20 @@ class GoogleLoginComponent extends HTMLElement {
     hideProfileModal() {
         const targetContainer = document.getElementById('intro-content-advanced');
         if (targetContainer) {
-            this.hideModalInContainer(targetContainer);
-            this.showOriginalContent(targetContainer);
+            // 添加退出動畫
+            const modalContent = targetContainer.querySelector('.profile-modal');
+            if (modalContent) {
+                modalContent.style.animation = 'slideOutToRight 0.3s cubic-bezier(0.06, 0.43, 0.26, 0.99) forwards';
+                
+                // 等待動畫完成後再隱藏
+                setTimeout(() => {
+                    this.hideModalInContainer(targetContainer);
+                    this.showOriginalContent(targetContainer);
+                }, 300);
+            } else {
+                this.hideModalInContainer(targetContainer);
+                this.showOriginalContent(targetContainer);
+            }
         }
     }
     
@@ -403,10 +444,186 @@ class GoogleLoginComponent extends HTMLElement {
             position: relative;
         `;
         
+        // 添加 CSS 樣式
+        const styleElement = document.createElement('style');
+        styleElement.textContent = `
+            /* 全局字體設定 */
+            * {
+                font-family: 'Noto Sans TC', 'Figtree', sans-serif;
+            }
+            
+            /* 中文使用 Noto Sans TC */
+            *:lang(zh),
+            *:lang(zh-TW),
+            *:lang(zh-CN) {
+                font-family: 'Noto Sans TC', sans-serif;
+            }
+            
+            /* 英文和數字使用 Figtree */
+            *:lang(en),
+            *:lang(en-US),
+            *:lang(en-GB) {
+                font-family: 'Figtree', sans-serif;
+            }
+            
+            /* 使用 font-family 堆疊來實現 UTF-8 編碼字體 */
+            .profile-modal__info-label-text {
+                font-family: 'Noto Sans TC', sans-serif;
+            }
+            
+            .profile-modal__info-value {
+                font-family: 'Figtree', 'Noto Sans TC', sans-serif;
+            }
+            
+            /* Profile Modal BEM 樣式 */
+            .profile-modal {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                animation: slideInFromRight 0.3s cubic-bezier(0.06, 0.43, 0.26, 0.99);
+            }
+            
+            @keyframes slideInFromRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOutToRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes slideOutToRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            .profile-modal__header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: white;
+                flex-shrink: 0;
+                max-height: 19px;
+                margin-bottom:6px;
+            }
+            
+            .profile-modal__back-arrow {
+                cursor: pointer;
+            }
+            
+            .profile-modal__title {
+                font-size: 18px;
+                font-style: normal;
+                font-weight: 700;
+                line-height: 19px;
+                letter-spacing: 0.36px;
+            }
+            
+            .profile-modal__logout-btn {
+                display: flex;
+                align-items: center;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                color: #787974;
+            }
+            
+            .profile-modal__content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px 0;
+            }
+            
+            .profile-modal__avatar-section {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+            }
+            
+            .profile-modal__avatar {
+                position: relative;
+                width: 72px;
+                height: 72px;
+            }
+            
+            .profile-modal__avatar-img {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                object-fit: cover;
+            }
+            
+            .profile-modal__info-section {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                text-align: left;
+            }
+            
+            .profile-modal__info-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 18px 0;
+                border-bottom: 1px solid #E0E0DF;
+            }
+            
+            .profile-modal__info-item:last-child {
+                border-bottom: none;
+            }
+            
+            .profile-modal__info-label {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .profile-modal__info-label-text {
+                font-weight: 500;
+                font-size: 17px;
+                line-height: 22px;
+                letter-spacing: 0.34px;
+                color: #1E1E19;
+            }
+            
+            .profile-modal__info-value {
+                font-weight: 500;
+                font-size: 15px;
+                line-height: 20px;
+                letter-spacing: -0.12px;
+                color: #787974;
+            }
+        `;
+        
+        modalDiv.appendChild(styleElement);
+        
         if (type === 'login') {
-            modalDiv.innerHTML = this.getLoginModalHTML();
+            modalDiv.innerHTML += this.getLoginModalHTML();
         } else if (type === 'profile') {
-            modalDiv.innerHTML = this.getProfileModalHTML();
+            modalDiv.innerHTML += this.getProfileModalHTML();
         }
         
         return modalDiv;
@@ -418,16 +635,16 @@ class GoogleLoginComponent extends HTMLElement {
             <div style="width: 100%; height:100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div style="cursor: pointer; padding: 8px;" id="modal-back-arrow">
-                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M15.9996 22.3999L9.59961 15.9999L15.9996 9.5999" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M22.3996 16H9.59961" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 17px; color: rgba(0, 0, 0, 0.95);">登入</div>
+                    <div style="font-weight: 700; font-size: 17px; color: rgba(0, 0, 0, 0.95);">登入</div>
                     <div style="width: 24px;"></div>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 20px 0;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 32px; padding: 20px 0;">
                     <div style="width: 121px; height: 26px; display: flex; align-items: center; justify-content: center;">
                         <svg width="121" height="26" viewBox="0 0 121 26" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M108.993 25.0225C108.218 24.9117 107.436 24.8294 106.666 24.6852C104.615 24.3015 102.652 23.6742 100.911 22.4783C100.822 22.4172 100.739 22.3495 100.619 22.2591C101.246 20.8717 101.871 19.4884 102.51 18.0742C102.858 18.2941 103.158 18.5011 103.473 18.6795C105.75 19.9691 108.199 20.607 110.819 20.5532C111.716 20.5345 112.603 20.4172 113.436 20.0546C114.108 19.7622 114.648 19.3255 114.848 18.585C115.101 17.6489 114.703 16.8506 113.733 16.308C112.679 15.7182 111.505 15.4925 110.357 15.1829C108.727 14.743 107.088 14.3202 105.486 13.7931C104.306 13.4053 103.258 12.7349 102.442 11.7695C101.305 10.4261 100.962 8.84078 101.151 7.13813C101.482 4.16705 103.268 2.34546 105.957 1.30514C108.231 0.425301 110.608 0.325097 113.005 0.540169C114.851 0.705546 116.634 1.14383 118.314 1.94709C118.689 2.12713 119.05 2.33813 119.452 2.5532C118.876 3.96828 118.313 5.35157 117.729 6.78701C117.554 6.69903 117.4 6.62652 117.251 6.5475C115.036 5.37927 112.696 4.76257 110.175 4.95809C109.304 5.02571 108.458 5.19923 107.709 5.68559C106.86 6.23711 106.459 7.18538 106.709 8.05952C106.886 8.67703 107.347 9.05178 107.883 9.33854C109.031 9.9528 110.3 10.1915 111.549 10.4897C113.416 10.9361 115.305 11.3174 117.035 12.2029C118.81 13.1121 120.052 14.4538 120.353 16.4823C120.739 19.0852 119.941 21.2677 117.844 22.9084C116.19 24.2029 114.238 24.7178 112.187 24.9361C112.043 24.9516 111.903 24.9923 111.76 25.0216C110.838 25.0225 109.915 25.0225 108.993 25.0225Z" fill="#1E1E19"/>
@@ -461,7 +678,7 @@ class GoogleLoginComponent extends HTMLElement {
                                     </clipPath>
                                 </defs>
                             </svg>
-                            <span style="font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 17px; line-height: 1.2941176470588236em; letter-spacing: 2%; color: rgba(0, 0, 0, 0.95);">繼續使用 Google 登入</span>
+                            <span style="font-weight: 500; font-size: 17px; line-height: 1.2941176470588236em; letter-spacing: 2%; color: rgba(0, 0, 0, 0.95);">繼續使用 Google 登入</span>
                         </button>
                     </div>
                 </div>
@@ -483,43 +700,65 @@ class GoogleLoginComponent extends HTMLElement {
         }
         
         return `
-            <div style="width: 100%; height:100%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div style="cursor: pointer; padding: 8px;" id="modal-profile-back-arrow">
-                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div class="profile-modal">
+                <div class="profile-modal__header">
+                    <div class="profile-modal__back-arrow" id="modal-profile-back-arrow">
+                        <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M15.9996 22.3999L9.59961 15.9999L15.9996 9.5999" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M22.3996 16H9.59961" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 17px; color: rgba(0, 0, 0, 0.95);">個人資訊</div>
-                    <button style="display: flex; align-items: center; padding: 8px 4px; background: none; border: none; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 15px; color: #787974;" id="modal-logout-button">
-                        <span>登出</span>
-                    </button>
+                    <div class="profile-modal__title">個人資訊</div>
+                    <button class="profile-modal__logout-btn" id="modal-logout-button">登出</button>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 20px 0;">
-                    <div style="position: relative; width: 72px; height: 72px;">
-                        <img src="${pictureUrl || ''}" alt="用戶頭像" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'">
+                <div class="profile-modal__content">
+                    <div class="profile-modal__avatar-section">
+                        <div class="profile-modal__avatar">
+                            <img src="${pictureUrl || ''}" alt="用戶頭像" class="profile-modal__avatar-img" onerror="this.style.display='none'">
+                        </div>
                     </div>
                     
-                    <div style="display: flex; flex-direction: column; width: 100%; gap: 18px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0E0DF;">
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 17px; color: #1E1E19;">姓名</div>
-                                <div style="font-family: 'Figtree', sans-serif; font-weight: 500; font-size: 15px; color: #787974;">${userInfo ? (userInfo.name || '尚未提供') : '尚未提供'}</div>
+                    <div class="profile-modal__info-section">
+                        <div class="profile-modal__info-item">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">姓名</div>
+                                <div class="profile-modal__info-value">${userInfo ? (userInfo.name || '尚未提供') : '尚未提供'}</div>
                             </div>
                         </div>
                         
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0E0DF;">
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 17px; color: #1E1E19;">電子郵件</div>
-                                <div style="font-family: 'Figtree', sans-serif; font-weight: 500; font-size: 15px; color: #787974; display: flex; align-items: center; gap: 4px;">
-                                    <span>${userInfo ? (userInfo.email || '尚未提供') : '尚未提供'}</span>
-                                    <svg style="width: 18px; height: 18px; color: #1EC337;" viewBox="0 0 18 18" fill="none">
-                                        <path d="M0.75 0.75L16.5 16.5" fill="#1EC337"/>
-                                        <path d="M5.7 6.52L12.3 11.47" fill="white"/>
-                                    </svg>
-                                </div>
+                        <div class="profile-modal__info-item">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">電子郵件</div>
+                                <div class="profile-modal__info-value">${userInfo ? (userInfo.email || '尚未提供') : '尚未提供'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-modal__info-item">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">電話號碼</div>
+                                <div class="profile-modal__info-value">${userInfo ? (userInfo.phone || '尚未提供') : '尚未提供'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-modal__info-item">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">電話號碼</div>
+                                <div class="profile-modal__info-value">${userInfo ? (userInfo.phone || '尚未提供') : '尚未提供'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-modal__info-item">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">電話號碼</div>
+                                <div class="profile-modal__info-value">${userInfo ? (userInfo.phone || '尚未提供') : '尚未提供'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-modal__info-item">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">電話號碼</div>
+                                <div class="profile-modal__info-value">${userInfo ? (userInfo.phone || '尚未提供') : '尚未提供'}</div>
                             </div>
                         </div>
                     </div>
@@ -775,6 +1014,35 @@ class GoogleLoginComponent extends HTMLElement {
                 :host {
                     display: inline-block;
                     cursor: default;
+                    font-family: 'Noto Sans TC', 'Figtree', sans-serif;
+                }
+                
+                /* 全局字體設定 */
+                * {
+                    font-family: 'Noto Sans TC', 'Figtree', sans-serif;
+                }
+                
+                /* 中文使用 Noto Sans TC */
+                *:lang(zh),
+                *:lang(zh-TW),
+                *:lang(zh-CN) {
+                    font-family: 'Noto Sans TC', sans-serif;
+                }
+                
+                /* 英文和數字使用 Figtree */
+                *:lang(en),
+                *:lang(en-US),
+                *:lang(en-GB) {
+                    font-family: 'Figtree', sans-serif;
+                }
+                
+                /* 使用 font-family 堆疊來實現 UTF-8 編碼字體 */
+                .profile-modal__info-label-text {
+                    font-family: 'Noto Sans TC', sans-serif;
+                }
+                
+                .profile-modal__info-value {
+                    font-family: 'Figtree', 'Noto Sans TC', sans-serif;
                 }
                 .avatar-container {
                     position: relative;
@@ -852,7 +1120,6 @@ class GoogleLoginComponent extends HTMLElement {
                 }
                 
                 .title-text {
-                    font-family: 'Noto Sans TC', sans-serif;
                     font-weight: 700;
                     font-size: 17px;
                     line-height: 1.1176470588235294em;
@@ -942,7 +1209,6 @@ class GoogleLoginComponent extends HTMLElement {
                 }
                 
                 .google-login-text {
-                    font-family: 'Noto Sans TC', sans-serif;
                     font-weight: 500;
                     font-size: 17px;
                     line-height: 1.2941176470588236em;
@@ -1018,7 +1284,6 @@ class GoogleLoginComponent extends HTMLElement {
                 }
                 
                 .info-label {
-                    font-family: 'Noto Sans TC', sans-serif;
                     font-weight: 500;
                     font-size: 17px;
                     line-height: 1.2941176470588236em;
@@ -1027,7 +1292,6 @@ class GoogleLoginComponent extends HTMLElement {
                 }
                 
                 .info-value {
-                    font-family: 'Figtree', sans-serif;
                     font-weight: 500;
                     font-size: 15px;
                     line-height: 1.3333333333333333em;
@@ -1056,7 +1320,6 @@ class GoogleLoginComponent extends HTMLElement {
                     background: none;
                     border: none;
                     cursor: pointer;
-                    font-family: 'Noto Sans TC', sans-serif;
                     font-weight: 400;
                     font-size: 13px;
                     line-height: 1.3846153846153846em;
@@ -1073,13 +1336,11 @@ class GoogleLoginComponent extends HTMLElement {
                 .logout-button {
                     display: flex;
                     align-items: center;
-                    padding: 8px 4px;
                     background: none;
                     border: none;
                     cursor: pointer;
-                    font-family: 'Noto Sans TC', sans-serif;
-                    font-weight: 500;
-                    font-size: 15px;
+                    font-weight: 400;
+                    font-size: 12px;
                     line-height: 1.2;
                     color: #787974;
                     transition: all 0.2s ease;
@@ -1212,7 +1473,7 @@ class GoogleLoginComponent extends HTMLElement {
                     </div>
                         <div class="title-text">個人資訊</div>
                           <button class="logout-button" id="logout-button">
-                                    <span>登出</span>
+                                    登出
                                 </button>
                     </div>
                     
