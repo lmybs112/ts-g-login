@@ -76,6 +76,12 @@
             const inffitsApiResponse = localStorage.getItem('inffits_api_response');
             const googleAuthCredential = localStorage.getItem('google_auth_credential');
             
+            // 檢查是否有登入數據
+            if (!inffitsApiResponse && !googleAuthCredential) {
+                userDetailsElement.textContent = '未登入';
+                return;
+            }
+            
             let details = {
                 timestamp: new Date().toISOString(),
                 inffits_api_response: inffitsApiResponse ? JSON.parse(inffitsApiResponse) : null,
@@ -102,7 +108,9 @@
         // 監聽 Google 登出事件
         document.addEventListener('google-logout', function(event) {
             console.log('Google 登出事件觸發');
-            updateUserDetails();
+            // 清除用戶詳情顯示
+            const userDetailsElement = document.getElementById('userDetails');
+            userDetailsElement.textContent = '未登入';
         });
         
         // 頁面載入時初始化顯示
