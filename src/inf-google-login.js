@@ -736,60 +736,30 @@ class GoogleLoginComponent extends HTMLElement {
                 return;
             }
             
-            // 動態載入 Google Identity Services 腳本
+            // iOS WebView 特殊處理 - 優先使用
+            if (this.isInWebKitWebView()) {
+                console.log('檢測到 iOS WebView 環境，使用 iOS 專用載入策略');
+                this.loadGoogleForIOS();
+                return;
+            }
+            
+            // 標準載入方式
             const script = document.createElement('script');
             script.src = 'https://accounts.google.com/gsi/client';
             script.async = true;
             script.defer = true;
             
-            // 腳本載入成功
             script.onload = () => {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
             };
             
-            // 腳本載入失敗
             script.onerror = () => {
                 console.error('無法載入 Google Identity Services');
                 this.handleLoginFailure('無法載入 Google Identity Services');
             };
             
-            // 添加到文檔頭部
             document.head.appendChild(script);
-            
-            // iOS WebView 特殊處理
-            if (this.isInWebKitWebView()) {
-                console.log('檢測到 iOS WebView 環境，使用特殊載入策略');
-                
-                // 在 iOS WebView 中，使用更積極的檢查策略
-                let checkCount = 0;
-                const maxChecks = 40; // 最多檢查 20 秒
-                
-                const checkInterval = setInterval(() => {
-                    checkCount++;
-                    console.log(`iOS WebView 檢查 Google 服務載入狀態 (${checkCount}/${maxChecks})`);
-                    
-                    if (window.google && window.google.accounts) {
-                        this.isGoogleLoaded = true;
-                        this.onGoogleLoaded();
-                        clearInterval(checkInterval);
-                        console.log('iOS WebView 中 Google 服務載入成功');
-                    } else if (checkCount >= maxChecks) {
-                        clearInterval(checkInterval);
-                        console.warn('iOS WebView 中 Google 服務載入超時，嘗試備用方案');
-                        this.tryAlternativeGoogleLoad();
-                    }
-                }, 500);
-                
-            } else if (this.isInWebView()) {
-                console.log('檢測到一般 WebView 環境，使用標準載入策略');
-                setTimeout(() => {
-                    if (!this.isGoogleLoaded && window.google && window.google.accounts) {
-                        this.isGoogleLoaded = true;
-                        this.onGoogleLoaded();
-                    }
-                }, 1000);
-            }
             
         } catch (error) {
             console.error('載入 Google 服務時發生錯誤:', error);
@@ -797,7 +767,164 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
-    // 重試載入 Google 服務
+    // iOS 專用的 Google 載入策略
+    loadGoogleForIOS() {
+        console.log('開始 iOS 專用 Google 載入策略');
+        
+        // 策略1: 使用 JSONP 方式載入
+        this.loadGoogleWithJSONP();
+    }
+    
+    // 使用 JSONP 載入 Google 服務
+    loadGoogleWithJSONP() {
+        console.log('嘗試 JSONP 載入方式');
+        
+        try {
+            // 創建全局回調函數
+            window.googleLoadedCallback = () => {
+                console.log('JSONP 回調觸發');
+                if (window.google && window.google.accounts) {
+                    this.isGoogleLoaded = true;
+                    this.onGoogleLoaded();
+                } else {
+                    console.warn('JSONP 載入失敗，嘗試方案2');
+                    this.loadGoogleWithIframe();
+                }
+            };
+            
+            // 創建 script 標籤
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client?onload=googleLoadedCallback';
+            script.async = true;
+            
+            // 設置超時
+            const timeout = setTimeout(() => {
+                console.warn('JSONP 載入超時，嘗試方案2');
+                this.loadGoogleWithIframe();
+            }, 5000);
+            
+            // 成功載入時清除超時
+            script.onload = () => {
+                clearTimeout(timeout);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                console.warn('JSONP 載入錯誤，嘗試方案2');
+                this.loadGoogleWithIframe();
+            };
+            
+            document.head.appendChild(script);
+            
+        } catch (error) {
+            console.error('JSONP 載入失敗:', error);
+            this.loadGoogleWithIframe();
+        }
+    }
+    
+    // 使用 iframe 載入 Google 服務
+    loadGoogleWithIframe() {
+        console.log('嘗試 iframe 載入方式');
+        
+        try {
+            // 創建隱藏的 iframe
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = 'https://accounts.google.com/gsi/client';
+            
+            // 監聽 iframe 載入
+            iframe.onload = () => {
+                console.log('iframe 載入完成');
+                
+                // 檢查 Google 服務是否可用
+                let checkCount = 0;
+                const maxChecks = 20;
+                
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    console.log(`iframe 檢查 Google 服務 (${checkCount}/${maxChecks})`);
+                    
+                    if (window.google && window.google.accounts) {
+                        this.isGoogleLoaded = true;
+                        this.onGoogleLoaded();
+                        clearInterval(checkInterval);
+                        console.log('iframe 載入成功');
+                    } else if (checkCount >= maxChecks) {
+                        clearInterval(checkInterval);
+                        console.warn('iframe 載入失敗，嘗試方案3');
+                        this.loadGoogleWithDirectScript();
+                    }
+                }, 500);
+            };
+            
+            iframe.onerror = () => {
+                console.warn('iframe 載入錯誤，嘗試方案3');
+                this.loadGoogleWithDirectScript();
+            };
+            
+            document.body.appendChild(iframe);
+            
+        } catch (error) {
+            console.error('iframe 載入失敗:', error);
+            this.loadGoogleWithDirectScript();
+        }
+    }
+    
+    // 直接腳本載入（最後方案）
+    loadGoogleWithDirectScript() {
+        console.log('嘗試直接腳本載入（最後方案）');
+        
+        try {
+            // 移除可能存在的舊腳本
+            const existingScripts = document.querySelectorAll('script[src*="accounts.google.com"]');
+            existingScripts.forEach(script => script.remove());
+            
+            // 創建新的腳本
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = false; // 同步載入
+            script.defer = false;
+            
+            // 設置載入檢查
+            let checkCount = 0;
+            const maxChecks = 30;
+            
+            const checkInterval = setInterval(() => {
+                checkCount++;
+                console.log(`直接腳本檢查 Google 服務 (${checkCount}/${maxChecks})`);
+                
+                if (window.google && window.google.accounts) {
+                    this.isGoogleLoaded = true;
+                    this.onGoogleLoaded();
+                    clearInterval(checkInterval);
+                    console.log('直接腳本載入成功');
+                } else if (checkCount >= maxChecks) {
+                    clearInterval(checkInterval);
+                    console.error('所有載入方案都失敗了');
+                    this.handleLoginFailure('iOS WebView 中無法載入 Google Identity Services，請檢查網路連接或使用備用登入方式');
+                }
+            }, 500);
+            
+            script.onload = () => {
+                console.log('直接腳本 onload 觸發');
+            };
+            
+            script.onerror = () => {
+                console.error('直接腳本載入錯誤');
+            };
+            
+            document.head.appendChild(script);
+            
+        } catch (error) {
+            console.error('直接腳本載入失敗:', error);
+            this.handleLoginFailure('所有 Google 載入方案都失敗了: ' + error.message);
+        }
+    }
+    
+        // 重試載入 Google 服務
     retryLoadGoogleServices() {
         console.log('重試載入 Google 服務');
         try {
@@ -815,67 +942,6 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
-    // 嘗試備用 Google 載入方案
-    tryAlternativeGoogleLoad() {
-        console.log('嘗試備用 Google 載入方案');
-        try {
-            // 方案1: 使用不同的腳本載入方式
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client?onload=googleLoaded';
-            script.async = true;
-            
-            // 定義全局回調
-            window.googleLoaded = () => {
-                console.log('備用方案載入成功');
-                this.isGoogleLoaded = true;
-                this.onGoogleLoaded();
-            };
-            
-            // 腳本載入失敗處理
-            script.onerror = () => {
-                console.warn('備用方案1失敗，嘗試方案2');
-                this.tryAlternativeGoogleLoad2();
-            };
-            
-            document.head.appendChild(script);
-            
-        } catch (error) {
-            console.error('備用方案1失敗:', error);
-            this.tryAlternativeGoogleLoad2();
-        }
-    }
-    
-    // 備用方案2: 使用 JSONP 方式
-    tryAlternativeGoogleLoad2() {
-        console.log('嘗試備用方案2: JSONP 載入');
-        try {
-            // 創建一個隱藏的 iframe 來載入 Google 服務
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = 'https://accounts.google.com/gsi/client';
-            
-            iframe.onload = () => {
-                console.log('備用方案2 iframe 載入完成');
-                // 檢查是否成功載入
-                setTimeout(() => {
-                    if (window.google && window.google.accounts) {
-                        this.isGoogleLoaded = true;
-                        this.onGoogleLoaded();
-                    } else {
-                        console.warn('備用方案2也失敗，使用最後方案');
-                        this.useFallbackLogin();
-                    }
-                }, 2000);
-            };
-            
-            document.body.appendChild(iframe);
-            
-        } catch (error) {
-            console.error('備用方案2失敗:', error);
-            this.useFallbackLogin();
-        }
-    }
-    
     // 最後方案: 使用備用登入方式
     useFallbackLogin() {
         console.log('使用備用登入方式');
@@ -889,7 +955,7 @@ class GoogleLoginComponent extends HTMLElement {
             composed: true
         }));
     }
-    
+
     // 檢測是否在 WebView 中
     isInWebView() {
         const userAgent = navigator.userAgent.toLowerCase();
@@ -1126,4 +1192,4 @@ if (!customElements.get('google-login')) {
     console.log('Google Login Web Component 已註冊');
 } else {
     console.warn('Google Login Web Component 已經存在，跳過註冊');
-} 
+}

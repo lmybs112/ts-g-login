@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>iOS WebView 調試測試</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-text-size-adjust: 100%;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 15px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .status-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid #007AFF;
+            font-size: 12px;
+        }
+        
+        .status-item.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .status-item.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .status-item.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .component-area {
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .test-button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 1;
+            min-width: 80px;
+        }
+        
+        .test-button:hover {
+            background: #0056CC;
+        }
+        
+        .test-button.secondary {
+            background: #6c757d;
+        }
+        
+        .test-button.secondary:hover {
+            background: #545b62;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #f8f8f2;
+            border-radius: 6px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 1px 0;
+        }
+        
+        .log-entry.success { color: #a6e22e; }
+        .log-entry.error { color: #f92672; }
+        .log-entry.warning { color: #f4bf75; }
+        .log-entry.info { color: #66d9ef; }
+        .log-entry.debug { color: #ae81ff; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007AFF, #00C851);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 iOS WebView 調試</h1>
+        </div>
+        
+        <div class="content">
+            <div class="status-grid">
+                <div class="status-item" id="device-status">
+                    <strong>📱 設備</strong><br>
+                    <span id="device-info">檢測中...</span>
+                </div>
+                <div class="status-item" id="webview-status">
+                    <strong>🌐 WebView</strong><br>
+                    <span id="webview-type">檢測中...</span>
+                </div>
+                <div class="status-item" id="google-status">
+                    <strong>🔐 Google</strong><br>
+                    <span id="google-info">檢測中...</span>
+                </div>
+                <div class="status-item" id="network-status">
+                    <strong>📡 網路</strong><br>
+                    <span id="network-info">檢測中...</span>
+                </div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            
+            <div class="component-area">
+                <h3>🔐 Google 登入組件</h3>
+                <google-login
+                    client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com">
+                </google-login>
+            </div>
+            
+            <div class="button-group">
+                <button class="test-button" onclick="checkGoogle()">檢查 Google</button>
+                <button class="test-button" onclick="testNetwork()">測試網路</button>
+                <button class="test-button" onclick="testScriptLoad()">測試腳本載入</button>
+                <button class="test-button secondary" onclick="clearLog()">清除日誌</button>
+            </div>
+            
+            <div class="log-container" id="log-container">
+                <div class="log-entry info">🚀 調試工具已啟動...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入 Google Login Web Component -->
+    <script src="src/inf-google-login.js"></script>
+    
+    <script>
+        let progressValue = 0;
+        const progressFill = document.getElementById('progress-fill');
+        
+        // 更新進度條
+        function updateProgress(value) {
+            progressValue = Math.min(100, Math.max(0, value));
+            progressFill.style.width = progressValue + '%';
+        }
+        
+        // 詳細的環境檢測
+        function detectEnvironment() {
+            const userAgent = navigator.userAgent;
+            const platform = navigator.platform;
+            
+            // 設備檢測
+            let deviceInfo = '未知';
+            let deviceType = 'unknown';
+            
+            if (userAgent.includes('iPhone')) {
+                deviceInfo = 'iPhone';
+                deviceType = 'iphone';
+            } else if (userAgent.includes('iPad')) {
+                deviceInfo = 'iPad';
+                deviceType = 'ipad';
+            } else if (userAgent.includes('iPod')) {
+                deviceInfo = 'iPod';
+                deviceType = 'ipod';
+            }
+            
+            // WebView 檢測
+            let webviewType = '未知';
+            let webviewStatus = 'unknown';
+            
+            if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+                if (userAgent.includes('webkit')) {
+                    webviewType = 'iOS WebKit';
+                    webviewStatus = 'webkit';
+                } else if (userAgent.includes('mozilla')) {
+                    webviewType = 'iOS 原生';
+                    webviewStatus = 'native';
+                } else {
+                    webviewType = 'iOS WebView';
+                    webviewStatus = 'webview';
+                }
+            }
+            
+            // 網路檢測
+            let networkInfo = '未知';
+            let networkStatus = 'unknown';
+            
+            if (navigator.onLine) {
+                networkInfo = '在線';
+                networkStatus = 'online';
+            } else {
+                networkInfo = '離線';
+                networkStatus = 'offline';
+            }
+            
+            // 更新顯示
+            document.getElementById('device-info').textContent = deviceInfo;
+            document.getElementById('webview-type').textContent = webviewType;
+            document.getElementById('network-info').textContent = networkInfo;
+            
+            // 更新狀態樣式
+            updateStatusStyle('device-status', deviceType === 'unknown' ? 'error' : 'success');
+            updateStatusStyle('webview-status', webviewStatus === 'unknown' ? 'error' : 'success');
+            updateStatusStyle('network-status', networkStatus === 'offline' ? 'error' : 'success');
+            
+            return { deviceInfo, webviewType, networkInfo, userAgent, platform };
+        }
+        
+        // 更新狀態樣式
+        function updateStatusStyle(elementId, status) {
+            const element = document.getElementById(elementId);
+            element.className = `status-item ${status}`;
+        }
+        
+        // 日誌系統
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            
+            // 保持最新的 15 個條目
+            const entries = logContainer.querySelectorAll('.log-entry');
+            if (entries.length > 15) {
+                entries[0].remove();
+            }
+            
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // 檢查 Google 服務
+        function checkGoogle() {
+            addLog('🔍 檢查 Google Identity Services...', 'debug');
+            
+            if (window.google && window.google.accounts) {
+                addLog('✅ Google Identity Services 已載入', 'success');
+                document.getElementById('google-info').textContent = '✅ 已載入';
+                updateStatusStyle('google-status', 'success');
+                updateProgress(100);
+            } else {
+                addLog('❌ Google Identity Services 未載入', 'error');
+                document.getElementById('google-info').textContent = '❌ 未載入';
+                updateStatusStyle('google-status', 'error');
+                updateProgress(0);
+            }
+        }
+        
+        // 測試網路連接
+        async function testNetwork() {
+            addLog('🌐 測試網路連接...', 'debug');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('https://accounts.google.com/gsi/client', {
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                addLog(`✅ 網路連接正常 (${duration}ms)`, 'success');
+                updateStatusStyle('network-status', 'success');
+            } catch (error) {
+                addLog(`❌ 網路連接失敗: ${error.message}`, 'error');
+                updateStatusStyle('network-status', 'error');
+            }
+        }
+        
+        // 測試腳本載入
+        function testScriptLoad() {
+            addLog('📜 測試腳本載入...', 'debug');
+            
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = true;
+            
+            let loadStartTime = Date.now();
+            
+            script.onload = () => {
+                const loadTime = Date.now() - loadStartTime;
+                addLog(`✅ 腳本載入成功 (${loadTime}ms)`, 'success');
+            };
+            
+            script.onerror = () => {
+                const loadTime = Date.now() - loadStartTime;
+                addLog(`❌ 腳本載入失敗 (${loadTime}ms)`, 'error');
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        // 清除日誌
+        function clearLog() {
+            document.getElementById('log-container').innerHTML = '<div class="log-entry info">🧹 日誌已清除...</div>';
+        }
+        
+        // 監聽組件事件
+        document.addEventListener('google-login-success', (event) => {
+            addLog('✅ Google 登入成功', 'success');
+            updateProgress(100);
+        });
+        
+        document.addEventListener('google-login-failure', (event) => {
+            addLog(`❌ 登入失敗: ${event.detail.error}`, 'error');
+            updateProgress(0);
+        });
+        
+        document.addEventListener('google-services-unavailable', (event) => {
+            addLog(`⚠️ ${event.detail.message}`, 'warning');
+            updateProgress(0);
+        });
+        
+        // 網路狀態監聽
+        window.addEventListener('online', () => {
+            addLog('🌐 網路已連接', 'success');
+            updateStatusStyle('network-status', 'success');
+        });
+        
+        window.addEventListener('offline', () => {
+            addLog('🌐 網路已斷開', 'error');
+            updateStatusStyle('network-status', 'error');
+        });
+        
+        // 頁面載入
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🚀 頁面載入完成', 'info');
+            updateProgress(10);
+            
+            const env = detectEnvironment();
+            addLog(`📱 設備: ${env.deviceInfo}`, 'info');
+            addLog(`🌐 WebView: ${env.webviewType}`, 'info');
+            addLog(`📡 網路: ${env.networkInfo}`, 'info');
+            addLog(`🔧 User Agent: ${env.userAgent.substring(0, 50)}...`, 'debug');
+            addLog(`🔧 Platform: ${env.platform}`, 'debug');
+            
+            updateProgress(30);
+            
+            // 延遲檢查 Google 服務
+            setTimeout(() => {
+                checkGoogle();
+                updateProgress(60);
+            }, 2000);
+            
+            // 延遲測試網路
+            setTimeout(() => {
+                testNetwork();
+                updateProgress(80);
+            }, 3000);
+        });
+        
+        // 錯誤監聽
+        window.addEventListener('error', (event) => {
+            addLog(`❌ 錯誤: ${event.error?.message || event.message}`, 'error');
+        });
+        
+        // 未處理的 Promise 拒絕
+        window.addEventListener('unhandledrejection', (event) => {
+            addLog(`❌ Promise 拒絕: ${event.reason}`, 'error');
+        });
+    </script>
+</body>
+</html> 
