@@ -91,7 +91,7 @@
             userDetailsElement.textContent = JSON.stringify(details, null, 2);
         }
         
-        // 監聽 localStorage 變更
+        // 監聽 localStorage 變更（跨頁面同步）
         window.addEventListener('storage', function(event) {
             if (event.key === 'inffits_api_response' || event.key === 'google_auth_credential') {
                 updateUserDetails();
@@ -104,6 +104,31 @@
             // 事件觸發時，數據已經保存到 localStorage，直接更新顯示
             updateUserDetails();
         });
+        
+        // 監聽 localStorage 更新事件
+        document.addEventListener('localStorage-updated', function(event) {
+            console.log('localStorage 更新事件觸發:', event.detail.key);
+            updateUserDetails();
+        });
+        
+        // 定期檢查 localStorage 變更（同頁面內）
+        let lastInffitsResponse = localStorage.getItem('inffits_api_response');
+        let lastGoogleCredential = localStorage.getItem('google_auth_credential');
+        
+        setInterval(function() {
+            const currentInffitsResponse = localStorage.getItem('inffits_api_response');
+            const currentGoogleCredential = localStorage.getItem('google_auth_credential');
+            
+            // 檢查是否有變更
+            if (currentInffitsResponse !== lastInffitsResponse || 
+                currentGoogleCredential !== lastGoogleCredential) {
+                
+                console.log('檢測到 localStorage 變更，更新顯示');
+                lastInffitsResponse = currentInffitsResponse;
+                lastGoogleCredential = currentGoogleCredential;
+                updateUserDetails();
+            }
+        }, 500); // 每 500ms 檢查一次
         
         // 監聽 Google 登出事件
         document.addEventListener('google-logout', function(event) {

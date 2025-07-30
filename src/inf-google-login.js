@@ -52,6 +52,16 @@ class GoogleLoginComponent extends HTMLElement {
             localStorage.setItem('google_auth_credential', credential);
             this.credential = credential;
             this.isAuthenticated = true;
+            
+            // 觸發 localStorage 更新事件
+            this.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    key: 'google_auth_credential',
+                    value: credential
+                },
+                bubbles: true,
+                composed: true
+            }));
         }
     }
 
@@ -1911,6 +1921,16 @@ class GoogleLoginComponent extends HTMLElement {
         try {
             localStorage.setItem('inffits_api_response', JSON.stringify(data));
             this.apiResponse = data;
+            
+            // 觸發 localStorage 更新事件
+            this.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    key: 'inffits_api_response',
+                    value: data
+                },
+                bubbles: true,
+                composed: true
+            }));
         } catch (error) {
             console.warn('保存 API 回應數據失敗:', error);
         }
