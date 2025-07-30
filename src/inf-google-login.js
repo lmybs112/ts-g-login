@@ -890,10 +890,12 @@ class GoogleLoginComponent extends HTMLElement {
                     if (notification.isNotDisplayed()) {
                         console.log('Google 登入提示未顯示:', notification.getNotDisplayedReason());
                         
-                        // 如果是因為沒有活躍會話，嘗試重新初始化
-                        if (notification.getNotDisplayedReason() === 'no_session') {
-                            console.log('沒有活躍會話，嘗試重新初始化');
-                            this.reinitializeGoogleSignIn();
+                        // 針對空會話問題，直接使用備用方法
+                        if (notification.getNotDisplayedReason() === 'no_session' || 
+                            notification.getNotDisplayedReason() === 'browser_not_supported' ||
+                            notification.getNotDisplayedReason() === 'invalid_client') {
+                            console.log('檢測到會話問題，使用備用登入方法');
+                            this.useDirectGoogleSignIn();
                         } else {
                             // 如果無法顯示，嘗試其他方式
                             this.fallbackGoogleSignIn();
@@ -951,6 +953,63 @@ class GoogleLoginComponent extends HTMLElement {
         } catch (error) {
             console.error('重新初始化失敗:', error);
             this.fallbackGoogleSignIn();
+        }
+    }
+    
+    // 直接 Google 登入方法（處理空會話問題）
+    useDirectGoogleSignIn() {
+        console.log('使用直接 Google 登入方法');
+        try {
+            // 創建一個新的 Google 登入按鈕
+            const googleSignInButton = document.createElement('div');
+            googleSignInButton.id = 'google-signin-button';
+            googleSignInButton.style.cssText = `
+                position: fixed;
+                top: -1000px;
+                left: -1000px;
+                width: 1px;
+                height: 1px;
+                opacity: 0;
+                pointer-events: none;
+            `;
+            
+            document.body.appendChild(googleSignInButton);
+            
+            // 使用 Google 的 renderButton 方法
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.renderButton(googleSignInButton, {
+                    type: 'standard',
+                    theme: 'outline',
+                    size: 'large',
+                    text: 'signin_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'left',
+                    width: 300
+                });
+                
+                // 模擬點擊按鈕
+                setTimeout(() => {
+                    const button = googleSignInButton.querySelector('div[role="button"]');
+                    if (button) {
+                        button.click();
+                    } else {
+                        console.log('無法找到 Google 登入按鈕，使用最後備用方法');
+                        this.triggerDirectGoogleSignIn();
+                    }
+                    
+                    // 清理臨時按鈕
+                    setTimeout(() => {
+                        if (googleSignInButton.parentNode) {
+                            googleSignInButton.parentNode.removeChild(googleSignInButton);
+                        }
+                    }, 1000);
+                }, 100);
+            } else {
+                this.triggerDirectGoogleSignIn();
+            }
+        } catch (error) {
+            console.error('直接登入方法失敗:', error);
+            this.triggerDirectGoogleSignIn();
         }
     }
     
@@ -1880,7 +1939,12 @@ class GoogleLoginComponent extends HTMLElement {
                 // 修復空會話問題
                 auto_prompt: false,
                 state: 'google_signin',
-                scope: 'openid email profile'
+                scope: 'openid email profile',
+                // 針對空會話問題的額外配置
+                flow: 'implicit',
+                response_type: 'token',
+                include_granted_scopes: true,
+                access_type: 'offline'
             };
             
             // 在 WebKit WebView 中使用特殊配置
