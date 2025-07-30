@@ -345,8 +345,12 @@ class GoogleLoginComponent extends HTMLElement {
                         this.renderFallbackButton(container);
                     } else {
                         console.log('WebKit WebView 中按鈕渲染成功');
+                        // 確保按鈕在 iOS WebView 中可見
+                        button.style.display = 'block';
+                        button.style.visibility = 'visible';
+                        button.style.opacity = '1';
                     }
-                }, 1000);
+                }, 2000); // 增加等待時間
             }
             
         } catch (error) {
@@ -746,7 +750,8 @@ class GoogleLoginComponent extends HTMLElement {
             
             // 腳本載入失敗
             script.onerror = () => {
-                this.handleError('無法載入 Google Identity Services');
+                console.error('無法載入 Google Identity Services');
+                this.handleLoginFailure('無法載入 Google Identity Services');
             };
             
             // 添加到文檔頭部
@@ -755,21 +760,26 @@ class GoogleLoginComponent extends HTMLElement {
             // WebKit WebView 特殊處理
             if (this.isInWebKitWebView()) {
                 console.log('檢測到 WebKit WebView 環境，使用特殊載入策略');
-                // 在 WebKit WebView 中，需要更長的時間來確保腳本完全載入
-                setTimeout(() => {
-                    if (!this.isGoogleLoaded && window.google && window.google.accounts) {
+                
+                // 在 iOS WebView 中，需要更長的時間來確保腳本完全載入
+                const checkInterval = setInterval(() => {
+                    if (window.google && window.google.accounts) {
                         this.isGoogleLoaded = true;
                         this.onGoogleLoaded();
+                        clearInterval(checkInterval);
+                        console.log('WebKit WebView 中 Google 服務載入成功');
                     }
-                }, 2000);
+                }, 500);
                 
-                // 額外的檢查機制
+                // 設置超時檢查
                 setTimeout(() => {
+                    clearInterval(checkInterval);
                     if (!this.isGoogleLoaded) {
                         console.warn('WebKit WebView 中 Google 服務載入超時，嘗試重新載入');
                         this.retryLoadGoogleServices();
                     }
-                }, 5000);
+                }, 10000);
+                
             } else if (this.isInWebView()) {
                 console.log('檢測到一般 WebView 環境，使用標準載入策略');
                 setTimeout(() => {
@@ -781,7 +791,8 @@ class GoogleLoginComponent extends HTMLElement {
             }
             
         } catch (error) {
-            this.handleError('載入 Google 服務時發生錯誤: ' + error.message);
+            console.error('載入 Google 服務時發生錯誤:', error);
+            this.handleLoginFailure('載入 Google 服務時發生錯誤: ' + error.message);
         }
     }
     
@@ -799,6 +810,7 @@ class GoogleLoginComponent extends HTMLElement {
             this.loadGoogleIdentityServices();
         } catch (error) {
             console.error('重試載入失敗:', error);
+            this.handleLoginFailure('重試載入失敗: ' + error.message);
         }
     }
     
@@ -818,14 +830,18 @@ class GoogleLoginComponent extends HTMLElement {
     isInWebKitWebView() {
         const userAgent = navigator.userAgent.toLowerCase();
         return (
-            // iOS WKWebView
+            // iOS WKWebView - 更精確的檢測
+            (userAgent.includes('iphone') || userAgent.includes('ipad')) && userAgent.includes('webkit') ||
+            // iOS Safari WebView
             (userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome')) ||
             // 明確的 WebKit WebView
             userAgent.includes('webkit') && (userAgent.includes('mobile') || userAgent.includes('ipad') || userAgent.includes('iphone')) ||
             // WKWebView 特定檢測
             window.webkit && window.webkit.messageHandlers ||
             // 其他 WebKit 環境
-            userAgent.includes('webkit') && !userAgent.includes('chrome')
+            userAgent.includes('webkit') && !userAgent.includes('chrome') ||
+            // iOS 原生 WebView 檢測
+            (userAgent.includes('iphone') || userAgent.includes('ipad')) && userAgent.includes('mozilla')
         );
     }
     
