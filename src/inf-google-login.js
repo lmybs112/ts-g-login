@@ -172,100 +172,6 @@ class GoogleLoginComponent extends HTMLElement {
         this.updateAvatar(); // 初始化頭像顯示
         this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
         this.loadGoogleIdentityServices();
-        
-        // 檢查 URL 參數，處理 WebView OAuth 回調
-        this.checkUrlParams();
-    }
-    
-    // 檢查 URL 參數，處理 WebView OAuth 回調
-    checkUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        
-        // 檢查是否有 OAuth 回調參數
-        const accessToken = urlParams.get('access_token') || hashParams.get('access_token');
-        const error = urlParams.get('error') || hashParams.get('error');
-        const state = urlParams.get('state') || hashParams.get('state');
-        
-        if (accessToken && state === 'webview_login') {
-            console.log('檢測到 WebView OAuth 回調，處理登入成功');
-            this.handleWebViewOAuthSuccess(accessToken);
-        } else if (error && state === 'webview_login') {
-            console.log('檢測到 WebView OAuth 錯誤:', error);
-            this.handleLoginFailure(new Error(error));
-        }
-    }
-    
-    // 處理 WebView OAuth 成功回調
-    async handleWebViewOAuthSuccess(accessToken) {
-        try {
-            // 使用 access token 獲取用戶資訊
-            const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`
-                }
-            });
-            
-            if (!userInfoResponse.ok) {
-                throw new Error('無法獲取用戶資訊');
-            }
-            
-            const userInfo = await userInfoResponse.json();
-            
-            // 構造 JWT 格式的憑證（模擬 Google Identity Services 的格式）
-            const credential = this.constructJWTFromUserInfo(userInfo, accessToken);
-            
-            // 處理登入成功
-            await this.handleCredentialResponse({
-                credential: credential,
-                select_by: 'webview_oauth'
-            });
-            
-            // 清理 URL 參數
-            this.cleanupUrlParams();
-            
-        } catch (error) {
-            console.error('處理 WebView OAuth 成功回調失敗:', error);
-            this.handleLoginFailure(error);
-        }
-    }
-    
-    // 從用戶資訊構造 JWT 格式的憑證
-    constructJWTFromUserInfo(userInfo, accessToken) {
-        // 構造 JWT payload
-        const payload = {
-            iss: 'https://accounts.google.com',
-            sub: userInfo.id,
-            aud: this.clientId,
-            exp: Math.floor(Date.now() / 1000) + 3600, // 1小時後過期
-            iat: Math.floor(Date.now() / 1000),
-            name: userInfo.name,
-            given_name: userInfo.given_name,
-            family_name: userInfo.family_name,
-            picture: userInfo.picture,
-            email: userInfo.email,
-            email_verified: userInfo.verified_email,
-            locale: userInfo.locale
-        };
-        
-        // 構造 JWT（簡化版本，實際使用中可能需要更安全的處理）
-        const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-        const payloadEncoded = btoa(JSON.stringify(payload));
-        const signature = btoa('webview_signature'); // 簡化簽名
-        
-        return `${header}.${payloadEncoded}.${signature}`;
-    }
-    
-    // 清理 URL 參數
-    cleanupUrlParams() {
-        try {
-            const url = new URL(window.location.href);
-            url.search = '';
-            url.hash = '';
-            window.history.replaceState({}, document.title, url.toString());
-        } catch (error) {
-            console.warn('清理 URL 參數失敗:', error);
-        }
     }
     
     // 設置事件監聽器
@@ -598,22 +504,26 @@ class GoogleLoginComponent extends HTMLElement {
             // 嘗試與原生應用通信
             if (window.ReactNativeWebView) {
                 // React Native WebView
+                console.log('使用 React Native WebView 通信');
                 window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'GOOGLE_SIGN_IN',
                     clientId: this.clientId
                 }));
             } else if (window.webkit && window.webkit.messageHandlers) {
                 // iOS WKWebView
+                console.log('使用 iOS WKWebView 通信');
                 window.webkit.messageHandlers.googleSignIn.postMessage({
                     type: 'GOOGLE_SIGN_IN',
                     clientId: this.clientId
                 });
             } else if (window.Android) {
                 // Android WebView
+                console.log('使用 Android WebView 通信');
                 window.Android.googleSignIn(this.clientId);
             } else {
-                // 通用方式：嘗試通過 URL scheme 或 postMessage
-                this.tryUniversalWebViewLogin();
+                // 無法與原生應用通信，顯示錯誤
+                console.error('WebView 環境中無法與原生應用通信');
+                this.handleLoginFailure(new Error('WebView 環境需要原生應用支援 Google 登入'));
             }
         };
     }
@@ -649,29 +559,7 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
-    // 嘗試通用 WebView 登入方式
-    tryUniversalWebViewLogin() {
-        console.log('嘗試通用 WebView 登入方式');
-        
-        // 構造 Google OAuth2 授權 URL
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/auth?` +
-            `client_id=${encodeURIComponent(this.clientId)}&` +
-            `redirect_uri=${encodeURIComponent(window.location.origin + window.location.pathname)}&` +
-            `response_type=token&` +
-            `scope=${encodeURIComponent('openid email profile')}&` +
-            `state=${encodeURIComponent('webview_login')}&` +
-            `prompt=select_account`;
-        
-        try {
-            // WebView 環境：直接在當前窗口打開
-            console.log('在 WebView 中打開 Google 登入頁面');
-            window.location.href = googleAuthUrl;
-            
-        } catch (error) {
-            console.error('無法打開 Google 登入頁面:', error);
-            this.handleLoginFailure(new Error('WebView 環境不支援 Google 登入'));
-        }
-    }
+    // 移除通用 WebView 登入方式（不再使用重定向 URI）
     
     // Google 服務載入完成後的回調
     onGoogleLoaded() {
