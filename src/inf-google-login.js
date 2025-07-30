@@ -880,14 +880,24 @@ class GoogleLoginComponent extends HTMLElement {
         if (window.google && window.google.accounts) {
             console.log('Google 服務已載入，調用 prompt()');
             
+            // 檢查是否有活躍的 Google 會話
+            const hasActiveSession = this.checkGoogleSession();
+            
             // 在 WebView 中使用更穩定的方式觸發登入
             try {
                 // 先嘗試使用標準的 prompt 方法
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed()) {
                         console.log('Google 登入提示未顯示:', notification.getNotDisplayedReason());
-                        // 如果無法顯示，嘗試其他方式
-                        this.fallbackGoogleSignIn();
+                        
+                        // 如果是因為沒有活躍會話，嘗試重新初始化
+                        if (notification.getNotDisplayedReason() === 'no_session') {
+                            console.log('沒有活躍會話，嘗試重新初始化');
+                            this.reinitializeGoogleSignIn();
+                        } else {
+                            // 如果無法顯示，嘗試其他方式
+                            this.fallbackGoogleSignIn();
+                        }
                     } else if (notification.isSkippedMoment()) {
                         console.log('Google 登入被跳過:', notification.getSkippedReason());
                     } else if (notification.isDismissedMoment()) {
@@ -900,6 +910,47 @@ class GoogleLoginComponent extends HTMLElement {
             }
         } else {
             console.error('Google 服務尚未載入');
+        }
+    }
+    
+    // 檢查 Google 會話狀態
+    checkGoogleSession() {
+        try {
+            // 檢查是否有 Google 相關的 cookie
+            const cookies = document.cookie.split(';');
+            const googleCookies = cookies.filter(cookie => 
+                cookie.trim().startsWith('G_AUTHUSER_') || 
+                cookie.trim().startsWith('SID=') ||
+                cookie.trim().startsWith('SSID=')
+            );
+            
+            console.log('Google 會話檢查:', googleCookies.length > 0 ? '有活躍會話' : '無活躍會話');
+            return googleCookies.length > 0;
+        } catch (error) {
+            console.warn('檢查 Google 會話失敗:', error);
+            return false;
+        }
+    }
+    
+    // 重新初始化 Google 登入
+    reinitializeGoogleSignIn() {
+        console.log('重新初始化 Google 登入');
+        try {
+            // 清除現有配置
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.cancel();
+            }
+            
+            // 重新初始化
+            this.onGoogleLoaded();
+            
+            // 延遲後再次嘗試
+            setTimeout(() => {
+                this.triggerGoogleSignIn();
+            }, 1000);
+        } catch (error) {
+            console.error('重新初始化失敗:', error);
+            this.fallbackGoogleSignIn();
         }
     }
     
@@ -1825,7 +1876,11 @@ class GoogleLoginComponent extends HTMLElement {
                 // 確保在 WebKit 中正常工作
                 hosted_domain: null,
                 login_hint: null,
-                prompt: 'select_account'
+                prompt: 'select_account',
+                // 修復空會話問題
+                auto_prompt: false,
+                state: 'google_signin',
+                scope: 'openid email profile'
             };
             
             // 在 WebKit WebView 中使用特殊配置
