@@ -180,23 +180,29 @@
                 iosVersion = `${iosMatch[1]}.${iosMatch[2]}`;
             }
             
-            // WebView 類型
+            // WebView 類型 - 更精確的 iOS 檢測
             let webviewType = '未知';
-            if ((userAgent.includes('iPhone') || userAgent.includes('iPad')) && userAgent.includes('webkit')) {
-                webviewType = 'iOS WebKit WebView';
+            if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+                if (userAgent.includes('webkit')) {
+                    webviewType = 'iOS WebKit WebView';
+                } else if (userAgent.includes('mozilla')) {
+                    webviewType = 'iOS 原生 WebView';
+                } else if (window.webkit && window.webkit.messageHandlers) {
+                    webviewType = 'WKWebView';
+                } else {
+                    webviewType = 'iOS WebView';
+                }
             } else if (userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome')) {
                 webviewType = 'iOS Safari WebView';
             } else if (window.webkit && window.webkit.messageHandlers) {
                 webviewType = 'WKWebView';
-            } else if ((userAgent.includes('iPhone') || userAgent.includes('iPad')) && userAgent.includes('mozilla')) {
-                webviewType = 'iOS 原生 WebView';
             }
             
-            // WebKit 狀態
+            // WebKit 狀態 - 更寬鬆的檢測
             const isWebKit = (
                 userAgent.includes('webkit') && !userAgent.includes('chrome') ||
-                (userAgent.includes('iPhone') || userAgent.includes('iPad')) && userAgent.includes('webkit') ||
-                (userAgent.includes('iPhone') || userAgent.includes('iPad')) && userAgent.includes('mozilla')
+                userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') ||
+                (userAgent.includes('mobile') && userAgent.includes('safari'))
             );
             
             // 更新顯示
@@ -278,6 +284,13 @@
         document.addEventListener('navigate-to-profile', (event) => {
             console.log('📱 導航到個人資料頁', event.detail);
             addLogEntry('📱 導航到個人資料頁', 'info');
+        });
+        
+        // 監聽 Google 服務不可用事件
+        document.addEventListener('google-services-unavailable', (event) => {
+            console.log('⚠️ Google 服務不可用！', event.detail);
+            addLogEntry(`⚠️ ${event.detail.message}`, 'warning');
+            addLogEntry('建議使用備用登入方式或檢查網路連接', 'warning');
         });
         
         // 頁面載入完成

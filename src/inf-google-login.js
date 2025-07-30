@@ -757,28 +757,29 @@ class GoogleLoginComponent extends HTMLElement {
             // 添加到文檔頭部
             document.head.appendChild(script);
             
-            // WebKit WebView 特殊處理
+            // iOS WebView 特殊處理
             if (this.isInWebKitWebView()) {
-                console.log('檢測到 WebKit WebView 環境，使用特殊載入策略');
+                console.log('檢測到 iOS WebView 環境，使用特殊載入策略');
                 
-                // 在 iOS WebView 中，需要更長的時間來確保腳本完全載入
+                // 在 iOS WebView 中，使用更積極的檢查策略
+                let checkCount = 0;
+                const maxChecks = 40; // 最多檢查 20 秒
+                
                 const checkInterval = setInterval(() => {
+                    checkCount++;
+                    console.log(`iOS WebView 檢查 Google 服務載入狀態 (${checkCount}/${maxChecks})`);
+                    
                     if (window.google && window.google.accounts) {
                         this.isGoogleLoaded = true;
                         this.onGoogleLoaded();
                         clearInterval(checkInterval);
-                        console.log('WebKit WebView 中 Google 服務載入成功');
+                        console.log('iOS WebView 中 Google 服務載入成功');
+                    } else if (checkCount >= maxChecks) {
+                        clearInterval(checkInterval);
+                        console.warn('iOS WebView 中 Google 服務載入超時，嘗試備用方案');
+                        this.tryAlternativeGoogleLoad();
                     }
                 }, 500);
-                
-                // 設置超時檢查
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    if (!this.isGoogleLoaded) {
-                        console.warn('WebKit WebView 中 Google 服務載入超時，嘗試重新載入');
-                        this.retryLoadGoogleServices();
-                    }
-                }, 10000);
                 
             } else if (this.isInWebView()) {
                 console.log('檢測到一般 WebView 環境，使用標準載入策略');
@@ -814,6 +815,81 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
+    // 嘗試備用 Google 載入方案
+    tryAlternativeGoogleLoad() {
+        console.log('嘗試備用 Google 載入方案');
+        try {
+            // 方案1: 使用不同的腳本載入方式
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client?onload=googleLoaded';
+            script.async = true;
+            
+            // 定義全局回調
+            window.googleLoaded = () => {
+                console.log('備用方案載入成功');
+                this.isGoogleLoaded = true;
+                this.onGoogleLoaded();
+            };
+            
+            // 腳本載入失敗處理
+            script.onerror = () => {
+                console.warn('備用方案1失敗，嘗試方案2');
+                this.tryAlternativeGoogleLoad2();
+            };
+            
+            document.head.appendChild(script);
+            
+        } catch (error) {
+            console.error('備用方案1失敗:', error);
+            this.tryAlternativeGoogleLoad2();
+        }
+    }
+    
+    // 備用方案2: 使用 JSONP 方式
+    tryAlternativeGoogleLoad2() {
+        console.log('嘗試備用方案2: JSONP 載入');
+        try {
+            // 創建一個隱藏的 iframe 來載入 Google 服務
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'https://accounts.google.com/gsi/client';
+            
+            iframe.onload = () => {
+                console.log('備用方案2 iframe 載入完成');
+                // 檢查是否成功載入
+                setTimeout(() => {
+                    if (window.google && window.google.accounts) {
+                        this.isGoogleLoaded = true;
+                        this.onGoogleLoaded();
+                    } else {
+                        console.warn('備用方案2也失敗，使用最後方案');
+                        this.useFallbackLogin();
+                    }
+                }, 2000);
+            };
+            
+            document.body.appendChild(iframe);
+            
+        } catch (error) {
+            console.error('備用方案2失敗:', error);
+            this.useFallbackLogin();
+        }
+    }
+    
+    // 最後方案: 使用備用登入方式
+    useFallbackLogin() {
+        console.log('使用備用登入方式');
+        // 觸發事件通知父組件使用備用登入
+        this.dispatchEvent(new CustomEvent('google-services-unavailable', {
+            detail: {
+                message: 'Google 服務無法載入，請使用備用登入方式',
+                timestamp: new Date().toISOString()
+            },
+            bubbles: true,
+            composed: true
+        }));
+    }
+    
     // 檢測是否在 WebView 中
     isInWebView() {
         const userAgent = navigator.userAgent.toLowerCase();
@@ -840,8 +916,10 @@ class GoogleLoginComponent extends HTMLElement {
             window.webkit && window.webkit.messageHandlers ||
             // 其他 WebKit 環境
             userAgent.includes('webkit') && !userAgent.includes('chrome') ||
-            // iOS 原生 WebView 檢測
-            (userAgent.includes('iphone') || userAgent.includes('ipad')) && userAgent.includes('mozilla')
+            // iOS 原生 WebView 檢測 - 更寬鬆的檢測
+            (userAgent.includes('iphone') || userAgent.includes('ipad')) ||
+            // 任何 iOS 設備
+            userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')
         );
     }
     
