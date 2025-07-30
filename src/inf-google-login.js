@@ -294,16 +294,31 @@ class GoogleLoginComponent extends HTMLElement {
     // 渲染 Google 登入按鈕
     renderGoogleLoginButton() {
         const container = this.shadowRoot.getElementById('google-login-button-container');
-        if (!container || !window.google || !window.google.accounts) {
-            console.warn('無法渲染 Google 登入按鈕：Google 服務未載入');
+        if (!container) {
+            console.warn('找不到 Google 登入按鈕容器');
+            return;
+        }
+        
+        // 清空容器
+        container.innerHTML = '';
+        
+        // 檢查是否在 WebKit WebView 中
+        const isWebKitWebView = this.isInWebKitWebView();
+        
+        if (isWebKitWebView) {
+            console.log('檢測到 WebKit WebView，使用備用登入按鈕');
+            this.renderFallbackButton(container);
+            return;
+        }
+        
+        if (!window.google || !window.google.accounts) {
+            console.warn('Google 服務未載入，使用備用按鈕');
+            this.renderFallbackButton(container);
             return;
         }
         
         try {
-            // 清空容器
-            container.innerHTML = '';
-            
-            // 渲染 Google 登入按鈕
+            // 嘗試渲染 Google 官方登入按鈕
             window.google.accounts.id.renderButton(container, {
                 type: 'standard',
                 theme: 'outline',
@@ -315,9 +330,18 @@ class GoogleLoginComponent extends HTMLElement {
             });
             
             console.log('Google 登入按鈕已渲染');
+            
+            // 檢查按鈕是否真的被渲染
+            setTimeout(() => {
+                const googleButton = container.querySelector('[data-testid="google-signin-button"], .google-signin-button, iframe');
+                if (!googleButton) {
+                    console.warn('Google 按鈕渲染可能失敗，使用備用按鈕');
+                    this.renderFallbackButton(container);
+                }
+            }, 1000);
+            
         } catch (error) {
             console.error('渲染 Google 登入按鈕失敗:', error);
-            // 如果渲染失敗，顯示備用按鈕
             this.renderFallbackButton(container);
         }
     }
@@ -325,7 +349,7 @@ class GoogleLoginComponent extends HTMLElement {
     // 渲染備用登入按鈕
     renderFallbackButton(container) {
         container.innerHTML = `
-            <button style="
+            <button id="fallback-google-button" style="
                 background-color: #4285f4;
                 color: white;
                 border: none;
@@ -339,8 +363,9 @@ class GoogleLoginComponent extends HTMLElement {
                 gap: 8px;
                 min-width: 200px;
                 justify-content: center;
-            " onclick="this.getRootNode().host.triggerGoogleSignIn()">
-                <svg width="18" height="18" viewBox="0 0 24 24">
+                transition: background-color 0.2s ease;
+            " onmouseover="this.style.backgroundColor='#3367d6'" onmouseout="this.style.backgroundColor='#4285f4'">
+                <svg width="18" height="18" viewBox="0 0 24 24" style="flex-shrink: 0;">
                     <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -349,6 +374,17 @@ class GoogleLoginComponent extends HTMLElement {
                 使用 Google 登入
             </button>
         `;
+        
+        // 添加點擊事件監聽器
+        const button = container.querySelector('#fallback-google-button');
+        if (button) {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                console.log('點擊備用 Google 登入按鈕');
+                this.triggerGoogleSignIn();
+            });
+        }
     }
     
     // 進入個人資料頁
@@ -367,6 +403,14 @@ class GoogleLoginComponent extends HTMLElement {
     // 觸發 Google 登入
     triggerGoogleSignIn() {
         console.log('觸發 Google 登入');
+        
+        // 檢查是否在 WebKit WebView 中
+        if (this.isInWebKitWebView()) {
+            console.log('在 WebKit WebView 中，使用備用登入方式');
+            this.handleWebKitWebViewSignIn();
+            return;
+        }
+        
         if (window.google && window.google.accounts) {
             console.log('Google 服務已載入，調用 prompt()');
             
@@ -390,6 +434,53 @@ class GoogleLoginComponent extends HTMLElement {
             }
         } else {
             console.error('Google 服務尚未載入');
+            this.handleWebKitWebViewSignIn();
+        }
+    }
+    
+    // 處理 WebKit WebView 中的登入
+    handleWebKitWebViewSignIn() {
+        console.log('使用 WebKit WebView 專用登入方式');
+        
+        // 在 WebKit WebView 中，我們需要通知原生 App 來處理 Google 登入
+        if (window.webkit && window.webkit.messageHandlers) {
+            try {
+                // 發送消息給原生 App
+                window.webkit.messageHandlers.googleSignIn.postMessage({
+                    clientId: this.clientId,
+                    action: 'signIn'
+                });
+                console.log('已發送 Google 登入請求給原生 App');
+            } catch (error) {
+                console.error('發送消息給原生 App 失敗:', error);
+                this.showWebKitWebViewInstructions();
+            }
+        } else {
+            this.showWebKitWebViewInstructions();
+        }
+    }
+    
+    // 顯示 WebKit WebView 使用說明
+    showWebKitWebViewInstructions() {
+        const container = this.shadowRoot.getElementById('google-login-button-container');
+        if (container) {
+            container.innerHTML = `
+                <div style="
+                    background-color: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin: 10px 0;
+                    text-align: center;
+                    color: #856404;
+                ">
+                    <h4 style="margin: 0 0 10px 0;">🌐 WebView 登入說明</h4>
+                    <p style="margin: 0; font-size: 14px;">
+                        在 WebView 中，Google 登入需要原生 App 支援。<br>
+                        請聯繫開發者啟用 WebView 中的 Google 登入功能。
+                    </p>
+                </div>
+            `;
         }
     }
     
@@ -647,6 +738,14 @@ class GoogleLoginComponent extends HTMLElement {
                 return;
             }
             
+            // 檢查是否在 WebKit WebView 中
+            const isWebKitWebView = this.isInWebKitWebView();
+            if (isWebKitWebView) {
+                console.log('檢測到 WebKit WebView，跳過 Google Identity Services 載入');
+                this.isGoogleLoaded = false;
+                return;
+            }
+            
             // 動態載入 Google Identity Services 腳本
             const script = document.createElement('script');
             script.src = 'https://accounts.google.com/gsi/client';
@@ -661,7 +760,8 @@ class GoogleLoginComponent extends HTMLElement {
             
             // 腳本載入失敗
             script.onerror = () => {
-                this.handleError('無法載入 Google Identity Services');
+                console.warn('無法載入 Google Identity Services，將使用備用登入方式');
+                this.isGoogleLoaded = false;
             };
             
             // 添加到文檔頭部
@@ -680,7 +780,8 @@ class GoogleLoginComponent extends HTMLElement {
             }
             
         } catch (error) {
-            this.handleError('載入 Google 服務時發生錯誤: ' + error.message);
+            console.warn('載入 Google 服務時發生錯誤: ' + error.message);
+            this.isGoogleLoaded = false;
         }
     }
     
@@ -693,6 +794,22 @@ class GoogleLoginComponent extends HTMLElement {
             userAgent.includes('webview') || // 其他 WebView
             window.ReactNativeWebView || // React Native WebView
             window.webkit && window.webkit.messageHandlers // iOS WKWebView
+        );
+    }
+    
+    // 檢測是否在 WebKit WebView 中
+    isInWebKitWebView() {
+        const userAgent = navigator.userAgent.toLowerCase();
+        return (
+            // iOS WKWebView
+            (userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome')) ||
+            // 明確的 WebKit WebView 標識
+            userAgent.includes('webkit') && (userAgent.includes('mobile') || userAgent.includes('webview')) ||
+            // 檢查 webkit 對象
+            window.webkit && window.webkit.messageHandlers ||
+            // 檢查是否在 iOS 環境
+            (navigator.platform && navigator.platform.toLowerCase().includes('iphone')) ||
+            (navigator.platform && navigator.platform.toLowerCase().includes('ipad'))
         );
     }
     
