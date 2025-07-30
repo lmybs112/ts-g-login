@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Login in WebView</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #logoutButton { display: none; margin-top: 20px; padding: 10px 20px; }
+        #userInfo { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="g_id_onload"
+         data-client_id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="sign_in_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
+    </div>
+    <button id="logoutButton" onclick="logout()">登出</button>
+    <div id="userInfo"></div>
+
+    <script>
+        let authInstance = null;
+
+        // 處理 Google 登入回應
+        function handleCredentialResponse(response) {
+            const idToken = response.credential;
+            // 解析 ID Token
+            const decodedToken = parseJwt(idToken);
+            // 顯示用戶資訊
+            displayUserInfo(decodedToken);
+            // 顯示登出按鈕
+            document.getElementById('logoutButton').style.display = 'block';
+            // 隱藏登入按鈕
+            document.querySelector('.g_id_signin').style.display = 'none';
+            // 初始化 Google Auth 實例
+            authInstance = google.accounts.oauth2.initTokenClient({
+                client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
+                scope: 'email profile'
+            });
+            // 可選：將 token 發送到後端
+            /*
+            fetch('https://your-backend.com/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: idToken })
+            })
+            .then(response => response.json())
+            .then(data => console.log('Backend response:', data))
+            .catch(error => console.error('Error:', error));
+            */
+        }
+
+        // 解析 JWT Token
+        function parseJwt(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        // 顯示用戶資訊
+        function displayUserInfo(tokenData) {
+            const userInfoDiv = document.getElementById('userInfo');
+            userInfoDiv.innerHTML = `
+                <p>登入成功！</p>
+                <p>用戶名: ${tokenData.name || '未知'}</p>
+                <p>電子郵件: ${tokenData.email || '未知'}</p>
+                <p>ID Token: ${tokenData.sub}</p>
+            `;
+        }
+
+        // 登出功能
+        function logout() {
+            if (authInstance) {
+                google.accounts.id.disableAutoSelect();
+                google.accounts.id.revoke(tokenData.sub, done => {
+                    console.log('User signed out');
+                });
+            }
+            // 清空用戶資訊
+            document.getElementById('userInfo').innerHTML = '';
+            // 隱藏登出按鈕
+            document.getElementById('logoutButton').style.display = 'none';
+            // 顯示登入按鈕
+            document.querySelector('.g_id_signin').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
