@@ -3,132 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebView 登入測試</title>
+    <title>WebView Google 登入測試</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
+            max-width: 600px;
+            margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
         }
-        
         .container {
-            max-width: 600px;
-            margin: 0 auto;
             background: white;
             padding: 30px;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
         h1 {
             color: #333;
             text-align: center;
             margin-bottom: 30px;
         }
-        
-        .demo-section {
+        .info-section {
             margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .component-section {
+            text-align: center;
+            margin: 30px 0;
             padding: 20px;
-            border: 1px solid #e0e0e0;
+            border: 2px dashed #ddd;
             border-radius: 8px;
         }
-        
         .status {
             margin: 10px 0;
             padding: 10px;
             border-radius: 4px;
             font-family: monospace;
             background-color: #f8f9fa;
-            border-left: 4px solid #007bff;
         }
-        
         .webview-info {
             background-color: #e7f3ff;
-            border-left: 4px solid #007bff;
-        }
-        
-        .test-buttons {
-            display: flex;
-            gap: 10px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-        
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        button:hover {
-            background-color: #0056b3;
-        }
-        
-        button.danger {
-            background-color: #dc3545;
-        }
-        
-        button.danger:hover {
-            background-color: #c82333;
-        }
-        
-        .log {
-            background-color: #f8f9fa;
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
+            border: 1px solid #b3d9ff;
             padding: 10px;
+            border-radius: 4px;
             margin: 10px 0;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🌐 WebView 登入測試</h1>
+        <h1>📱 WebView Google 登入測試</h1>
         
-        <div class="demo-section">
-            <h2>環境檢測</h2>
-            <div class="status webview-info" id="environmentInfo">
-                正在檢測環境...
+        <div class="info-section">
+            <h3>WebView 環境檢測</h3>
+            <div id="webviewDetection" class="webview-info">
+                正在檢測 WebView 環境...
             </div>
         </div>
         
-        <div class="demo-section">
-            <h2>Google 登入組件</h2>
-            <p>點擊頭像進行登入測試：</p>
+        <div class="component-section">
+            <h3>Google 登入組件</h3>
+            <p>點擊下方頭像進行測試：</p>
             
+            <!-- Google 登入 Web Component -->
             <google-login 
                 client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com">
             </google-login>
-            
-            <div class="status" id="loginStatus">
-                等待登入...
-            </div>
         </div>
         
-        <div class="demo-section">
-            <h2>使用說明</h2>
-            <p>在 WebView 環境中，組件會自動檢測並使用備用方案：</p>
+        <div class="info-section">
+            <h3>測試說明</h3>
             <ul>
-                <li>點擊頭像時會觸發 <code>webview-google-login</code> 事件</li>
-                <li>原生應用需要監聽此事件並處理 Google 登入</li>
-                <li>登入完成後調用 <code>handleWebViewLoginResult()</code> 回傳結果</li>
+                <li><strong>WebView 檢測</strong>：組件會自動檢測是否在 WebView 環境中</li>
+                <li><strong>原生應用通信</strong>：支援 React Native、iOS WKWebView、Android WebView</li>
+                <li><strong>OAuth 回調</strong>：支援通過 URL 參數處理 OAuth 回調</li>
+                <li><strong>通用方式</strong>：如果無法與原生應用通信，會使用 OAuth2 授權流程</li>
             </ul>
-            
-            <button onclick="clearLog()" class="danger">清除日誌</button>
         </div>
         
-        <div class="demo-section">
-            <h2>事件日誌</h2>
-            <div class="log" id="log"></div>
+        <div class="status" id="loginStatus">
+            等待登入...
+        </div>
+        
+        <div class="status" id="userInfo" style="display: none;">
+            <h3>登入用戶信息：</h3>
+            <pre id="userDetails"></pre>
         </div>
     </div>
 
@@ -136,83 +98,92 @@
     <script src="src/inf-google-login.js"></script>
 
     <script>
-        const logElement = document.getElementById('log');
-        const environmentInfo = document.getElementById('environmentInfo');
-        const loginStatus = document.getElementById('loginStatus');
-        
-        function log(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = `[${timestamp}] ${message}\n`;
-            logElement.textContent += logEntry;
-            logElement.scrollTop = logElement.scrollHeight;
-            console.log(message);
-        }
-        
-        function clearLog() {
-            logElement.textContent = '';
-        }
-        
-        // 檢測環境
-        function detectEnvironment() {
-            const userAgent = navigator.userAgent;
-            const isWebView = userAgent.toLowerCase().includes('wv') || 
-                             userAgent.toLowerCase().includes('webview') ||
-                             window !== window.top;
+        // 檢測 WebView 環境
+        function detectWebView() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const webViewPatterns = [
+                'wv', 'webview', 'mobile safari', 'android', 'iphone', 'ipad', 'ipod',
+                'cordova', 'phonegap', 'ionic', 'capacitor', 'react-native', 'flutter'
+            ];
             
-            const environment = isWebView ? 'WebView 環境' : '一般瀏覽器環境';
-            environmentInfo.textContent = `環境: ${environment} | User-Agent: ${userAgent}`;
+            const isWebView = webViewPatterns.some(pattern => userAgent.includes(pattern));
+            const detectionDiv = document.getElementById('webviewDetection');
             
-            log(`環境檢測: ${environment}`);
-            return isWebView;
+            if (isWebView) {
+                detectionDiv.innerHTML = `
+                    <strong>✅ 檢測到 WebView 環境</strong><br>
+                    User Agent: ${navigator.userAgent}<br>
+                    將使用 WebView 特定的登入方式
+                `;
+                detectionDiv.style.backgroundColor = '#d4edda';
+                detectionDiv.style.borderColor = '#c3e6cb';
+            } else {
+                detectionDiv.innerHTML = `
+                    <strong>ℹ️ 一般瀏覽器環境</strong><br>
+                    User Agent: ${navigator.userAgent}<br>
+                    將使用標準 Google Identity Services
+                `;
+                detectionDiv.style.backgroundColor = '#fff3cd';
+                detectionDiv.style.borderColor = '#ffeaa7';
+            }
         }
         
-
-        
-        // 監聽組件事件
+        // 監聽登入成功事件
         document.addEventListener('google-login-success', (event) => {
-            log('🎉 Google 登入成功');
-            log(`用戶: ${event.detail.user?.name || '未知'}`);
-            loginStatus.textContent = '✅ 登入成功！';
-            loginStatus.style.backgroundColor = '#d4edda';
-            loginStatus.style.color = '#155724';
+            console.log('登入成功！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            const userInfoEl = document.getElementById('userInfo');
+            const userDetailsEl = document.getElementById('userDetails');
+            
+            statusEl.textContent = '✅ 登入成功！';
+            statusEl.style.backgroundColor = '#d4edda';
+            statusEl.style.color = '#155724';
+            
+            // 解析 JWT token
+            try {
+                const payload = JSON.parse(atob(event.detail.credential.split('.')[1]));
+                userDetailsEl.textContent = JSON.stringify(payload, null, 2);
+                userInfoEl.style.display = 'block';
+            } catch (error) {
+                console.error('解析 JWT 失敗:', error);
+                userDetailsEl.textContent = '無法解析憑證，但登入成功';
+                userInfoEl.style.display = 'block';
+            }
         });
-        
+
+        // 監聽登入失敗事件
         document.addEventListener('google-login-failure', (event) => {
-            log('❌ Google 登入失敗: ' + event.detail.error);
-            loginStatus.textContent = '❌ 登入失敗: ' + event.detail.error;
-            loginStatus.style.backgroundColor = '#f8d7da';
-            loginStatus.style.color = '#721c24';
+            console.log('登入失敗！', event.detail);
+            
+            const statusEl = document.getElementById('loginStatus');
+            statusEl.textContent = '❌ 登入失敗: ' + (event.detail.error || '未知錯誤');
+            statusEl.style.backgroundColor = '#f8d7da';
+            statusEl.style.color = '#721c24';
         });
         
+        // 監聽登出事件
         document.addEventListener('google-logout', (event) => {
-            log('👋 Google 登出成功');
-            loginStatus.textContent = '👋 已登出';
-            loginStatus.style.backgroundColor = '#f8f9fa';
-            loginStatus.style.color = '#6c757d';
+            console.log('登出成功！');
+            
+            const statusEl = document.getElementById('loginStatus');
+            const userInfoEl = document.getElementById('userInfo');
+            
+            statusEl.textContent = '👋 已登出';
+            statusEl.style.backgroundColor = '#d1ecf1';
+            statusEl.style.color = '#0c5460';
+            userInfoEl.style.display = 'none';
         });
         
+        // 監聽導航到個人資料事件
         document.addEventListener('navigate-to-profile', (event) => {
-            log('📱 導航到個人資料頁');
-            log(`用戶資訊: ${JSON.stringify(event.detail.user)}`);
+            console.log('導航到個人資料頁', event.detail);
+            alert('導航到個人資料頁\n用戶: ' + (event.detail.user?.name || '未知'));
         });
         
-        // WebView 特定事件
-        document.addEventListener('webview-google-login', (event) => {
-            log('🌐 WebView 登入請求');
-            log(`Client ID: ${event.detail.clientId}`);
-            log(`Action: ${event.detail.action}`);
-        });
-        
-        document.addEventListener('webview-google-logout', (event) => {
-            log('🌐 WebView 登出請求');
-            log(`Action: ${event.detail.action}`);
-        });
-        
-        // 頁面載入
+        // 頁面載入時檢測 WebView 環境
         document.addEventListener('DOMContentLoaded', () => {
-            log('🚀 頁面已載入');
-            detectEnvironment();
-            log('請點擊頭像進行測試');
+            detectWebView();
         });
     </script>
 </body>
