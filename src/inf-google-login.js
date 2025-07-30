@@ -220,6 +220,26 @@ class GoogleLoginComponent extends HTMLElement {
                 this.hideDropdown();
             }
         });
+        
+        // 設置登入畫面關閉按鈕
+        const closeLoginModal = this.shadowRoot.getElementById('close-login-modal');
+        if (closeLoginModal) {
+            closeLoginModal.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideLoginModal();
+            });
+        }
+        
+        // 點擊登入畫面背景關閉
+        const loginModal = this.shadowRoot.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.addEventListener('click', (event) => {
+                if (event.target === loginModal) {
+                    this.hideLoginModal();
+                }
+            });
+        }
     }
     
     // 處理頭像點擊
@@ -231,9 +251,9 @@ class GoogleLoginComponent extends HTMLElement {
             console.log('用戶已登入，顯示下拉選單');
             this.toggleDropdown();
         } else {
-            // 未登入：觸發 Google 登入
-            console.log('用戶未登入，觸發 Google 登入');
-            this.triggerGoogleSignIn();
+            // 未登入：顯示登入畫面
+            console.log('用戶未登入，顯示登入畫面');
+            this.showLoginModal();
         }
     }
     
@@ -251,6 +271,84 @@ class GoogleLoginComponent extends HTMLElement {
         if (dropdownMenu) {
             dropdownMenu.classList.remove('show');
         }
+    }
+    
+    // 顯示登入畫面
+    showLoginModal() {
+        const loginModal = this.shadowRoot.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.classList.add('show');
+            // 渲染 Google 登入按鈕
+            this.renderGoogleLoginButton();
+        }
+    }
+    
+    // 隱藏登入畫面
+    hideLoginModal() {
+        const loginModal = this.shadowRoot.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.classList.remove('show');
+        }
+    }
+    
+    // 渲染 Google 登入按鈕
+    renderGoogleLoginButton() {
+        const container = this.shadowRoot.getElementById('google-login-button-container');
+        if (!container || !window.google || !window.google.accounts) {
+            console.warn('無法渲染 Google 登入按鈕：Google 服務未載入');
+            return;
+        }
+        
+        try {
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 渲染 Google 登入按鈕
+            window.google.accounts.id.renderButton(container, {
+                type: 'standard',
+                theme: 'outline',
+                size: 'large',
+                text: 'signin_with',
+                shape: 'rectangular',
+                logo_alignment: 'left',
+                width: 300
+            });
+            
+            console.log('Google 登入按鈕已渲染');
+        } catch (error) {
+            console.error('渲染 Google 登入按鈕失敗:', error);
+            // 如果渲染失敗，顯示備用按鈕
+            this.renderFallbackButton(container);
+        }
+    }
+    
+    // 渲染備用登入按鈕
+    renderFallbackButton(container) {
+        container.innerHTML = `
+            <button style="
+                background-color: #4285f4;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 4px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 200px;
+                justify-content: center;
+            " onclick="this.getRootNode().host.triggerGoogleSignIn()">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                使用 Google 登入
+            </button>
+        `;
     }
     
     // 進入個人資料頁
@@ -432,6 +530,80 @@ class GoogleLoginComponent extends HTMLElement {
                 .dropdown-item.logout:hover {
                     background-color: #f8d7da;
                 }
+                
+                /* 登入畫面樣式 */
+                .login-modal {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    display: none;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                }
+                
+                .login-modal.show {
+                    display: flex;
+                }
+                
+                .login-container {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 30px;
+                    max-width: 400px;
+                    width: 90%;
+                    text-align: center;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                }
+                
+                .login-header {
+                    margin-bottom: 25px;
+                }
+                
+                .login-title {
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: #333;
+                    margin-bottom: 10px;
+                }
+                
+                .login-subtitle {
+                    font-size: 14px;
+                    color: #666;
+                    margin-bottom: 20px;
+                }
+                
+                .google-login-button-container {
+                    margin: 20px 0;
+                    display: flex;
+                    justify-content: center;
+                }
+                
+                .close-button {
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #999;
+                    padding: 5px;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .close-button:hover {
+                    background-color: #f0f0f0;
+                    color: #333;
+                }
             </style>
             
             <div class="avatar-container" id="avatar-container">
@@ -443,6 +615,22 @@ class GoogleLoginComponent extends HTMLElement {
                     </div>
                     <div class="dropdown-item logout" id="logout-item">
                         🚪 登出
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 登入畫面 -->
+            <div class="login-modal" id="login-modal">
+                <div class="login-container">
+                    <button class="close-button" id="close-login-modal">×</button>
+                    
+                    <div class="login-header">
+                        <div class="login-title">歡迎回來</div>
+                        <div class="login-subtitle">請選擇您的登入方式</div>
+                    </div>
+                    
+                    <div class="google-login-button-container" id="google-login-button-container">
+                        <!-- Google 登入按鈕將在這裡渲染 -->
                     </div>
                 </div>
             </div>
@@ -532,7 +720,11 @@ class GoogleLoginComponent extends HTMLElement {
                 // 支援 WebView 的配置
                 context: 'signin', // 明確指定上下文
                 // 確保在 WebView 中正常工作
-                itp_support: true
+                itp_support: true,
+                // 支援 One Tap 登入
+                auto_select: false,
+                // 允許選擇帳號
+                select_account: true
             });
             
             console.log('Google Identity Services 初始化完成（WebView 相容模式）');
@@ -563,6 +755,9 @@ class GoogleLoginComponent extends HTMLElement {
             
             // 調用 infFITS API
             await this.callInfFitsAPI(response.credential);
+            
+            // 隱藏登入畫面
+            this.hideLoginModal();
             
             // 觸發成功事件
             this.dispatchEvent(new CustomEvent('google-login-success', {
