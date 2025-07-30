@@ -92,20 +92,27 @@ class GoogleLoginComponent extends HTMLElement {
         const defaultAvatar = this.shadowRoot.getElementById('default-avatar');
         const avatarImage = this.shadowRoot.getElementById('avatar-image');
         
-        if (this.isAuthenticated && this.userInfo && this.userInfo.picture) {
+        // 優先使用 API 回應中的 picture，如果沒有則使用 Google 用戶資訊中的 picture
+        let pictureUrl = null;
+        const apiResponse = this.getApiResponse();
+        
+        if (apiResponse && apiResponse.picture) {
+            pictureUrl = apiResponse.picture;
+            console.log('使用 API 回傳的 picture:', pictureUrl);
+        } else if (this.userInfo && this.userInfo.picture) {
+            pictureUrl = this.userInfo.picture;
+            console.log('使用 Google 用戶資訊的 picture:', pictureUrl);
+        }
+        
+        if (this.isAuthenticated && pictureUrl) {
             // 顯示用戶頭像
-            avatarImage.src = this.userInfo.picture;
+            avatarImage.src = pictureUrl;
             avatarImage.style.display = 'block';
             defaultAvatar.style.display = 'none';
         } else {
             // 顯示預設頭像
             avatarImage.style.display = 'none';
             defaultAvatar.style.display = 'flex';
-        }
-        
-        // 隱藏下拉選單（如果用戶登出）
-        if (!this.isAuthenticated) {
-            this.hideDropdown();
         }
     }
     
@@ -172,14 +179,16 @@ class GoogleLoginComponent extends HTMLElement {
         this.updateAvatar(); // 初始化頭像顯示
         this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
         this.loadGoogleIdentityServices();
+        
+        // Debug 模式：添加模擬登入按鈕（僅在開發環境）
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            this.addDebugButtons();
+        }
     }
     
     // 設置事件監聽器
     setupEventListeners() {
         const avatarContainer = this.shadowRoot.getElementById('avatar-container');
-        const dropdownMenu = this.shadowRoot.getElementById('dropdown-menu');
-        const profileItem = this.shadowRoot.getElementById('profile-item');
-        const logoutItem = this.shadowRoot.getElementById('logout-item');
         
         if (avatarContainer) {
             console.log('設置頭像點擊事件監聽器');
@@ -193,34 +202,6 @@ class GoogleLoginComponent extends HTMLElement {
             console.error('找不到頭像容器元素');
         }
         
-        // 設置下拉選單項目點擊事件
-        if (profileItem) {
-            profileItem.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                console.log('點擊個人資料');
-                this.navigateToProfile();
-                this.hideDropdown();
-            });
-        }
-        
-        if (logoutItem) {
-            logoutItem.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                console.log('點擊登出');
-                this.signOut();
-                this.hideDropdown();
-            });
-        }
-        
-        // 點擊外部關閉下拉選單
-        document.addEventListener('click', (event) => {
-            if (!this.shadowRoot.contains(event.target)) {
-                this.hideDropdown();
-            }
-        });
-        
         // 設置登入畫面關閉按鈕
         const closeLoginModal = this.shadowRoot.getElementById('close-login-modal');
         if (closeLoginModal) {
@@ -228,6 +209,16 @@ class GoogleLoginComponent extends HTMLElement {
                 event.preventDefault();
                 event.stopPropagation();
                 this.hideLoginModal();
+            });
+        }
+        
+        // 設置個人資訊畫面關閉按鈕
+        const closeProfileModal = this.shadowRoot.getElementById('close-profile-modal');
+        if (closeProfileModal) {
+            closeProfileModal.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideProfileModal();
             });
         }
         
@@ -240,6 +231,57 @@ class GoogleLoginComponent extends HTMLElement {
                 }
             });
         }
+        
+        // 點擊個人資訊畫面背景關閉
+        const profileModal = this.shadowRoot.getElementById('profile-modal');
+        if (profileModal) {
+            profileModal.addEventListener('click', (event) => {
+                if (event.target === profileModal) {
+                    this.hideProfileModal();
+                }
+            });
+        }
+        
+        // 設置返回按鈕
+        const backArrow = this.shadowRoot.getElementById('back-arrow');
+        if (backArrow) {
+            backArrow.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideLoginModal();
+            });
+        }
+        
+        const profileBackArrow = this.shadowRoot.getElementById('profile-back-arrow');
+        if (profileBackArrow) {
+            profileBackArrow.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideProfileModal();
+            });
+        }
+        
+        // 設置 Google 登入按鈕
+        const googleLoginButton = this.shadowRoot.getElementById('google-login-button');
+        if (googleLoginButton) {
+            googleLoginButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.triggerGoogleSignIn();
+            });
+        }
+        
+
+        
+        // 設置登出按鈕
+        const logoutButton = this.shadowRoot.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.handleLogout();
+            });
+        }
     }
     
     // 處理頭像點擊
@@ -247,9 +289,9 @@ class GoogleLoginComponent extends HTMLElement {
         console.log('處理頭像點擊，登入狀態:', this.isAuthenticated);
         
         if (this.isAuthenticated) {
-            // 已登入：顯示下拉選單
-            console.log('用戶已登入，顯示下拉選單');
-            this.toggleDropdown();
+            // 已登入：顯示個人資訊畫面
+            console.log('用戶已登入，顯示個人資訊畫面');
+            this.showProfileModal();
         } else {
             // 未登入：顯示登入畫面
             console.log('用戶未登入，顯示登入畫面');
@@ -257,150 +299,341 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
-    // 切換下拉選單顯示
-    toggleDropdown() {
-        const dropdownMenu = this.shadowRoot.getElementById('dropdown-menu');
-        if (dropdownMenu) {
-            dropdownMenu.classList.toggle('show');
-        }
-    }
-    
-    // 隱藏下拉選單
-    hideDropdown() {
-        const dropdownMenu = this.shadowRoot.getElementById('dropdown-menu');
-        if (dropdownMenu) {
-            dropdownMenu.classList.remove('show');
-        }
-    }
+
     
     // 顯示登入畫面
     showLoginModal() {
-        const loginModal = this.shadowRoot.getElementById('login-modal');
-        if (loginModal) {
-            loginModal.classList.add('show');
-            // 渲染 Google 登入按鈕
-            this.renderGoogleLoginButton();
+        // 查找目標容器
+        const targetContainer = document.getElementById('intro-content-advanced');
+        if (!targetContainer) {
+            console.error('找不到目標容器 #intro-content-advanced');
+            return;
         }
+        
+        // 隱藏原本內容
+        this.hideOriginalContent(targetContainer);
+        
+        // 創建並顯示登入畫面
+        this.showModalInContainer(targetContainer, 'login');
     }
     
     // 隱藏登入畫面
     hideLoginModal() {
-        const loginModal = this.shadowRoot.getElementById('login-modal');
-        if (loginModal) {
-            loginModal.classList.remove('show');
+        const targetContainer = document.getElementById('intro-content-advanced');
+        if (targetContainer) {
+            this.hideModalInContainer(targetContainer);
+            this.showOriginalContent(targetContainer);
         }
     }
     
-    // 渲染 Google 登入按鈕
-    renderGoogleLoginButton() {
-        const container = this.shadowRoot.getElementById('google-login-button-container');
-        if (!container || !window.google || !window.google.accounts) {
-            console.warn('無法渲染 Google 登入按鈕：Google 服務未載入');
+    // 顯示個人資訊畫面
+    showProfileModal() {
+        // 查找目標容器
+        const targetContainer = document.getElementById('intro-content-advanced');
+        if (!targetContainer) {
+            console.error('找不到目標容器 #intro-content-advanced');
             return;
         }
         
-        try {
-            // 清空容器
-            container.innerHTML = '';
-            
-            // 針對 WebKit WebView 的特殊按鈕配置
-            const buttonConfig = {
-                type: 'standard',
-                theme: 'outline',
-                size: 'large',
-                text: 'signin_with',
-                shape: 'rectangular',
-                logo_alignment: 'left',
-                width: 300
-            };
-            
-            // 在 WebKit WebView 中使用特殊配置
-            if (this.isInWebKitWebView()) {
-                console.log('在 WebKit WebView 中渲染按鈕，使用特殊配置');
-                buttonConfig.type = 'standard';
-                buttonConfig.theme = 'filled_blue';
-                buttonConfig.size = 'large';
-                buttonConfig.text = 'signin_with';
-                buttonConfig.shape = 'rectangular';
-                buttonConfig.logo_alignment = 'left';
-                buttonConfig.width = 300;
-                // 確保在 WebKit 中可見
-                buttonConfig.click_listener = () => {
-                    console.log('WebKit WebView 中的按鈕被點擊');
-                    this.triggerGoogleSignIn();
-                };
-            }
-            
-            // 渲染 Google 登入按鈕
-            window.google.accounts.id.renderButton(container, buttonConfig);
-            
-            console.log('Google 登入按鈕已渲染（WebKit 相容模式）');
-            
-            // 在 WebKit WebView 中添加額外的檢查
-            if (this.isInWebKitWebView()) {
-                setTimeout(() => {
-                    const button = container.querySelector('div[role="button"]');
-                    if (!button) {
-                        console.warn('WebKit WebView 中按鈕未正確渲染，使用備用方案');
-                        this.renderFallbackButton(container);
-                    } else {
-                        console.log('WebKit WebView 中按鈕渲染成功');
-                        // 確保按鈕在 iOS WebView 中可見
-                        button.style.display = 'block';
-                        button.style.visibility = 'visible';
-                        button.style.opacity = '1';
-                    }
-                }, 2000); // 增加等待時間
-            }
-            
-        } catch (error) {
-            console.error('渲染 Google 登入按鈕失敗:', error);
-            // 如果渲染失敗，顯示備用按鈕
-            this.renderFallbackButton(container);
+        // 隱藏原本內容
+        this.hideOriginalContent(targetContainer);
+        
+        // 創建並顯示個人資訊畫面
+        this.showModalInContainer(targetContainer, 'profile');
+    }
+    
+    // 隱藏個人資訊畫面
+    hideProfileModal() {
+        const targetContainer = document.getElementById('intro-content-advanced');
+        if (targetContainer) {
+            this.hideModalInContainer(targetContainer);
+            this.showOriginalContent(targetContainer);
         }
     }
     
-    // 渲染備用登入按鈕
-    renderFallbackButton(container) {
-        container.innerHTML = `
-            <button style="
-                background-color: #4285f4;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 4px;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                min-width: 200px;
-                justify-content: center;
-            " onclick="this.getRootNode().host.triggerGoogleSignIn()">
-                <svg width="18" height="18" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                使用 Google 登入
-            </button>
+    // 隱藏原本內容
+    hideOriginalContent(container) {
+        // 保存原本內容的引用
+        this.originalContent = container.innerHTML;
+        
+        // 隱藏原本內容
+        container.style.display = 'none';
+    }
+    
+    // 顯示原本內容
+    showOriginalContent(container) {
+        if (this.originalContent) {
+            container.innerHTML = this.originalContent;
+            container.style.display = 'block';
+            this.originalContent = null;
+        }
+    }
+    
+    // 在容器內顯示模態框
+    showModalInContainer(container, type) {
+        // 清空容器
+        container.innerHTML = '';
+        container.style.display = 'block';
+        
+        // 創建模態框內容
+        const modalContent = this.createModalContent(type);
+        container.appendChild(modalContent);
+        
+        // 添加事件監聽器
+        this.setupModalEventListeners(container, type);
+    }
+    
+    // 隱藏容器內的模態框
+    hideModalInContainer(container) {
+        container.innerHTML = '';
+    }
+    
+    // 創建模態框內容
+    createModalContent(type) {
+        const modalDiv = document.createElement('div');
+        modalDiv.className = 'google-login-modal-container';
+        modalDiv.style.cssText = `
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 8px;
+            position: relative;
+        `;
+        
+        if (type === 'login') {
+            modalDiv.innerHTML = this.getLoginModalHTML();
+        } else if (type === 'profile') {
+            modalDiv.innerHTML = this.getProfileModalHTML();
+        }
+        
+        return modalDiv;
+    }
+    
+    // 獲取登入模態框 HTML
+    getLoginModalHTML() {
+        return `
+            <div style="width: 100%; height:100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="cursor: pointer; padding: 8px;" id="modal-back-arrow">
+                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15.9996 22.3999L9.59961 15.9999L15.9996 9.5999" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22.3996 16H9.59961" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 17px; color: rgba(0, 0, 0, 0.95);">登入</div>
+                    <div style="width: 24px;"></div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 20px 0;">
+                    <div style="width: 121px; height: 26px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="121" height="26" viewBox="0 0 121 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M108.993 25.0225C108.218 24.9117 107.436 24.8294 106.666 24.6852C104.615 24.3015 102.652 23.6742 100.911 22.4783C100.822 22.4172 100.739 22.3495 100.619 22.2591C101.246 20.8717 101.871 19.4884 102.51 18.0742C102.858 18.2941 103.158 18.5011 103.473 18.6795C105.75 19.9691 108.199 20.607 110.819 20.5532C111.716 20.5345 112.603 20.4172 113.436 20.0546C114.108 19.7622 114.648 19.3255 114.848 18.585C115.101 17.6489 114.703 16.8506 113.733 16.308C112.679 15.7182 111.505 15.4925 110.357 15.1829C108.727 14.743 107.088 14.3202 105.486 13.7931C104.306 13.4053 103.258 12.7349 102.442 11.7695C101.305 10.4261 100.962 8.84078 101.151 7.13813C101.482 4.16705 103.268 2.34546 105.957 1.30514C108.231 0.425301 110.608 0.325097 113.005 0.540169C114.851 0.705546 116.634 1.14383 118.314 1.94709C118.689 2.12713 119.05 2.33813 119.452 2.5532C118.876 3.96828 118.313 5.35157 117.729 6.78701C117.554 6.69903 117.4 6.62652 117.251 6.5475C115.036 5.37927 112.696 4.76257 110.175 4.95809C109.304 5.02571 108.458 5.19923 107.709 5.68559C106.86 6.23711 106.459 7.18538 106.709 8.05952C106.886 8.67703 107.347 9.05178 107.883 9.33854C109.031 9.9528 110.3 10.1915 111.549 10.4897C113.416 10.9361 115.305 11.3174 117.035 12.2029C118.81 13.1121 120.052 14.4538 120.353 16.4823C120.739 19.0852 119.941 21.2677 117.844 22.9084C116.19 24.2029 114.238 24.7178 112.187 24.9361C112.043 24.9516 111.903 24.9923 111.76 25.0216C110.838 25.0225 109.915 25.0225 108.993 25.0225Z" fill="#1E1E19"/>
+                            <path d="M0.552734 5.36793C0.758844 4.52964 1.18166 3.86813 2.01261 3.51049C3.11241 3.03717 4.63094 3.29705 5.32992 4.09787C6.40039 5.32475 5.91974 7.26691 4.36618 7.83555C3.30141 8.22577 2.26842 8.12964 1.34459 7.38911C0.896523 7.02984 0.735219 6.52149 0.552734 6.01803C0.552734 5.80133 0.552734 5.58463 0.552734 5.36793Z" fill="#1E1E19"/>
+                            <path d="M65.2331 11.5178C65.2331 13.038 65.2331 14.4922 65.2331 15.9846C61.581 15.9846 57.9517 15.9846 54.2702 15.9846C54.2702 18.8677 54.2702 21.7133 54.2702 24.5867C52.3932 24.5867 50.5692 24.5867 48.7109 24.5867C48.7109 16.7015 48.7109 8.80743 48.7109 0.865273C48.8429 0.858755 48.9863 0.844906 49.1305 0.844091C54.8405 0.843277 60.5513 0.845721 66.2612 0.835945C66.605 0.83513 66.7337 0.903562 66.7264 1.27831C66.702 2.48238 66.7175 3.68645 66.7166 4.89134C66.7166 5.0111 66.706 5.13004 66.6979 5.30845C62.5529 5.30845 58.4266 5.30845 54.2783 5.30845C54.2783 7.4054 54.2783 9.44287 54.2783 11.5178C57.9297 11.5178 61.5598 11.5178 65.2331 11.5178Z" fill="#1E1E19"/>
+                            <path d="M86.4174 24.5827C86.4174 18.1836 86.4174 11.8039 86.4174 5.386C83.8715 5.386 81.3673 5.386 78.8377 5.386C78.8239 5.24832 78.8051 5.14486 78.8051 5.0414C78.8027 3.7697 78.8133 2.4972 78.797 1.22551C78.7929 0.916751 78.8972 0.836914 79.1937 0.836914C85.8675 0.843431 92.5404 0.841802 99.2141 0.843431C99.32 0.843431 99.4251 0.859725 99.5563 0.870315C99.5563 2.37011 99.5563 3.84954 99.5563 5.36971C97.0365 5.36971 94.533 5.36971 91.9937 5.36971C91.9937 11.7901 91.9937 18.1697 91.9937 24.5819C90.1355 24.5827 88.3131 24.5827 86.4174 24.5827Z" fill="#1E1E19"/>
+                            <path d="M30.7687 13.9895C30.7687 12.6861 30.7687 11.4567 30.7687 10.1818C31.9963 10.1818 33.2224 10.1818 34.4827 10.1818C34.4909 10.0091 34.5023 9.87955 34.5031 9.74921C34.5047 8.7211 34.543 7.69055 34.4966 6.66407C34.3458 3.35002 36.7564 0.906028 39.4945 0.216008C42.6416 -0.577475 46.0094 0.870183 47.3935 3.6547C47.501 3.87141 47.5898 4.09707 47.7128 4.3765C46.3817 4.7936 45.075 5.20338 43.7405 5.62212C43.2908 4.75206 42.5552 4.32273 41.6118 4.18342C39.9629 3.93984 38.653 5.04126 38.653 6.69259C38.653 7.80216 38.6546 8.91173 38.6562 10.0213C38.6562 10.0474 38.6652 10.0734 38.6815 10.1622C39.286 10.1622 39.9035 10.1622 40.521 10.1622C41.1295 10.1622 41.7373 10.1622 42.3719 10.1622C42.3719 11.438 42.3719 12.6869 42.3719 13.9667C41.1434 13.9667 39.9279 13.9667 38.653 13.9667C38.653 14.1386 38.653 14.2812 38.653 14.4237C38.653 15.5333 38.6163 16.6445 38.6603 17.7525C38.7809 20.8026 36.6684 23.2775 33.932 24.0906C30.635 25.0706 27.0554 23.5309 25.6803 20.5297C25.6029 20.3602 25.5377 20.1842 25.4473 19.9618C26.7931 19.5415 28.1128 19.1292 29.4212 18.7211C30.3247 20.0694 31.6697 20.5329 33.0179 19.9749C33.9629 19.5838 34.4778 18.8669 34.4982 17.847C34.5234 16.5769 34.5039 15.306 34.5039 13.9903C33.2583 13.9895 32.033 13.9895 30.7687 13.9895Z" fill="#1E1E19"/>
+                            <path d="M24.1711 24.5974C22.7649 24.5974 21.3719 24.5974 19.921 24.5974C19.921 24.4467 19.921 24.3041 19.921 24.1616C19.921 21.8471 19.9283 19.5327 19.9152 17.2182C19.9128 16.7481 19.859 16.274 19.7865 15.808C19.5739 14.4459 18.6484 13.6182 17.288 13.5335C15.8167 13.4414 14.4513 14.0483 13.8753 15.4724C13.5886 16.1811 13.5226 16.9127 13.5193 17.6565C13.5104 19.795 13.5161 21.9335 13.5161 24.072C13.5161 24.2333 13.5161 24.3946 13.5161 24.5852C12.0871 24.5852 10.6859 24.5852 9.25781 24.5852C9.25781 19.7379 9.25781 14.8997 9.25781 10.0329C10.6045 10.0329 11.9397 10.0329 13.3197 10.0329C13.3197 10.5396 13.3197 11.0447 13.3197 11.6019C13.701 11.3127 14.013 11.039 14.3592 10.819C15.8729 9.85689 17.5446 9.65078 19.2823 9.88296C22.3438 10.2919 24.0244 12.4744 24.1385 15.3771C24.2558 18.3636 24.1947 21.3575 24.2102 24.3481C24.2102 24.4263 24.1865 24.5045 24.1711 24.5974Z" fill="#1E1E19"/>
+                            <path d="M75.5762 24.6023C73.7146 24.6023 71.8988 24.6023 70.0527 24.6023C70.0527 16.6944 70.0527 8.79949 70.0527 0.871993C70.179 0.862217 70.2963 0.844294 70.4144 0.844294C72.0153 0.842665 73.6161 0.849997 75.2169 0.836962C75.5216 0.834518 75.6087 0.924946 75.6079 1.228C75.6006 8.90213 75.6022 16.5763 75.6006 24.2512C75.6022 24.3563 75.5867 24.4622 75.5762 24.6023Z" fill="#1E1E19"/>
+                            <path d="M1.125 10.019C2.54822 10.019 3.92744 10.019 5.34007 10.019C5.34007 14.8785 5.34007 19.7241 5.34007 24.5918C3.94048 24.5918 2.55066 24.5918 1.125 24.5918C1.125 19.7445 1.125 14.8997 1.125 10.019Z" fill="#1E1E19"/>
+                        </svg>
+                    </div>
+                    
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <div style="flex: 1; height: 1px; background-color: #D7D7D6;"></div>
+                        <div style="flex: 1; height: 1px; background-color: #D7D7D6;"></div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                        <button style="display: flex; justify-content: center; align-items: center; gap: 6px; padding: 10px 14px; background-color: #F2F2F2; border-radius: 40px; border: none; cursor: pointer; width: 100%; position: relative;" id="modal-google-login-button">
+                            <svg style="position: absolute; left: 14px; top: 13px; width: 16px; height: 16px;" width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <g clip-path="url(#clip0_7461_9318)">
+                                    <path d="M15.8099 8.17192C15.8099 7.5164 15.7567 7.03805 15.6416 6.54199H8.15625V9.50065H12.55C12.4614 10.2359 11.9831 11.3432 10.92 12.0873L10.9051 12.1863L13.2719 14.0198L13.4358 14.0362C14.9417 12.6454 15.8099 10.5991 15.8099 8.17192Z" fill="#4285F4"/>
+                                    <path d="M8.15534 15.9675C10.3079 15.9675 12.115 15.2588 13.4349 14.0364L10.9191 12.0875C10.2459 12.557 9.34233 12.8848 8.15534 12.8848C6.04707 12.8848 4.25769 11.494 3.61983 9.57178L3.52633 9.57972L1.06539 11.4843L1.0332 11.5737C2.34423 14.1781 5.03717 15.9675 8.15534 15.9675Z" fill="#34A853"/>
+                                    <path d="M3.6206 9.57182C3.4523 9.07576 3.35489 8.54422 3.35489 7.99503C3.35489 7.44578 3.4523 6.9143 3.61175 6.41824L3.60729 6.31259L1.1155 4.37744L1.03398 4.41622C0.49364 5.49695 0.183594 6.71057 0.183594 7.99503C0.183594 9.27949 0.49364 10.493 1.03398 11.5738L3.6206 9.57182Z" fill="#FBBC05"/>
+                                    <path d="M8.15534 3.10515C9.65238 3.10515 10.6622 3.7518 11.238 4.2922L13.488 2.09532C12.1062 0.810858 10.3079 0.0224609 8.15534 0.0224609C5.03717 0.0224609 2.34423 1.81184 1.0332 4.41617L3.61097 6.41819C4.25769 4.49593 6.04707 3.10515 8.15534 3.10515Z" fill="#EB4335"/>
+                                </g>
+                                <defs>
+                                    <clipPath id="clip0_7461_9318">
+                                        <rect width="16" height="16" fill="white" transform="translate(0 0.0224609)"/>
+                                    </clipPath>
+                                </defs>
+                            </svg>
+                            <span style="font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 17px; line-height: 1.2941176470588236em; letter-spacing: 2%; color: rgba(0, 0, 0, 0.95);">繼續使用 Google 登入</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         `;
     }
     
-    // 進入個人資料頁
-    navigateToProfile() {
-        // 觸發事件，讓父組件處理導航
-        this.dispatchEvent(new CustomEvent('navigate-to-profile', {
+    // 獲取個人資訊模態框 HTML
+    getProfileModalHTML() {
+        const userInfo = this.getUserInfo();
+        const apiResponse = this.getApiResponse();
+        
+        // 獲取頭像 URL
+        let pictureUrl = null;
+        if (apiResponse && apiResponse.picture) {
+            pictureUrl = apiResponse.picture;
+        } else if (userInfo && userInfo.picture) {
+            pictureUrl = userInfo.picture;
+        }
+        
+        return `
+            <div style="width: 100%; max-width: 365px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="cursor: pointer; padding: 8px;" id="modal-profile-back-arrow">
+                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15.9996 22.3999L9.59961 15.9999L15.9996 9.5999" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22.3996 16H9.59961" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 700; font-size: 17px; color: rgba(0, 0, 0, 0.95);">個人資訊</div>
+                    <button style="display: flex; align-items: center; padding: 8px 4px; background: none; border: none; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 15px; color: #787974;" id="modal-logout-button">
+                        <span>登出</span>
+                    </button>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 20px 0;">
+                    <div style="position: relative; width: 72px; height: 72px;">
+                        <img src="${pictureUrl || ''}" alt="用戶頭像" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'">
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; width: 100%; gap: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0E0DF;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 17px; color: #1E1E19;">姓名</div>
+                                <div style="font-family: 'Figtree', sans-serif; font-weight: 500; font-size: 15px; color: #787974;">${userInfo ? (userInfo.name || '尚未提供') : '尚未提供'}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid #E0E0DF;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <div style="font-family: 'Noto Sans TC', sans-serif; font-weight: 500; font-size: 17px; color: #1E1E19;">電子郵件</div>
+                                <div style="font-family: 'Figtree', sans-serif; font-weight: 500; font-size: 15px; color: #787974; display: flex; align-items: center; gap: 4px;">
+                                    <span>${userInfo ? (userInfo.email || '尚未提供') : '尚未提供'}</span>
+                                    <svg style="width: 18px; height: 18px; color: #1EC337;" viewBox="0 0 18 18" fill="none">
+                                        <path d="M0.75 0.75L16.5 16.5" fill="#1EC337"/>
+                                        <path d="M5.7 6.52L12.3 11.47" fill="white"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 設置模態框事件監聽器
+    setupModalEventListeners(container, type) {
+        if (type === 'login') {
+            // 返回按鈕
+            const backArrow = container.querySelector('#modal-back-arrow');
+            if (backArrow) {
+                backArrow.addEventListener('click', () => {
+                    this.hideLoginModal();
+                });
+            }
+            
+            // Google 登入按鈕
+            const googleLoginButton = container.querySelector('#modal-google-login-button');
+            if (googleLoginButton) {
+                googleLoginButton.addEventListener('click', () => {
+                    this.triggerGoogleSignIn();
+                });
+            }
+        } else if (type === 'profile') {
+            // 返回按鈕
+            const backArrow = container.querySelector('#modal-profile-back-arrow');
+            if (backArrow) {
+                backArrow.addEventListener('click', () => {
+                    this.hideProfileModal();
+                });
+            }
+            
+            // 登出按鈕
+            const logoutButton = container.querySelector('#modal-logout-button');
+            if (logoutButton) {
+                logoutButton.addEventListener('click', () => {
+                    this.handleLogout();
+                });
+            }
+        }
+    }
+    
+    // 更新個人資訊顯示
+    updateProfileInfo() {
+        const userInfo = this.getUserInfo();
+        const apiResponse = this.getApiResponse();
+        
+        // 更新頭像 - 優先使用 API 回應中的 picture
+        const profileAvatarImage = this.shadowRoot.getElementById('profile-avatar-image');
+        if (profileAvatarImage) {
+            let pictureUrl = null;
+            if (apiResponse && apiResponse.picture) {
+                pictureUrl = apiResponse.picture;
+                console.log('個人資訊使用 API 回傳的 picture:', pictureUrl);
+            } else if (userInfo && userInfo.picture) {
+                pictureUrl = userInfo.picture;
+                console.log('個人資訊使用 Google 用戶資訊的 picture:', pictureUrl);
+            }
+            
+            if (pictureUrl) {
+                profileAvatarImage.src = pictureUrl;
+            }
+        }
+        
+        // 更新姓名
+        const profileName = this.shadowRoot.getElementById('profile-name');
+        if (profileName) {
+            profileName.textContent = userInfo ? (userInfo.name || '尚未提供') : '尚未提供';
+        }
+        
+        // 更新電子郵件
+        const profileEmail = this.shadowRoot.getElementById('profile-email');
+        if (profileEmail) {
+            const emailSpan = profileEmail.querySelector('span');
+            if (emailSpan) {
+                emailSpan.textContent = userInfo ? (userInfo.email || '尚未提供') : '尚未提供';
+            }
+        }
+        
+        // 更新其他資訊（如果有 API 回應數據）
+        if (apiResponse) {
+            // 這裡可以根據 API 回應更新其他欄位
+            // 例如：出生日期、電話號碼等
+        }
+    }
+    
+
+    
+    // 處理登出
+    handleLogout() {
+        console.log('用戶點擊登出按鈕');
+        
+        // 隱藏個人資訊畫面
+        this.hideProfileModal();
+        
+        // 執行登出
+        this.signOut();
+        
+        // 觸發登出事件
+        this.dispatchEvent(new CustomEvent('google-logout', {
             detail: {
-                user: this.getUserInfo(),
-                apiResponse: this.getApiResponse()
+                timestamp: new Date().toISOString()
             },
             bubbles: true,
             composed: true
         }));
     }
+    
+
+    
+
     
     // 觸發 Google 登入
     triggerGoogleSignIn() {
@@ -541,21 +774,21 @@ class GoogleLoginComponent extends HTMLElement {
             <style>
                 :host {
                     display: inline-block;
-                    cursor: pointer;
+                    cursor: default;
                 }
-                
                 .avatar-container {
                     position: relative;
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
+                    width: var(--google-login-size, 40px);
+                    height: var(--google-login-size, 40px);
+                    border-radius: var(--google-login-border-radius, 50%);
                     overflow: hidden;
-                    border: 2px solid #e0e0e0;
+                    border: 2px solid var(--google-login-border-color, #e0e0e0);
                     transition: border-color 0.3s ease;
                 }
                 
                 .avatar-container:hover {
-                    border-color: #4285f4;
+                    opacity: var(--google-login-hover-opacity, 0.8);
+                    cursor: pointer;
                 }
                 
                 .avatar-image {
@@ -567,61 +800,18 @@ class GoogleLoginComponent extends HTMLElement {
                 .default-avatar {
                     width: 100%;
                     height: 100%;
-                    background-color: #f0f0f0;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    color: #666;
-                    font-size: 16px;
-                    font-weight: bold;
                 }
                 
-                .dropdown-menu {
-                    position: absolute;
-                    top: 100%;
-                    right: 0;
-                    background: white;
-                    border: 1px solid #ddd;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    min-width: 150px;
-                    z-index: 1000;
-                    display: none;
-                    margin-top: 5px;
+                .default-avatar svg {
+                    width: 100%;
+                    height: 100%;
                 }
                 
-                .dropdown-menu.show {
-                    display: block;
-                }
-                
-                .dropdown-item {
-                    padding: 10px 15px;
-                    cursor: pointer;
-                    border-bottom: 1px solid #f0f0f0;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-size: 14px;
-                }
-                
-                .dropdown-item:last-child {
-                    border-bottom: none;
-                }
-                
-                .dropdown-item:hover {
-                    background-color: #f8f9fa;
-                }
-                
-                .dropdown-item.logout {
-                    color: #dc3545;
-                }
-                
-                .dropdown-item.logout:hover {
-                    background-color: #f8d7da;
-                }
-                
-                /* 登入畫面樣式 */
-                .login-modal {
+                /* 模態框基礎樣式 */
+                .modal {
                     position: fixed;
                     top: 0;
                     left: 0;
@@ -634,42 +824,279 @@ class GoogleLoginComponent extends HTMLElement {
                     z-index: 10000;
                 }
                 
-                .login-modal.show {
+                .modal.show {
                     display: flex;
                 }
                 
-                .login-container {
+                .modal-container {
                     background: white;
-                    border-radius: 12px;
-                    padding: 30px;
-                    max-width: 400px;
-                    width: 90%;
+                    border-radius: 18px;
+                    width: 365px;
+                    height: 365px;
+                    box-shadow: 0px -10px 72px 0px rgba(0, 0, 0, 0.18), 0px 0px 18px 0px rgba(0, 0, 0, 0.05);
+                    backdrop-filter: blur(80px);
+                    overflow: hidden;
+                    position: relative;
+                }
+                
+                /* 標題區域 */
+                .title-section {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 18px 20px;
+                    width: 355px;
+                    backdrop-filter: blur(32px);
+                    position: relative;
+                    box-sizing: border-box;
+                }
+                
+                .title-text {
+                    font-family: 'Noto Sans TC', sans-serif;
+                    font-weight: 700;
+                    font-size: 17px;
+                    line-height: 1.1176470588235294em;
+                    letter-spacing: 2%;
+                    color: rgba(0, 0, 0, 0.95);
+                    flex: 1;
                     text-align: center;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                    padding: 0 12px;
+                    min-width: 0;
                 }
                 
-                .login-header {
-                    margin-bottom: 25px;
+                .back-arrow {
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    flex-shrink: 0;
+                    padding: 4px;
+                    border-radius: 4px;
+                    transition: background-color 0.2s ease;
                 }
                 
-                .login-title {
-                    font-size: 24px;
-                    font-weight: 600;
-                    color: #333;
-                    margin-bottom: 10px;
+                .back-arrow:hover {
+                    background-color: rgba(0, 0, 0, 0.05);
                 }
                 
-                .login-subtitle {
-                    font-size: 14px;
-                    color: #666;
-                    margin-bottom: 20px;
+                .back-arrow svg {
+                    width: 32px;
+                    height: 32px;
+                }
+                
+                /* 登入畫面內容 */
+                .login-content {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 24px;
+                    padding: 32px 16px 24px;
+                    height: 445px;
+                }
+                
+                .logo-container {
+                    width: 121px;
+                    height: 26px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .divider {
+                    display: flex;
+                    gap: 6px;
+                    width: 100%;
+                }
+                
+                .divider-line {
+                    flex: 1;
+                    height: 1px;
+                    background-color: #D7D7D6;
                 }
                 
                 .google-login-button-container {
-                    margin: 20px 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    width: 100%;
+                }
+                
+                .google-login-button {
                     display: flex;
                     justify-content: center;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 10px 14px;
+                    background-color: #F2F2F2;
+                    border-radius: 40px;
+                    border: none;
+                    cursor: pointer;
+                    width: 100%;
+                    position: relative;
                 }
+                
+                .google-login-button:hover {
+                    background-color: #E8E8E8;
+                }
+                
+                .google-login-text {
+                    font-family: 'Noto Sans TC', sans-serif;
+                    font-weight: 500;
+                    font-size: 17px;
+                    line-height: 1.2941176470588236em;
+                    letter-spacing: 2%;
+                    color: rgba(0, 0, 0, 0.95);
+                }
+                
+                .google-icon {
+                    position: absolute;
+                    left: 14px;
+                    top: 13px;
+                    width: 16px;
+                    height: 16px;
+                }
+                
+                /* 個人資訊畫面內容 */
+                .profile-content {
+                    display: flex;
+                    flex-direction: column;
+                    overflow-y: auto;
+                    align-items: center;
+                    gap: 24px;
+                    padding: 24px 18px 16px;
+                    width: 355px;
+                    height: 447px;
+                }
+                
+                .profile-header {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 16px;
+                }
+                
+                .profile-avatar {
+                    position: relative;
+                    width: 72px;
+                    height: 72px;
+                }
+                
+                .profile-avatar img {
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    object-fit: cover;
+                }
+                
+
+                
+                .profile-info-section {
+                    display: flex;
+                    flex-direction: column;
+                    width: 319px;
+                }
+                
+                .info-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 18px 0px;
+                    border-bottom: 1px solid #E0E0DF;
+                }
+                
+                .info-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .info-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+                
+                .info-label {
+                    font-family: 'Noto Sans TC', sans-serif;
+                    font-weight: 500;
+                    font-size: 17px;
+                    line-height: 1.2941176470588236em;
+                    letter-spacing: 2%;
+                    color: #1E1E19;
+                }
+                
+                .info-value {
+                    font-family: 'Figtree', sans-serif;
+                    font-weight: 500;
+                    font-size: 15px;
+                    line-height: 1.3333333333333333em;
+                    letter-spacing: -0.8000000119209291%;
+                    color: #787974;
+                }
+                
+                .info-value.verified {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                
+                .verified-icon {
+                    width: 18px;
+                    height: 18px;
+                    color: #1EC337;
+                }
+                
+                .edit-button {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 8px 16px;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    font-family: 'Noto Sans TC', sans-serif;
+                    font-weight: 400;
+                    font-size: 13px;
+                    line-height: 1.3846153846153846em;
+                    letter-spacing: 2%;
+                    color: #787974;
+                }
+                
+                .edit-button:hover {
+                    background-color: #f8f9fa;
+                    border-radius: 4px;
+                }
+                
+                /* 登出按鈕樣式 */
+                .logout-button {
+                    display: flex;
+                    align-items: center;
+                    padding: 8px 4px;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    font-family: 'Noto Sans TC', sans-serif;
+                    font-weight: 500;
+                    font-size: 15px;
+                    line-height: 1.2;
+                    color: #787974;
+                    transition: all 0.2s ease;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                    border-radius: 4px;
+                }
+                
+                .logout-button:hover {
+                    color: #333;
+                }
+                
+                .logout-button:active {
+                    color: #000;
+                }
+                
+
                 
                 .close-button {
                     position: absolute;
@@ -696,30 +1123,149 @@ class GoogleLoginComponent extends HTMLElement {
             </style>
             
             <div class="avatar-container" id="avatar-container">
-                <div class="default-avatar" id="default-avatar">👤</div>
-                <img class="avatar-image" id="avatar-image" style="display: none;" alt="用戶頭像">
-                <div class="dropdown-menu" id="dropdown-menu">
-                    <div class="dropdown-item" id="profile-item">
-                        👤 個人資料
-                    </div>
-                    <div class="dropdown-item logout" id="logout-item">
-                        🚪 登出
-                    </div>
+                <div class="default-avatar" id="default-avatar">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g clip-path="url(#clip0_7314_33987)">
+                            <rect width="32" height="32" rx="16" fill="#787974"/>
+                            <path d="M20.2426 18.2426C19.1174 19.3679 17.5913 20 16 20C14.4087 20 12.8826 19.3679 11.7574 18.2426C10.6321 17.1174 10 15.5913 10 14C10 12.4087 10.6321 10.8826 11.7574 9.75736C12.8826 8.63214 14.4087 8 16 8C17.5913 8 19.1174 8.63214 20.2426 9.75736C21.3679 10.8826 22 12.4087 22 14C22 15.5913 21.3679 17.1174 20.2426 18.2426Z" fill="#FCFCF8"/>
+                            <path d="M13.2791 19.3335C7.41602 19.3335 2.66602 24.6668 2.66602 33.6498C2.66602 34.5795 3.45768 35.3335 4.43387 35.3335H27.5648C28.541 35.3335 29.3327 34.5795 29.3327 33.6498C29.3327 24.0002 24.5827 19.3335 18.7196 19.3335H13.2791Z" fill="#FCFCF8"/>
+                        </g>
+                        <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="15.25" stroke="#787974" stroke-width="1.5"/>
+                        <defs>
+                            <clipPath id="clip0_7314_33987">
+                                <rect width="32" height="32" rx="16" fill="white"/>
+                            </clipPath>
+                        </defs>
+                    </svg>
                 </div>
-            </div>
+                <img class="avatar-image" id="avatar-image" style="display: none;" alt="用戶頭像">
+                    </div>
             
             <!-- 登入畫面 -->
-            <div class="login-modal" id="login-modal">
-                <div class="login-container">
+            <div class="modal" id="login-modal">
+                <div class="modal-container">
                     <button class="close-button" id="close-login-modal">×</button>
                     
-                    <div class="login-header">
-                        <div class="login-title">歡迎回來</div>
-                        <div class="login-subtitle">請選擇您的登入方式</div>
+                    <div class="title-section">
+                        <div class="back-arrow" id="back-arrow">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15.9996 22.3999L9.59961 15.9999L15.9996 9.5999" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M22.3996 16H9.59961" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                    </div>
+                        <div class="title-text">登入</div>
+                </div>
+                    
+                    <div class="login-content">
+                        <div class="logo-container">
+                            <!-- Logo SVG -->
+                            <svg width="121" height="26" viewBox="0 0 121 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M108.993 25.0225C108.218 24.9117 107.436 24.8294 106.666 24.6852C104.615 24.3015 102.652 23.6742 100.911 22.4783C100.822 22.4172 100.739 22.3495 100.619 22.2591C101.246 20.8717 101.871 19.4884 102.51 18.0742C102.858 18.2941 103.158 18.5011 103.473 18.6795C105.75 19.9691 108.199 20.607 110.819 20.5532C111.716 20.5345 112.603 20.4172 113.436 20.0546C114.108 19.7622 114.648 19.3255 114.848 18.585C115.101 17.6489 114.703 16.8506 113.733 16.308C112.679 15.7182 111.505 15.4925 110.357 15.1829C108.727 14.743 107.088 14.3202 105.486 13.7931C104.306 13.4053 103.258 12.7349 102.442 11.7695C101.305 10.4261 100.962 8.84078 101.151 7.13813C101.482 4.16705 103.268 2.34546 105.957 1.30514C108.231 0.425301 110.608 0.325097 113.005 0.540169C114.851 0.705546 116.634 1.14383 118.314 1.94709C118.689 2.12713 119.05 2.33813 119.452 2.5532C118.876 3.96828 118.313 5.35157 117.729 6.78701C117.554 6.69903 117.4 6.62652 117.251 6.5475C115.036 5.37927 112.696 4.76257 110.175 4.95809C109.304 5.02571 108.458 5.19923 107.709 5.68559C106.86 6.23711 106.459 7.18538 106.709 8.05952C106.886 8.67703 107.347 9.05178 107.883 9.33854C109.031 9.9528 110.3 10.1915 111.549 10.4897C113.416 10.9361 115.305 11.3174 117.035 12.2029C118.81 13.1121 120.052 14.4538 120.353 16.4823C120.739 19.0852 119.941 21.2677 117.844 22.9084C116.19 24.2029 114.238 24.7178 112.187 24.9361C112.043 24.9516 111.903 24.9923 111.76 25.0216C110.838 25.0225 109.915 25.0225 108.993 25.0225Z" fill="#1E1E19"/>
+                                <path d="M0.552734 5.36793C0.758844 4.52964 1.18166 3.86813 2.01261 3.51049C3.11241 3.03717 4.63094 3.29705 5.32992 4.09787C6.40039 5.32475 5.91974 7.26691 4.36618 7.83555C3.30141 8.22577 2.26842 8.12964 1.34459 7.38911C0.896523 7.02984 0.735219 6.52149 0.552734 6.01803C0.552734 5.80133 0.552734 5.58463 0.552734 5.36793Z" fill="#1E1E19"/>
+                                <path d="M65.2331 11.5178C65.2331 13.038 65.2331 14.4922 65.2331 15.9846C61.581 15.9846 57.9517 15.9846 54.2702 15.9846C54.2702 18.8677 54.2702 21.7133 54.2702 24.5867C52.3932 24.5867 50.5692 24.5867 48.7109 24.5867C48.7109 16.7015 48.7109 8.80743 48.7109 0.865273C48.8429 0.858755 48.9863 0.844906 49.1305 0.844091C54.8405 0.843277 60.5513 0.845721 66.2612 0.835945C66.605 0.83513 66.7337 0.903562 66.7264 1.27831C66.702 2.48238 66.7175 3.68645 66.7166 4.89134C66.7166 5.0111 66.706 5.13004 66.6979 5.30845C62.5529 5.30845 58.4266 5.30845 54.2783 5.30845C54.2783 7.4054 54.2783 9.44287 54.2783 11.5178C57.9297 11.5178 61.5598 11.5178 65.2331 11.5178Z" fill="#1E1E19"/>
+                                <path d="M86.4174 24.5827C86.4174 18.1836 86.4174 11.8039 86.4174 5.386C83.8715 5.386 81.3673 5.386 78.8377 5.386C78.8239 5.24832 78.8051 5.14486 78.8051 5.0414C78.8027 3.7697 78.8133 2.4972 78.797 1.22551C78.7929 0.916751 78.8972 0.836914 79.1937 0.836914C85.8675 0.843431 92.5404 0.841802 99.2141 0.843431C99.32 0.843431 99.4251 0.859725 99.5563 0.870315C99.5563 2.37011 99.5563 3.84954 99.5563 5.36971C97.0365 5.36971 94.533 5.36971 91.9937 5.36971C91.9937 11.7901 91.9937 18.1697 91.9937 24.5819C90.1355 24.5827 88.3131 24.5827 86.4174 24.5827Z" fill="#1E1E19"/>
+                                <path d="M30.7687 13.9895C30.7687 12.6861 30.7687 11.4567 30.7687 10.1818C31.9963 10.1818 33.2224 10.1818 34.4827 10.1818C34.4909 10.0091 34.5023 9.87955 34.5031 9.74921C34.5047 8.7211 34.543 7.69055 34.4966 6.66407C34.3458 3.35002 36.7564 0.906028 39.4945 0.216008C42.6416 -0.577475 46.0094 0.870183 47.3935 3.6547C47.501 3.87141 47.5898 4.09707 47.7128 4.3765C46.3817 4.7936 45.075 5.20338 43.7405 5.62212C43.2908 4.75206 42.5552 4.32273 41.6118 4.18342C39.9629 3.93984 38.653 5.04126 38.653 6.69259C38.653 7.80216 38.6546 8.91173 38.6562 10.0213C38.6562 10.0474 38.6652 10.0734 38.6815 10.1622C39.286 10.1622 39.9035 10.1622 40.521 10.1622C41.1295 10.1622 41.7373 10.1622 42.3719 10.1622C42.3719 11.438 42.3719 12.6869 42.3719 13.9667C41.1434 13.9667 39.9279 13.9667 38.653 13.9667C38.653 14.1386 38.653 14.2812 38.653 14.4237C38.653 15.5333 38.6163 16.6445 38.6603 17.7525C38.7809 20.8026 36.6684 23.2775 33.932 24.0906C30.635 25.0706 27.0554 23.5309 25.6803 20.5297C25.6029 20.3602 25.5377 20.1842 25.4473 19.9618C26.7931 19.5415 28.1128 19.1292 29.4212 18.7211C30.3247 20.0694 31.6697 20.5329 33.0179 19.9749C33.9629 19.5838 34.4778 18.8669 34.4982 17.847C34.5234 16.5769 34.5039 15.306 34.5039 13.9903C33.2583 13.9895 32.033 13.9895 30.7687 13.9895Z" fill="#1E1E19"/>
+                                <path d="M24.1711 24.5974C22.7649 24.5974 21.3719 24.5974 19.921 24.5974C19.921 24.4467 19.921 24.3041 19.921 24.1616C19.921 21.8471 19.9283 19.5327 19.9152 17.2182C19.9128 16.7481 19.859 16.274 19.7865 15.808C19.5739 14.4459 18.6484 13.6182 17.288 13.5335C15.8167 13.4414 14.4513 14.0483 13.8753 15.4724C13.5886 16.1811 13.5226 16.9127 13.5193 17.6565C13.5104 19.795 13.5161 21.9335 13.5161 24.072C13.5161 24.2333 13.5161 24.3946 13.5161 24.5852C12.0871 24.5852 10.6859 24.5852 9.25781 24.5852C9.25781 19.7379 9.25781 14.8997 9.25781 10.0329C10.6045 10.0329 11.9397 10.0329 13.3197 10.0329C13.3197 10.5396 13.3197 11.0447 13.3197 11.6019C13.701 11.3127 14.013 11.039 14.3592 10.819C15.8729 9.85689 17.5446 9.65078 19.2823 9.88296C22.3438 10.2919 24.0244 12.4744 24.1385 15.3771C24.2558 18.3636 24.1947 21.3575 24.2102 24.3481C24.2102 24.4263 24.1865 24.5045 24.1711 24.5974Z" fill="#1E1E19"/>
+                                <path d="M75.5762 24.6023C73.7146 24.6023 71.8988 24.6023 70.0527 24.6023C70.0527 16.6944 70.0527 8.79949 70.0527 0.871993C70.179 0.862217 70.2963 0.844294 70.4144 0.844294C72.0153 0.842665 73.6161 0.849997 75.2169 0.836962C75.5216 0.834518 75.6087 0.924946 75.6079 1.228C75.6006 8.90213 75.6022 16.5763 75.6006 24.2512C75.6022 24.3563 75.5867 24.4622 75.5762 24.6023Z" fill="#1E1E19"/>
+                                <path d="M1.125 10.019C2.54822 10.019 3.92744 10.019 5.34007 10.019C5.34007 14.8785 5.34007 19.7241 5.34007 24.5918C3.94048 24.5918 2.55066 24.5918 1.125 24.5918C1.125 19.7445 1.125 14.8997 1.125 10.019Z" fill="#1E1E19"/>
+                            </svg>
+            </div>
+            
+                        <div class="divider">
+                            <div class="divider-line"></div>
+                            <div class="divider-line"></div>
+                        </div>
+                        
+                        <div class="google-login-button-container">
+                            <button class="google-login-button" id="google-login-button">
+                                <svg class="google-icon" width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <g clip-path="url(#clip0_7461_9318)">
+                                        <path d="M15.8099 8.17192C15.8099 7.5164 15.7567 7.03805 15.6416 6.54199H8.15625V9.50065H12.55C12.4614 10.2359 11.9831 11.3432 10.92 12.0873L10.9051 12.1863L13.2719 14.0198L13.4358 14.0362C14.9417 12.6454 15.8099 10.5991 15.8099 8.17192Z" fill="#4285F4"/>
+                                        <path d="M8.15534 15.9675C10.3079 15.9675 12.115 15.2588 13.4349 14.0364L10.9191 12.0875C10.2459 12.557 9.34233 12.8848 8.15534 12.8848C6.04707 12.8848 4.25769 11.494 3.61983 9.57178L3.52633 9.57972L1.06539 11.4843L1.0332 11.5737C2.34423 14.1781 5.03717 15.9675 8.15534 15.9675Z" fill="#34A853"/>
+                                        <path d="M3.6206 9.57182C3.4523 9.07576 3.35489 8.54422 3.35489 7.99503C3.35489 7.44578 3.4523 6.9143 3.61175 6.41824L3.60729 6.31259L1.1155 4.37744L1.03398 4.41622C0.49364 5.49695 0.183594 6.71057 0.183594 7.99503C0.183594 9.27949 0.49364 10.493 1.03398 11.5738L3.6206 9.57182Z" fill="#FBBC05"/>
+                                        <path d="M8.15534 3.10515C9.65238 3.10515 10.6622 3.7518 11.238 4.2922L13.488 2.09532C12.1062 0.810858 10.3079 0.0224609 8.15534 0.0224609C5.03717 0.0224609 2.34423 1.81184 1.0332 4.41617L3.61097 6.41819C4.25769 4.49593 6.04707 3.10515 8.15534 3.10515Z" fill="#EB4335"/>
+                                    </g>
+                                    <defs>
+                                        <clipPath id="clip0_7461_9318">
+                                            <rect width="16" height="16" fill="white" transform="translate(0 0.0224609)"/>
+                                        </clipPath>
+                                    </defs>
+                                </svg>
+                                <span class="google-login-text">繼續使用 Google 登入</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
                     </div>
                     
-                    <div class="google-login-button-container" id="google-login-button-container">
-                        <!-- Google 登入按鈕將在這裡渲染 -->
+            <!-- 個人資訊畫面 -->
+            <div class="modal" id="profile-modal">
+                <div class="modal-container">
+                    <button class="close-button" id="close-profile-modal">×</button>
+                    
+                    <div class="title-section">
+                        <div class="back-arrow" id="profile-back-arrow">
+                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15.9996 22.3999L9.59961 15.9999L15.9996 9.5999" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M22.3996 16H9.59961" stroke="#01453D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                    </div>
+                        <div class="title-text">個人資訊</div>
+                          <button class="logout-button" id="logout-button">
+                                    <span>登出</span>
+                                </button>
+                    </div>
+                    
+                    <div class="profile-content">
+                        <div class="profile-header">
+                            <div class="profile-avatar">
+                                <img id="profile-avatar-image" src="" alt="用戶頭像">
+                            </div>
+                        </div>
+                        
+                        <div class="profile-info-section">
+                            <div class="info-item">
+                                <div class="info-content">
+                                    <div class="info-label">姓名</div>
+                                    <div class="info-value" id="profile-name">尚未提供</div>
+                                </div>
+                              
+                            </div>
+                            
+                            <div class="info-item">
+                                <div class="info-content">
+                                    <div class="info-label">電子郵件</div>
+                                    <div class="info-value verified" id="profile-email">
+                                        <span>尚未提供</span>
+                                        <svg class="verified-icon" viewBox="0 0 18 18" fill="none">
+                                            <path d="M0.75 0.75L16.5 16.5" fill="#1EC337"/>
+                                            <path d="M5.7 6.52L12.3 11.47" fill="white"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-item">
+                                <div class="info-content">
+                                    <div class="info-label">出生日期</div>
+                                    <div class="info-value" id="profile-birthday">尚未提供</div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-item">
+                                <div class="info-content">
+                                    <div class="info-label">電話號碼</div>
+                                    <div class="info-value" id="profile-phone">尚未提供</div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-item">
+                                <div class="info-content">
+                                    <div class="info-label">密碼</div>
+                                    <div class="info-value">••••••••••••</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1058,7 +1604,19 @@ class GoogleLoginComponent extends HTMLElement {
             this.saveCredential(response.credential);
             
             // 調用 infFITS API
-            await this.callInfFitsAPI(response.credential);
+            const apiResponse = await this.callInfFitsAPI(response.credential);
+            
+            // 檢查 API 回應中是否有 picture 欄位，如果有則更新用戶資訊
+            if (apiResponse && apiResponse.picture) {
+                console.log('API 回傳 picture:', apiResponse.picture);
+                // 更新用戶資訊中的 picture
+                if (payload) {
+                    payload.picture = apiResponse.picture;
+                    this.saveUserInfo(payload);
+                }
+                // 更新頭像顯示
+                this.updateAvatar();
+            }
             
             // 隱藏登入畫面
             this.hideLoginModal();
@@ -1068,6 +1626,7 @@ class GoogleLoginComponent extends HTMLElement {
                 detail: {
                     credential: response.credential,
                     user: payload,
+                    apiResponse: apiResponse,
                     timestamp: new Date().toISOString()
                 },
                 bubbles: true,
@@ -1183,6 +1742,87 @@ class GoogleLoginComponent extends HTMLElement {
             bubbles: true,
             composed: true
         }));
+    }
+    
+    // Debug 方法：模擬已登入狀態
+    async debugSimulateLogin(credential = 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImRkNTMwMTIwNGZjMWQ2YTBkNjhjNzgzYTM1Y2M5YzEwYjI1ZTFmNGEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyNjU4MjE3MDQyMzYtZmtkdDRycnZwbXVoZjQ0MmM3cjJkZmcxNmk3MWM2cWcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIyNjU4MjE3MDQyMzYtZmtkdDRycnZwbXVoZjQ0MmM3cjJkZmcxNmk3MWM2cWcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDU0NzQ4MzI4NjQ0NDUxMDYxMDkiLCJlbWFpbCI6ImluZmZpdHMuZGV2ZWxvcG1lbnRAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTc1Mzg2MjA2MSwibmFtZSI6ImluZkZJVFMgRGV2ZWxvcG1lbnQiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS3ZXY2Q3REhQYUk4bENaU0p2NVdodm1YdEJXb2VKOFZhR3UtZGZqamZDRnNneXhRPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6ImluZkZJVFMiLCJmYW1pbHlfbmFtZSI6IkRldmVsb3BtZW50IiwiaWF0IjoxNzUzODYyMzYxLCJleHAiOjE3NTM4NjU5NjEsImp0aSI6IjQxODhmZThlMTQxYTY2ZjE4YmQ1NTg5YzRjMmFiMjYwZmFhN2Y4YmYifQ.MWOVHIAGIaSJlcA-MG8aEYoz15E2_I0-hu2t2f7ccaBOfhEOr6WC0tFtWNTr56KVlmzpk6IbObiWgYjqOi2oBCQYieSqpmA0G52KMXr7S3GQgXnxAvIX-332gQ-n9AKUmFaUZeOLOXLfdUHj_BzUuLWLwHsbqFP1SjN9aA7hopqrjz-LTr83iFxt_-eQJppTs_k8cZc4vhx9HjuuoUCG7ELVgm7cRUZJfCjp7hEcYd5T0HS_ygKYftF9ymroB05zehP_mABA1ZTN72WB08UZAuvM8yCVQNXBY8FSpuZDwwSya3S00DzF3ou4P_VUYaluU5v88hLZLSWeG0XINTifNw') {
+        console.log('🔧 Debug: 使用真實憑證模擬登入流程');
+        console.log('📋 使用憑證:', credential);
+        
+        try {
+            // 使用真實的 handleCredentialResponse 流程
+            const response = { credential: credential };
+            
+            // 調用原本的登入處理流程
+            await this.handleCredentialResponse(response);
+            
+            console.log('✅ Debug: 真實登入流程完成');
+            
+        } catch (error) {
+            console.error('❌ Debug: 模擬登入失敗:', error);
+            this.handleLoginFailure(error);
+        }
+    }
+    
+    // Debug 方法：清除模擬登入狀態
+    debugClearLogin() {
+        console.log('🔧 Debug: 清除模擬登入狀態');
+        this.signOut();
+    }
+    
+    // 添加 Debug 按鈕
+    addDebugButtons() {
+        // 創建 debug 容器
+        const debugContainer = document.createElement('div');
+        debugContainer.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 10001;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            color: white;
+        `;
+        
+        debugContainer.innerHTML = `
+            <div style="margin-bottom: 8px; font-weight: bold;">🔧 Debug 模式</div>
+            <button id="debug-login" style="
+                background: #4285f4;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                margin: 2px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+            ">模擬登入</button>
+            <button id="debug-logout" style="
+                background: #ea4335;
+                color: white;
+                border: none;
+                padding: 4px 8px;
+                margin: 2px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+            ">模擬登出</button>
+        `;
+        
+        document.body.appendChild(debugContainer);
+        
+        // 添加事件監聽器
+        document.getElementById('debug-login').addEventListener('click', () => {
+            this.debugSimulateLogin();
+        });
+        
+        document.getElementById('debug-logout').addEventListener('click', () => {
+            this.debugClearLogin();
+        });
+        
+        console.log('🔧 Debug 按鈕已添加');
     }
 }
 

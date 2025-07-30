@@ -1,101 +1,377 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Login in WebView</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        #logoutButton { display: none; margin-top: 20px; padding: 10px 20px; }
-        #userInfo { margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <div id="g_id_onload"
-         data-client_id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
-         data-callback="handleCredentialResponse"
-         data-auto_prompt="false">
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div
+      id="params-selector"
+      style="
+        padding: 24px 32px;
+        border-radius: 12px;
+        border: 1.5px solid #e0e0e0;
+        margin: 24px auto 16px auto;
+        max-width: 420px;
+        background: #fafbfc;
+        box-shadow: 0 2px 12px 0 rgba(0,0,0,0.04);
+        font-family: 'Inter', 'Noto Sans', Arial, sans-serif;
+      "
+    >
+      <h2 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 18px; color: #222; letter-spacing: 0.5px;">選擇參數</h2>
+      <div style="margin-bottom: 10px;">
+        <input
+          type="radio"
+          id="opt-olivo"
+          name="param-option"
+          value="olivo"
+          checked
+        />
+        <label for="opt-olivo" style="margin-left: 6px; font-weight: 500; cursor: pointer;">OLIVO <span style='color:#888;'>(ID: 1750051004528)</span></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input
+          type="radio"
+          id="opt-olivo1"
+          name="param-option"
+          value="olivo1"
+        />
+        <label for="opt-olivo1" style="margin-left: 6px; font-weight: 500; cursor: pointer;">OLIVO 1 <span style='color:#888;'>(ID: 2025-06-24-16-55-16-1)</span></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input
+          type="radio"
+          id="opt-olivo2"
+          name="param-option"
+          value="olivo2"
+        />
+        <label for="opt-olivo2" style="margin-left: 6px; font-weight: 500; cursor: pointer;">OLIVO 2 <span style='color:#888;'>(ID: 2025-06-24-16-55-16-2)</span></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input
+          type="radio"
+          id="opt-olivo3"
+          name="param-option"
+          value="olivo3"
+        />
+        <label for="opt-olivo3" style="margin-left: 6px; font-weight: 500; cursor: pointer;">OLIVO 3 <span style='color:#888;'>(ID: 2025-06-24-16-55-16-3)</span></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input
+          type="radio"
+          id="opt-olivo4"
+          name="param-option"
+          value="olivo4"
+        />
+        <label for="opt-olivo4" style="margin-left: 6px; font-weight: 500; cursor: pointer;">OLIVO 4 <span style='color:#888;'>(ID: 2025-06-24-16-55-16-4)</span></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input
+          type="radio"
+          id="opt-jerscy"
+          name="param-option"
+          value="jerscy"
+        />
+        <label for="opt-jerscy" style="margin-left: 6px; font-weight: 500; cursor: pointer;">JERSCY <span style='color:#888;'>(ID: 1734582962432)</span></label>
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input type="radio" id="opt-almi" name="param-option" value="almi" />
+        <label for="opt-almi" style="margin-left: 6px; font-weight: 500; cursor: pointer;">ALMI <span style='color:#888;'>(ID: 2025-05-29-18-00-13-2)</span></label>
+      </div>
+      <div style="margin-bottom: 10px; display: flex; align-items: flex-start;">
+        <input type="radio" id="opt-custom" name="param-option" value="custom" style="margin-top: 4px;" />
+        <label for="opt-custom" style="margin-left: 6px; font-weight: 500; cursor: pointer; min-width: 60px;">自訂：</label>
+        <div
+          id="custom-fields"
+          style="display: none; margin-left: 10px; flex: 1; display: flex; gap: 8px; align-items: center;"
+        >
+          <label for="custom-brand" style="font-size: 0.97em; color: #555;">品牌</label>
+          <input type="text" id="custom-brand" placeholder="Brand" style="padding: 4px 8px; border-radius: 5px; border: 1px solid #ccc; width: 80px;" />
+          <label for="custom-id" style="font-size: 0.97em; color: #555;">ID</label>
+          <input type="text" id="custom-id" placeholder="ID" style="padding: 4px 8px; border-radius: 5px; border: 1px solid #ccc; width: 120px;" />
+        </div>
+      </div>
+      <button id="send-to-iframe" style="
+        margin-top: 18px;
+        padding: 8px 28px;
+        background: linear-gradient(90deg, #4f8cff 0%, #2356c7 100%);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.08em;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px 0 rgba(79,140,255,0.08);
+        cursor: pointer;
+        transition: background 0.2s;
+      "
+      >
+        傳送參數到 Iframe
+      </button>
     </div>
-    <div class="g_id_signin"
-         data-type="standard"
-         data-size="large"
-         data-theme="outline"
-         data-text="sign_in_with"
-         data-shape="rectangular"
-         data-logo_alignment="left">
-    </div>
-    <button id="logoutButton" onclick="logout()">登出</button>
-    <div id="userInfo"></div>
+  </body>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script>
+    (function ($) {
+      // 動態添加 Google 字體連結
+      var googleFontLink = document.createElement("link");
+      googleFontLink.rel = "preconnect";
+      googleFontLink.href = "https://fonts.googleapis.com";
+      document.head.appendChild(googleFontLink);
 
-    <script>
-        let authInstance = null;
+      var googleFontLink2 = document.createElement("link");
+      googleFontLink2.rel = "preconnect";
+      googleFontLink2.href = "https://fonts.gstatic.com";
+      googleFontLink2.crossorigin = "anonymous";
+      document.head.appendChild(googleFontLink2);
 
-        // 處理 Google 登入回應
-        function handleCredentialResponse(response) {
-            const idToken = response.credential;
-            // 解析 ID Token
-            const decodedToken = parseJwt(idToken);
-            // 顯示用戶資訊
-            displayUserInfo(decodedToken);
-            // 顯示登出按鈕
-            document.getElementById('logoutButton').style.display = 'block';
-            // 隱藏登入按鈕
-            document.querySelector('.g_id_signin').style.display = 'none';
-            // 初始化 Google Auth 實例
-            authInstance = google.accounts.oauth2.initTokenClient({
-                client_id: 'YOUR_CLIENT_ID.apps.googleusercontent.com',
-                scope: 'email profile'
-            });
-            // 可選：將 token 發送到後端
-            /*
-            fetch('https://your-backend.com/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_token: idToken })
-            })
-            .then(response => response.json())
-            .then(data => console.log('Backend response:', data))
-            .catch(error => console.error('Error:', error));
-            */
-        }
+      var googleFontLink3 = document.createElement("link");
+      googleFontLink3.rel = "stylesheet";
+      googleFontLink3.href =
+        "https://fonts.googleapis.com/css2?family=Chocolate+Classical+Sans&family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap";
+      document.head.appendChild(googleFontLink3);
 
-        // 解析 JWT Token
-        function parseJwt(token) {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        }
+      // 動態添加自定 CSS
+      var customCSS = document.createElement("link");
+      customCSS.rel = "stylesheet";
+      customCSS.type = "text/css";
+      customCSS.href = "./../css/iframe_ai_pd_style.css";
+      document.head.appendChild(customCSS);
 
-        // 顯示用戶資訊
-        function displayUserInfo(tokenData) {
-            const userInfoDiv = document.getElementById('userInfo');
-            userInfoDiv.innerHTML = `
-                <p>登入成功！</p>
-                <p>用戶名: ${tokenData.name || '未知'}</p>
-                <p>電子郵件: ${tokenData.email || '未知'}</p>
-                <p>ID Token: ${tokenData.sub}</p>
-            `;
-        }
-
-        // 登出功能
-        function logout() {
-            if (authInstance) {
-                google.accounts.id.disableAutoSelect();
-                google.accounts.id.revoke(tokenData.sub, done => {
-                    console.log('User signed out');
-                });
+      $(function () {
+        // console.log("DOM is ready");
+        $(window).on("message", function (event) {
+          var origin = event.originalEvent.origin;
+          // if (origin !== 'https://iframe所在的網址') return; // 避免跨域攻擊
+          // 處理從 <iframe> 來的訊息
+          // console.log("接收到來自 iframe 的訊息：", event.originalEvent.data);
+          if (event.originalEvent.data.type === "result") {
+            if (event.originalEvent.data.value) {
+              $(".ai-pd-container__trigger").addClass(
+                "ai-pd-container__trigger--result"
+              );
+            } else {
+              $(".ai-pd-container__trigger").removeClass(
+                "ai-pd-container__trigger--result"
+              );
             }
-            // 清空用戶資訊
-            document.getElementById('userInfo').innerHTML = '';
-            // 隱藏登出按鈕
-            document.getElementById('logoutButton').style.display = 'none';
-            // 顯示登入按鈕
-            document.querySelector('.g_id_signin').style.display = 'block';
+          }
+          if (event.originalEvent.data.type === "closeModal") {
+            if (event.originalEvent.data.value) {
+              $("#inffits_cblock--overlay").fadeOut();
+              $(".ai-pd-container__trigger").toggleClass(
+                "ai-pd-container__trigger--search ai-pd-container__trigger--close"
+              );
+            }
+          }
+        });
+        // 添加 html template
+        var aiSearchPdTemplate = `
+            <div class="ai-pd-container">
+            <button
+                class="ai-pd-container__trigger ai-pd-container__trigger--search"
+                type="button"
+            >
+                <div class="ai-pd-container__icon"></div>
+                <img class="ai-pd-container__icon--alert" src="https://raw.githubusercontent.com/infFITSDevelopment/pop-ad/refs/heads/main/icon-alert.svg"></img>
+            </button>
+                <div
+      style="
+        display: none;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0px;
+        left: 0px;
+        z-index: 999;
+        background: rgba(0, 0, 0, 0.5);
+        transform: none;
+      "
+      id="inffits_cblock--overlay"
+    >
+      <div
+        id="inffits_cblock"
+        style="
+          z-index: 60;
+          display: block;
+          position: absolute; inset: 0;
+        "
+      >
+        <div id="tryon" style="height: 100%;width:100%;display:flex;justify-content:center;align-items:center;">
+        <iframe
+            id="inffits_tryon_window"
+            style="
+              height: 100%;
+                width: 100%;
+                visibility: visible;
+                position: relative;
+                border: none;
+                outline: none;
+                z-index: 14;
+                max-width: 95vw;
+                margin: 0 auto;
+            "
+            src="${"./iframe_container_module.html"}"
+          ></iframe>
+
+        </div>
+      </div>
+    </div>
+    </div>
+    <style media="screen and (min-width: 480px)">
+      #inffits_cblock {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        height: 700px;
+        width: 480px !important;
+      }
+      #tryon {
+        margin: auto;
+        height: 700px;
+        width: 480px !important;
+      }
+        </style>
+
+    <style media="screen and (min-width: 365px) and (max-width: 479px)">
+      #inffits_cblock {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        // height: 580px;
+        // width: 365px !important;
+      }
+      #tryon {
+        margin: auto;
+        // height: 580px;
+        // height: 100vh;
+        width: 365px !important;
+      }
+    </style>
+      `;
+        document.body.insertAdjacentHTML("beforeend", aiSearchPdTemplate);
+
+        // 獲取 iframe 的 contentWindow
+        const iframeContainerDiv = document.getElementById("tryon");
+
+        if (iframeContainerDiv) {
+          const options = {
+            olivo: { id: "1750051004528", brand: "OLIVO" },
+            olivo1: { id: "2025-06-24-16-55-16-1", brand: "OLIVO" },
+            olivo2: { id: "2025-06-24-16-55-16-2", brand: "OLIVO" },
+            olivo3: { id: "2025-06-24-16-55-16-3", brand: "OLIVO" },
+            olivo4: { id: "2025-06-24-16-55-16-4", brand: "OLIVO" },
+            jerscy: { id: "1734582962432", brand: "JERSCY" },
+            almi: { id: "2025-05-29-18-00-13-2", brand: "ALMI" },
+          };
+
+          $('input[name="param-option"]').on("change", function () {
+            if ($(this).val() === "custom") {
+              $("#custom-fields").css("display", "inline-block");
+            } else {
+              $("#custom-fields").hide();
+            }
+          });
+          // 初始化自訂欄位的可見性
+          $('input[name="param-option"]:checked').trigger("change");
+
+          const recreateIframe = (id, brand) => {
+            const oldIframe = document.getElementById("inffits_tryon_window");
+            if (oldIframe) {
+              oldIframe.remove();
+            }
+
+            const iframeElement = document.createElement("iframe");
+            iframeElement.id = "inffits_tryon_window";
+            iframeElement.style.cssText = `
+              height: 100%;
+              width: 100%;
+              visibility: visible;
+              position: relative;
+              border: none;
+              outline: none;
+              z-index: 14;
+              max-width: 95vw;
+              margin: 0 auto;
+            `;
+            iframeElement.src = "./iframe_container_module.html";
+
+            iframeElement.onload = () => {
+              const iframe_container = iframeElement.contentWindow;
+              const iframe_preview_obj = {
+                id: id,
+                header: "from_preview",
+                brand: brand,
+              };
+              iframe_container.postMessage(iframe_preview_obj, "*");
+            };
+
+            iframeContainerDiv.appendChild(iframeElement);
+          };
+
+          $("#send-to-iframe").on("click", function () {
+            const selectedOption = $(
+              'input[name="param-option"]:checked'
+            ).val();
+            let id, brand;
+
+            if (selectedOption === "custom") {
+              id = $("#custom-id").val();
+              brand = $("#custom-brand").val();
+            } else {
+              id = options[selectedOption].id;
+              brand = options[selectedOption].brand;
+            }
+
+            if (!id || !brand) {
+              alert("ID and Brand cannot be empty.");
+              return;
+            }
+
+            recreateIframe(id, brand);
+          });
+
+          // Initial load
+          $("#send-to-iframe").click();
+        } else {
+          console.error("iframe 元素未找到，無法傳送 postMessage");
         }
-    </script>
-</body>
+
+        $(".ai-pd-container__trigger").on("pointerdown", function (event) {
+          if ($(this).hasClass("ai-pd-container__trigger--search")) {
+            $("#inffits_cblock--overlay").fadeIn();
+          } else {
+            $("#inffits_cblock--overlay").fadeOut();
+          }
+          $(this).toggleClass(
+            "ai-pd-container__trigger--search ai-pd-container__trigger--close"
+          );
+        });
+        $("#inffits_cblock--overlay").on("pointerdown", function (event) {
+          $("#inffits_cblock--overlay").fadeOut();
+          $(".ai-pd-container__trigger").toggleClass(
+            "ai-pd-container__trigger--search ai-pd-container__trigger--close"
+          );
+        });
+
+        var breakpoint = 992;
+
+        // 監聽窗口大小變化
+        window.addEventListener("resize", handleWindowResize);
+
+        // 首次載入時執行檢查
+        handleWindowResize();
+        function handleWindowResize() {
+          // 取得當前視窗寬度
+          var windowWidth = window.innerWidth;
+
+          // 當視窗寬度大於等於 992px (桌面版)
+          if (windowWidth >= breakpoint) {
+          } else {
+          }
+        }
+      });
+    })(jQuery);
+  </script>
 </html>
