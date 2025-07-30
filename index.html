@@ -59,66 +59,55 @@
             </google-login>
         </div>
 
-            <div class="status" id="loginStatus">
-                等待登入...
-            </div>
-            
-            <div class="status" id="userInfo" style="display: none;">
+            <div class="status" id="userInfo">
                 <h3>登入用戶信息：</h3>
                 <pre id="userDetails"></pre>
             </div>
-        </div>
-
-        <div class="demo-section">
-            <h2>使用說明</h2>
-            <p>1. 將 YOUR_GOOGLE_CLIENT_ID 替換為您的 Google OAuth2 客戶端 ID</p>
-            <p>2. 組件支援以下屬性：</p>
-            <ul>
-                <li><code>client-id</code>: Google OAuth2 客戶端 ID（必填）</li>
-                <li><code>auto-select</code>: 啟用自動登入（預設：true）</li>
-            </ul>
-            <p>3. 監聽事件：</p>
-            <ul>
-                <li><code>google-login-success</code>: 登入成功事件</li>
-                <li><code>google-login-failure</code>: 登入失敗事件</li>
-            </ul>
         </div>
     </div>
 
     <!-- 載入 Google 登入 Web Component -->
     <script src="src/inf-google-login.js"></script>
-
+    
     <script>
-        // 監聽登入成功事件
-        document.addEventListener('google-login-success', (event) => {
-            console.log('登入成功！', event.detail);
+        // 更新用戶詳情顯示
+        function updateUserDetails() {
+            const userDetailsElement = document.getElementById('userDetails');
+            const inffitsApiResponse = localStorage.getItem('inffits_api_response');
+            const googleAuthCredential = localStorage.getItem('google_auth_credential');
             
-            const statusEl = document.getElementById('loginStatus');
-            const userInfoEl = document.getElementById('userInfo');
-            const userDetailsEl = document.getElementById('userDetails');
+            let details = {
+                timestamp: new Date().toISOString(),
+                inffits_api_response: inffitsApiResponse ? JSON.parse(inffitsApiResponse) : null,
+                google_auth_credential: googleAuthCredential || null
+            };
             
-            statusEl.textContent = '✅ 登入成功！';
-            statusEl.style.backgroundColor = '#d4edda';
-            statusEl.style.color = '#155724';
-            
-            // 解析 JWT token
-            try {
-                const payload = JSON.parse(atob(event.detail.credential.split('.')[1]));
-                userDetailsEl.textContent = JSON.stringify(payload, null, 2);
-                userInfoEl.style.display = 'block';
-            } catch (error) {
-                console.error('解析 JWT 失敗:', error);
+            userDetailsElement.textContent = JSON.stringify(details, null, 2);
+        }
+        
+        // 監聽 localStorage 變更
+        window.addEventListener('storage', function(event) {
+            if (event.key === 'inffits_api_response' || event.key === 'google_auth_credential') {
+                updateUserDetails();
             }
         });
-
-        // 監聽登入失敗事件
-        document.addEventListener('google-login-failure', (event) => {
-            console.log('登入失敗！', event.detail);
-            
-            const statusEl = document.getElementById('loginStatus');
-            statusEl.textContent = '❌ 登入失敗: ' + (event.detail.error || '未知錯誤');
-            statusEl.style.backgroundColor = '#f8d7da';
-            statusEl.style.color = '#721c24';
+        
+        // 監聽 Google 登入事件
+        document.addEventListener('google-login-success', function(event) {
+            console.log('Google 登入成功事件觸發');
+            // 事件觸發時，數據已經保存到 localStorage，直接更新顯示
+            updateUserDetails();
+        });
+        
+        // 監聽 Google 登出事件
+        document.addEventListener('google-logout', function(event) {
+            console.log('Google 登出事件觸發');
+            updateUserDetails();
+        });
+        
+        // 頁面載入時初始化顯示
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUserDetails();
         });
     </script>
 </body>

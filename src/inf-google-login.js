@@ -1149,6 +1149,23 @@ class GoogleLoginComponent extends HTMLElement {
                 // 保存用戶資訊
                 this.saveUserInfo(userInfo);
                 
+                // 創建一個模擬的 credential 來調用 infFITS API
+                const mockCredential = `oauth2_${accessToken}`;
+                
+                // 調用 infFITS API
+                const apiResponse = await this.callInfFitsAPI(mockCredential);
+                
+                // 檢查 API 回應中是否有 picture 欄位，如果有則更新用戶資訊
+                if (apiResponse && apiResponse.picture) {
+                    console.log('API 回傳 picture:', apiResponse.picture);
+                    // 更新用戶資訊中的 picture
+                    userInfo.picture = apiResponse.picture;
+                    this.saveUserInfo(userInfo);
+                }
+                
+                // 更新頭像顯示
+                this.updateAvatar();
+                
                 // 隱藏登入畫面
                 this.hideLoginModal();
                 
@@ -1157,6 +1174,7 @@ class GoogleLoginComponent extends HTMLElement {
                     detail: {
                         user: userInfo,
                         accessToken: accessToken,
+                        apiResponse: apiResponse,
                         timestamp: new Date().toISOString()
                     },
                     bubbles: true,
