@@ -483,7 +483,7 @@ class GoogleLoginComponent extends HTMLElement {
         }
         
         return `
-            <div style="width: 100%; max-width: 365px; padding: 20px;">
+            <div style="width: 100%; height:100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div style="cursor: pointer; padding: 8px;" id="modal-profile-back-arrow">
                         <svg width="24" height="24" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
