@@ -271,9 +271,54 @@ class GoogleLoginComponent extends HTMLElement {
         console.log('觸發 Google 登入');
         if (window.google && window.google.accounts) {
             console.log('Google 服務已載入，調用 prompt()');
-            window.google.accounts.id.prompt();
+            
+            // 在 WebView 中使用更穩定的方式觸發登入
+            try {
+                // 先嘗試使用標準的 prompt 方法
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed()) {
+                        console.log('Google 登入提示未顯示:', notification.getNotDisplayedReason());
+                        // 如果無法顯示，嘗試其他方式
+                        this.fallbackGoogleSignIn();
+                    } else if (notification.isSkippedMoment()) {
+                        console.log('Google 登入被跳過:', notification.getSkippedReason());
+                    } else if (notification.isDismissedMoment()) {
+                        console.log('Google 登入被取消');
+                    }
+                });
+            } catch (error) {
+                console.warn('標準 prompt 方法失敗，使用備用方法:', error);
+                this.fallbackGoogleSignIn();
+            }
         } else {
             console.error('Google 服務尚未載入');
+        }
+    }
+    
+    // 備用 Google 登入方法（適用於 WebView）
+    fallbackGoogleSignIn() {
+        console.log('使用備用 Google 登入方法');
+        try {
+            // 在 WebView 中，有時需要手動觸發
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                // 嘗試重新初始化並立即觸發
+                window.google.accounts.id.initialize({
+                    client_id: this.clientId,
+                    callback: this.handleCredentialResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: false,
+                    use_fedcm_for_prompt: true,
+                    context: 'signin'
+                });
+                
+                // 延遲一下再觸發，確保初始化完成
+                setTimeout(() => {
+                    window.google.accounts.id.prompt();
+                }, 100);
+            }
+        } catch (error) {
+            console.error('備用登入方法也失敗:', error);
+            this.handleLoginFailure(error);
         }
     }
     
@@ -414,17 +459,7 @@ class GoogleLoginComponent extends HTMLElement {
                 return;
             }
             
-            // 檢查是否在 WebView 環境中
-            const isWebView = this.detectWebView();
-            console.log('WebView 檢測結果:', isWebView);
-            
-            if (isWebView) {
-                // WebView 環境：使用 WebView 特定的登入方式
-                this.setupWebViewLogin();
-                return;
-            }
-            
-            // 一般瀏覽器環境：動態載入 Google Identity Services 腳本
+            // 動態載入 Google Identity Services 腳本
             const script = document.createElement('script');
             script.src = 'https://accounts.google.com/gsi/client';
             script.async = true;
@@ -444,122 +479,34 @@ class GoogleLoginComponent extends HTMLElement {
             // 添加到文檔頭部
             document.head.appendChild(script);
             
+            // WebView 特殊處理：確保腳本在 WebView 中正確載入
+            if (this.isInWebView()) {
+                console.log('檢測到 WebView 環境，使用特殊載入策略');
+                // 在 WebView 中，有時需要額外的時間來確保腳本完全載入
+                setTimeout(() => {
+                    if (!this.isGoogleLoaded && window.google && window.google.accounts) {
+                        this.isGoogleLoaded = true;
+                        this.onGoogleLoaded();
+                    }
+                }, 1000);
+            }
+            
         } catch (error) {
             this.handleError('載入 Google 服務時發生錯誤: ' + error.message);
         }
     }
     
-    // 檢測是否在 WebView 環境中
-    detectWebView() {
+    // 檢測是否在 WebView 中
+    isInWebView() {
         const userAgent = navigator.userAgent.toLowerCase();
-        
-        // 檢測常見的 WebView 標識
-        const webViewPatterns = [
-            'wv', // Android WebView
-            'webview',
-            'mobile safari',
-            'android',
-            'iphone',
-            'ipad',
-            'ipod',
-            'cordova',
-            'phonegap',
-            'ionic',
-            'capacitor',
-            'react-native',
-            'flutter'
-        ];
-        
-        // 檢查是否包含 WebView 標識
-        const isWebView = webViewPatterns.some(pattern => userAgent.includes(pattern));
-        
-        // 額外檢查：如果沒有某些瀏覽器特有的功能，可能是 WebView
-        const hasBrowserFeatures = (
-            navigator.cookieEnabled !== undefined &&
-            navigator.onLine !== undefined &&
-            window.localStorage !== undefined
+        return (
+            userAgent.includes('wv') || // Android WebView
+            userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome') || // iOS WebView
+            userAgent.includes('webview') || // 其他 WebView
+            window.ReactNativeWebView || // React Native WebView
+            window.webkit && window.webkit.messageHandlers // iOS WKWebView
         );
-        
-        console.log('User Agent:', userAgent);
-        console.log('WebView 模式匹配:', isWebView);
-        console.log('瀏覽器功能檢查:', hasBrowserFeatures);
-        
-        return isWebView;
     }
-    
-    // 設置 WebView 特定的登入方式
-    setupWebViewLogin() {
-        console.log('設置 WebView 登入方式');
-        
-        // 監聽來自原生應用的消息
-        window.addEventListener('message', (event) => {
-            this.handleWebViewMessage(event);
-        });
-        
-        // 觸發 WebView 登入時，通知原生應用
-        this.originalTriggerGoogleSignIn = this.triggerGoogleSignIn;
-        this.triggerGoogleSignIn = () => {
-            console.log('WebView 環境：通知原生應用處理 Google 登入');
-            
-            // 嘗試與原生應用通信
-            if (window.ReactNativeWebView) {
-                // React Native WebView
-                console.log('使用 React Native WebView 通信');
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'GOOGLE_SIGN_IN',
-                    clientId: this.clientId
-                }));
-            } else if (window.webkit && window.webkit.messageHandlers) {
-                // iOS WKWebView
-                console.log('使用 iOS WKWebView 通信');
-                window.webkit.messageHandlers.googleSignIn.postMessage({
-                    type: 'GOOGLE_SIGN_IN',
-                    clientId: this.clientId
-                });
-            } else if (window.Android) {
-                // Android WebView
-                console.log('使用 Android WebView 通信');
-                window.Android.googleSignIn(this.clientId);
-            } else {
-                // 無法與原生應用通信，顯示錯誤
-                console.error('WebView 環境中無法與原生應用通信');
-                this.handleLoginFailure(new Error('WebView 環境需要原生應用支援 Google 登入'));
-            }
-        };
-    }
-    
-    // 處理來自原生應用的消息
-    handleWebViewMessage(event) {
-        try {
-            const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-            
-            console.log('收到 WebView 消息:', data);
-            
-            switch (data.type) {
-                case 'GOOGLE_SIGN_IN_SUCCESS':
-                    // 原生應用返回登入成功
-                    this.handleCredentialResponse({
-                        credential: data.credential,
-                        select_by: 'webview'
-                    });
-                    break;
-                    
-                case 'GOOGLE_SIGN_IN_FAILURE':
-                    // 原生應用返回登入失敗
-                    this.handleLoginFailure(new Error(data.error || 'WebView 登入失敗'));
-                    break;
-                    
-                case 'GOOGLE_SIGN_IN_CANCELLED':
-                    // 用戶取消登入
-                    console.log('用戶取消 Google 登入');
-                    break;
-            }
-        } catch (error) {
-            console.error('處理 WebView 消息失敗:', error);
-        }
-    }
-    
-    // 移除通用 WebView 登入方式（不再使用重定向 URI）
     
     // Google 服務載入完成後的回調
     onGoogleLoaded() {
@@ -571,15 +518,24 @@ class GoogleLoginComponent extends HTMLElement {
         }
         
         try {
-            // 初始化 Google Identity Services
+            // 初始化 Google Identity Services - 支援 WebView
             window.google.accounts.id.initialize({
                 client_id: this.clientId,
                 callback: this.handleCredentialResponse,
                 auto_select: false, // 不自動選擇，讓用戶點擊頭像觸發
-                cancel_on_tap_outside: false
+                cancel_on_tap_outside: false,
+                // WebView 支援配置
+                use_fedcm_for_prompt: true, // 使用 FedCM 提升 WebView 相容性
+                prompt_parent_id: null, // 不使用特定父容器
+                // 禁用重新導向，使用彈出視窗
+                redirect_uri: null,
+                // 支援 WebView 的配置
+                context: 'signin', // 明確指定上下文
+                // 確保在 WebView 中正常工作
+                itp_support: true
             });
             
-            console.log('Google Identity Services 初始化完成');
+            console.log('Google Identity Services 初始化完成（WebView 相容模式）');
             
         } catch (error) {
             console.error('初始化 Google 登入失敗:', error);
@@ -709,8 +665,18 @@ class GoogleLoginComponent extends HTMLElement {
     // 公開方法：登出
     signOut() {
         if (window.google && window.google.accounts) {
-            window.google.accounts.id.disableAutoSelect();
+            try {
+                // 在 WebView 中使用更安全的登出方式
+                window.google.accounts.id.disableAutoSelect();
+                // 清除 Google 的會話狀態
+                window.google.accounts.id.revoke(this.clientId, () => {
+                    console.log('Google 會話已撤銷');
+                });
+            } catch (error) {
+                console.warn('Google 登出清理失敗:', error);
+            }
         }
+        
         this.clearCredential();
         
         // 觸發登出事件
