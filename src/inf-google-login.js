@@ -883,9 +883,8 @@ class GoogleLoginComponent extends HTMLElement {
             // 檢查是否有活躍的 Google 會話
             const hasActiveSession = this.checkGoogleSession();
             
-            // 在 WebView 中使用更穩定的方式觸發登入
             try {
-                // 先嘗試使用標準的 prompt 方法
+                // 使用標準的 prompt 方法
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed()) {
                         console.log('Google 登入提示未顯示:', notification.getNotDisplayedReason());
@@ -1050,11 +1049,10 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
-    // 備用 Google 登入方法（適用於 WebView）
+    // 備用 Google 登入方法
     fallbackGoogleSignIn() {
         console.log('使用備用 Google 登入方法');
         try {
-            // 在 WebKit WebView 中使用特殊配置
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 const config = {
                     client_id: this.clientId,
@@ -1062,18 +1060,9 @@ class GoogleLoginComponent extends HTMLElement {
                     auto_select: false,
                     cancel_on_tap_outside: false,
                     context: 'signin',
-                    select_account: true
+                    select_account: true,
+                    use_fedcm_for_prompt: true
                 };
-                
-                // WebKit WebView 特殊配置
-                if (this.isInWebKitWebView()) {
-                    config.use_fedcm_for_prompt = false;
-                    config.ux_mode = 'popup';
-                    config.prompt = 'select_account';
-                    config.state_cookie_domain = window.location.hostname;
-                } else {
-                    config.use_fedcm_for_prompt = true;
-                }
                 
                 // 重新初始化
                 window.google.accounts.id.initialize(config);
@@ -1744,12 +1733,7 @@ class GoogleLoginComponent extends HTMLElement {
                 return;
             }
             
-            // iOS WebView 特殊處理 - 優先使用
-            if (this.isInWebKitWebView()) {
-                console.log('檢測到 iOS WebView 環境，使用 iOS 專用載入策略');
-                this.loadGoogleForIOS();
-                return;
-            }
+
             
             // 標準載入方式
             const script = document.createElement('script');
@@ -1775,227 +1759,11 @@ class GoogleLoginComponent extends HTMLElement {
         }
     }
     
-    // iOS 專用的 Google 載入策略
-    loadGoogleForIOS() {
-        console.log('開始 iOS 專用 Google 載入策略');
-        
-        // 策略1: 使用 JSONP 方式載入
-        this.loadGoogleWithJSONP();
-    }
-    
-    // 使用 JSONP 載入 Google 服務
-    loadGoogleWithJSONP() {
-        console.log('嘗試 JSONP 載入方式');
-        
-        try {
-            // 創建全局回調函數
-            window.googleLoadedCallback = () => {
-                console.log('JSONP 回調觸發');
-                if (window.google && window.google.accounts) {
-                    this.isGoogleLoaded = true;
-                    this.onGoogleLoaded();
-                } else {
-                    console.warn('JSONP 載入失敗，嘗試方案2');
-                    this.loadGoogleWithIframe();
-                }
-            };
-            
-            // 創建 script 標籤
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client?onload=googleLoadedCallback';
-            script.async = true;
-            
-            // 設置超時
-            const timeout = setTimeout(() => {
-                console.warn('JSONP 載入超時，嘗試方案2');
-                this.loadGoogleWithIframe();
-            }, 5000);
-            
-            // 成功載入時清除超時
-            script.onload = () => {
-                clearTimeout(timeout);
-            };
-            
-            script.onerror = () => {
-                clearTimeout(timeout);
-                console.warn('JSONP 載入錯誤，嘗試方案2');
-                this.loadGoogleWithIframe();
-            };
-            
-            document.head.appendChild(script);
-            
-        } catch (error) {
-            console.error('JSONP 載入失敗:', error);
-            this.loadGoogleWithIframe();
-        }
-    }
-    
-    // 使用 iframe 載入 Google 服務
-    loadGoogleWithIframe() {
-        console.log('嘗試 iframe 載入方式');
-        
-        try {
-            // 創建隱藏的 iframe
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = 'none';
-            iframe.src = 'https://accounts.google.com/gsi/client';
-            
-            // 監聽 iframe 載入
-            iframe.onload = () => {
-                console.log('iframe 載入完成');
-                
-                // 檢查 Google 服務是否可用
-                let checkCount = 0;
-                const maxChecks = 20;
-                
-                const checkInterval = setInterval(() => {
-                    checkCount++;
-                    console.log(`iframe 檢查 Google 服務 (${checkCount}/${maxChecks})`);
-                    
-                    if (window.google && window.google.accounts) {
-                        this.isGoogleLoaded = true;
-                        this.onGoogleLoaded();
-                        clearInterval(checkInterval);
-                        console.log('iframe 載入成功');
-                    } else if (checkCount >= maxChecks) {
-                        clearInterval(checkInterval);
-                        console.warn('iframe 載入失敗，嘗試方案3');
-                        this.loadGoogleWithDirectScript();
-                    }
-                }, 500);
-            };
-            
-            iframe.onerror = () => {
-                console.warn('iframe 載入錯誤，嘗試方案3');
-                this.loadGoogleWithDirectScript();
-            };
-            
-            document.body.appendChild(iframe);
-            
-        } catch (error) {
-            console.error('iframe 載入失敗:', error);
-            this.loadGoogleWithDirectScript();
-        }
-    }
-    
-    // 直接腳本載入（最後方案）
-    loadGoogleWithDirectScript() {
-        console.log('嘗試直接腳本載入（最後方案）');
-        
-        try {
-            // 移除可能存在的舊腳本
-            const existingScripts = document.querySelectorAll('script[src*="accounts.google.com"]');
-            existingScripts.forEach(script => script.remove());
-            
-            // 創建新的腳本
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = false; // 同步載入
-            script.defer = false;
-            
-            // 設置載入檢查
-            let checkCount = 0;
-            const maxChecks = 30;
-            
-            const checkInterval = setInterval(() => {
-                checkCount++;
-                console.log(`直接腳本檢查 Google 服務 (${checkCount}/${maxChecks})`);
-                
-                if (window.google && window.google.accounts) {
-                    this.isGoogleLoaded = true;
-                    this.onGoogleLoaded();
-                    clearInterval(checkInterval);
-                    console.log('直接腳本載入成功');
-                } else if (checkCount >= maxChecks) {
-                    clearInterval(checkInterval);
-                    console.error('所有載入方案都失敗了');
-                    this.handleLoginFailure('iOS WebView 中無法載入 Google Identity Services，請檢查網路連接或使用備用登入方式');
-                }
-            }, 500);
-            
-            script.onload = () => {
-                console.log('直接腳本 onload 觸發');
-            };
-            
-            script.onerror = () => {
-                console.error('直接腳本載入錯誤');
-            };
-            
-            document.head.appendChild(script);
-            
-        } catch (error) {
-            console.error('直接腳本載入失敗:', error);
-            this.handleLoginFailure('所有 Google 載入方案都失敗了: ' + error.message);
-        }
-    }
-    
-        // 重試載入 Google 服務
-    retryLoadGoogleServices() {
-        console.log('重試載入 Google 服務');
-        try {
-            // 移除現有的腳本
-            const existingScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
-            if (existingScript) {
-                existingScript.remove();
-            }
-            
-            // 重新載入
-            this.loadGoogleIdentityServices();
-        } catch (error) {
-            console.error('重試載入失敗:', error);
-            this.handleLoginFailure('重試載入失敗: ' + error.message);
-        }
-    }
-    
-    // 最後方案: 使用備用登入方式
-    useFallbackLogin() {
-        console.log('使用備用登入方式');
-        // 觸發事件通知父組件使用備用登入
-        this.dispatchEvent(new CustomEvent('google-services-unavailable', {
-            detail: {
-                message: 'Google 服務無法載入，請使用備用登入方式',
-                timestamp: new Date().toISOString()
-            },
-            bubbles: true,
-            composed: true
-        }));
-    }
 
-    // 檢測是否在 WebView 中
-    isInWebView() {
-        const userAgent = navigator.userAgent.toLowerCase();
-        return (
-            userAgent.includes('wv') || // Android WebView
-            userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome') || // iOS WebView
-            userAgent.includes('webview') || // 其他 WebView
-            window.ReactNativeWebView || // React Native WebView
-            window.webkit && window.webkit.messageHandlers // iOS WKWebView
-        );
-    }
+
+
     
-    // 檢測是否在 WebKit WebView 中
-    isInWebKitWebView() {
-        const userAgent = navigator.userAgent.toLowerCase();
-        return (
-            // iOS WKWebView - 更精確的檢測
-            (userAgent.includes('iphone') || userAgent.includes('ipad')) && userAgent.includes('webkit') ||
-            // iOS Safari WebView
-            (userAgent.includes('mobile') && userAgent.includes('safari') && !userAgent.includes('chrome')) ||
-            // 明確的 WebKit WebView
-            userAgent.includes('webkit') && (userAgent.includes('mobile') || userAgent.includes('ipad') || userAgent.includes('iphone')) ||
-            // WKWebView 特定檢測
-            window.webkit && window.webkit.messageHandlers ||
-            // 其他 WebKit 環境
-            userAgent.includes('webkit') && !userAgent.includes('chrome') ||
-            // iOS 原生 WebView 檢測 - 更寬鬆的檢測
-            (userAgent.includes('iphone') || userAgent.includes('ipad')) ||
-            // 任何 iOS 設備
-            userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')
-        );
-    }
+
     
     // Google 服務載入完成後的回調
     onGoogleLoaded() {
@@ -2007,56 +1775,23 @@ class GoogleLoginComponent extends HTMLElement {
         }
         
         try {
-            // 初始化 Google Identity Services - 針對 WebKit WebView 優化
+            // 初始化 Google Identity Services
             const config = {
                 client_id: this.clientId,
                 callback: this.handleCredentialResponse,
                 auto_select: false,
                 cancel_on_tap_outside: false,
-                // WebKit WebView 特殊配置
-                use_fedcm_for_prompt: false, // WebKit 中禁用 FedCM
-                prompt_parent_id: null,
-                redirect_uri: null,
                 context: 'signin',
-                itp_support: true,
                 select_account: true,
-                // WebKit WebView 額外配置
-                state_cookie_domain: window.location.hostname,
-                ux_mode: 'popup', // 強制使用彈出模式
-                // 確保在 WebKit 中正常工作
-                hosted_domain: null,
-                login_hint: null,
                 prompt: 'select_account',
-                // 修復空會話問題
                 auto_prompt: false,
                 state: 'google_signin',
-                scope: 'openid email profile',
-                // 針對空會話問題的額外配置
-                flow: 'implicit',
-                response_type: 'token',
-                include_granted_scopes: true,
-                access_type: 'offline',
-                // WebView 特殊配置
-                disable_auto_sign_in: true,
-                disable_auto_focus: true,
-                disable_instant_gsi_loading: true,
-                // 強制使用 One Tap 模式
-                auto_select: false,
-                cancel_on_tap_outside: true,
-                prompt_parent_id: 'google-signin-container'
+                scope: 'openid email profile'
             };
-            
-            // 在 WebKit WebView 中使用特殊配置
-            if (this.isInWebKitWebView()) {
-                console.log('檢測到 WebKit WebView，使用特殊配置');
-                config.use_fedcm_for_prompt = false;
-                config.ux_mode = 'popup';
-                config.prompt = 'select_account';
-            }
             
             window.google.accounts.id.initialize(config);
             
-            console.log('Google Identity Services 初始化完成（WebKit WebView 相容模式）');
+            console.log('Google Identity Services 初始化完成');
             
         } catch (error) {
             console.error('初始化 Google 登入失敗:', error);
@@ -2203,7 +1938,6 @@ class GoogleLoginComponent extends HTMLElement {
     signOut() {
         if (window.google && window.google.accounts) {
             try {
-                // 在 WebView 中使用更安全的登出方式
                 window.google.accounts.id.disableAutoSelect();
                 // 清除 Google 的會話狀態
                 window.google.accounts.id.revoke(this.clientId, () => {
