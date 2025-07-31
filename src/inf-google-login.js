@@ -46,12 +46,18 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.credential = storedCredential;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
+            this.getApiResponse(); // 載入 API 回應數據
+        } else {
+            // 如果沒有憑證，確保狀態為未登入
+            this.credential = null;
+            this.isAuthenticated = false;
         }
     }
 
     // 保存憑證
     saveCredential(credential) {
         if (credential) {
+            const oldCredential = this.credential;
             localStorage.setItem('google_auth_credential', credential);
             this.credential = credential;
             this.isAuthenticated = true;
@@ -65,11 +71,20 @@ class InfGoogleLoginComponent extends HTMLElement {
                 bubbles: true,
                 composed: true
             }));
+
+            // 觸發 storage 事件，通知其他組件實例
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'google_auth_credential',
+                newValue: credential,
+                oldValue: oldCredential,
+                storageArea: localStorage
+            }));
         }
     }
 
     // 清除憑證
     clearCredential() {
+        const oldCredential = this.credential;
         localStorage.removeItem('google_auth_credential');
         localStorage.removeItem('google_user_info');
         localStorage.removeItem('inffits_api_response'); // 清除 API 回應數據
@@ -78,6 +93,16 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.isAuthenticated = false;
         this.apiResponse = null;
         this.updateAvatar();
+
+        // 觸發 localStorage 更新事件
+        this.dispatchEvent(new CustomEvent('localStorage-updated', {
+            detail: {
+                key: 'google_auth_credential',
+                value: null
+            },
+            bubbles: true,
+            composed: true
+        }));
     }
 
     // 保存用戶資訊
@@ -86,6 +111,16 @@ class InfGoogleLoginComponent extends HTMLElement {
             localStorage.setItem('google_user_info', JSON.stringify(userInfo));
             this.userInfo = userInfo;
             this.updateAvatar();
+
+            // 觸發 localStorage 更新事件
+            this.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    key: 'google_user_info',
+                    value: userInfo
+                },
+                bubbles: true,
+                composed: true
+            }));
         }
     }
 
@@ -94,7 +129,12 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (!this.userInfo) {
             const stored = localStorage.getItem('google_user_info');
             if (stored) {
-                this.userInfo = JSON.parse(stored);
+                try {
+                    this.userInfo = JSON.parse(stored);
+                } catch (error) {
+                    console.warn('解析用戶資訊失敗:', error);
+                    this.userInfo = null;
+                }
             }
         }
         return this.userInfo;
@@ -122,15 +162,19 @@ class InfGoogleLoginComponent extends HTMLElement {
             avatarContainer.style.display = 'inline-block';
         }
 
+        // 再次檢查登入狀態，確保同步
+        this.checkStoredCredential();
+
         // 優先使用 API 回應中的 picture，如果沒有則使用 Google 用戶資訊中的 picture
         let pictureUrl = null;
         const apiResponse = this.getApiResponse();
+        const userInfo = this.getUserInfo();
 
         if (apiResponse && apiResponse.picture) {
             pictureUrl = apiResponse.picture;
             console.log('使用 API 回傳的 picture:', pictureUrl);
-        } else if (this.userInfo && this.userInfo.picture) {
-            pictureUrl = this.userInfo.picture;
+        } else if (userInfo && userInfo.picture) {
+            pictureUrl = userInfo.picture;
             console.log('使用 Google 用戶資訊的 picture:', pictureUrl);
         }
 
@@ -226,6 +270,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.isGoogleLoaded = true;
         }
         
+        // 確保在組件連接時檢查並同步登入狀態
+        this.checkStoredCredential();
         this.updateAvatar(); // 初始化頭像顯示
         this.loadGoogleIdentityServices();
 
@@ -361,6 +407,8 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 處理頭像點擊
     handleAvatarClick() {
+        // 再次檢查登入狀態，確保同步
+        this.checkStoredCredential();
         console.log('處理頭像點擊，登入狀態:', this.isAuthenticated);
 
         if (this.isAuthenticated) {
@@ -1066,6 +1114,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             pictureUrl = userInfo.picture;
         }
 
+        // 確保用戶資訊存在
+        const safeUserInfo = userInfo || {};
+
         return `
             <div class="profile-modal">
                 <div class="profile-modal__header">
@@ -1090,28 +1141,28 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">姓名</div>
-                                <div class="profile-modal__info-value">${userInfo ? (userInfo.name || '尚未提供') : '尚未提供'}</div>
+                                <div class="profile-modal__info-value">${safeUserInfo.name || '尚未提供'}</div>
                             </div>
                         </div>
                         
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">電子郵件</div>
-                                <div class="profile-modal__info-value">${userInfo ? (userInfo.email || '尚未提供') : '尚未提供'}</div>
+                                <div class="profile-modal__info-value">${safeUserInfo.email || '尚未提供'}</div>
                             </div>
                         </div>
                         
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">電話號碼</div>
-                                <div class="profile-modal__info-value">${userInfo ? (userInfo.phone || '尚未提供') : '尚未提供'}</div>
+                                <div class="profile-modal__info-value">${safeUserInfo.phone || '尚未提供'}</div>
                             </div>
                         </div>
                         
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">出生日期</div>
-                                <div class="profile-modal__info-value">${userInfo ? (userInfo.birthday || '尚未提供') : '尚未提供'}</div>
+                                <div class="profile-modal__info-value">${safeUserInfo.birthday || '尚未提供'}</div>
                             </div>
                         </div>
                     </div>
@@ -1162,6 +1213,9 @@ class InfGoogleLoginComponent extends HTMLElement {
         const userInfo = this.getUserInfo();
         const apiResponse = this.getApiResponse();
 
+        // 確保用戶資訊存在
+        const safeUserInfo = userInfo || {};
+
         // 更新頭像 - 優先使用 API 回應中的 picture
         const profileAvatarImage = this.shadowRoot.getElementById('profile-avatar-image');
         if (profileAvatarImage) {
@@ -1169,8 +1223,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (apiResponse && apiResponse.picture) {
                 pictureUrl = apiResponse.picture;
                 console.log('個人資訊使用 API 回傳的 picture:', pictureUrl);
-            } else if (userInfo && userInfo.picture) {
-                pictureUrl = userInfo.picture;
+            } else if (safeUserInfo.picture) {
+                pictureUrl = safeUserInfo.picture;
                 console.log('個人資訊使用 Google 用戶資訊的 picture:', pictureUrl);
             }
 
@@ -1182,7 +1236,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 更新姓名
         const profileName = this.shadowRoot.getElementById('profile-name');
         if (profileName) {
-            profileName.textContent = userInfo ? (userInfo.name || '尚未提供') : '尚未提供';
+            profileName.textContent = safeUserInfo.name || '尚未提供';
         }
 
         // 更新電子郵件
@@ -1190,7 +1244,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (profileEmail) {
             const emailSpan = profileEmail.querySelector('span');
             if (emailSpan) {
-                emailSpan.textContent = userInfo ? (userInfo.email || '尚未提供') : '尚未提供';
+                emailSpan.textContent = safeUserInfo.email || '尚未提供';
             }
         }
 
@@ -1522,17 +1576,25 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 隱藏登入畫面
                 this.hideLoginModal();
 
-                // 觸發成功事件
-                this.dispatchEvent(new CustomEvent('inf-google-login-success', {
-                    detail: {
-                        user: userInfo,
-                        accessToken: accessToken,
-                        apiResponse: apiResponse,
-                        timestamp: new Date().toISOString()
-                    },
-                    bubbles: true,
-                    composed: true
-                }));
+                            // 觸發成功事件
+            this.dispatchEvent(new CustomEvent('inf-google-login-success', {
+                detail: {
+                    user: userInfo,
+                    accessToken: accessToken,
+                    apiResponse: apiResponse,
+                    timestamp: new Date().toISOString()
+                },
+                bubbles: true,
+                composed: true
+            }));
+
+            // 觸發 localStorage 更新事件，通知其他組件實例
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'google_auth_credential',
+                newValue: mockCredential,
+                oldValue: null,
+                storageArea: localStorage
+            }));
             } else {
                 throw new Error('無法獲取用戶資訊');
             }
@@ -1550,14 +1612,43 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.credential = event.newValue;
                 this.isAuthenticated = true;
                 this.getUserInfo();
+                this.getApiResponse(); // 也載入 API 回應數據
                 this.updateAvatar();
             } else {
                 // 其他頁面登出了
                 this.credential = null;
                 this.isAuthenticated = false;
                 this.userInfo = null;
+                this.apiResponse = null;
                 this.updateAvatar();
             }
+        } else if (event.key === 'google_user_info') {
+            // 用戶資訊更新時，重新載入用戶資訊
+            if (event.newValue) {
+                try {
+                    this.userInfo = JSON.parse(event.newValue);
+                } catch (error) {
+                    console.warn('解析用戶資訊失敗:', error);
+                    this.userInfo = null;
+                }
+            } else {
+                this.userInfo = null;
+            }
+            this.updateAvatar();
+        } else if (event.key === 'inffits_api_response') {
+            // API 回應數據更新時，重新檢查登入狀態
+            if (event.newValue) {
+                try {
+                    this.apiResponse = JSON.parse(event.newValue);
+                } catch (error) {
+                    console.warn('解析 API 回應數據失敗:', error);
+                    this.apiResponse = null;
+                }
+            } else {
+                this.apiResponse = null;
+            }
+            this.checkStoredCredential();
+            this.updateAvatar();
         }
     }
 
@@ -2100,6 +2191,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (window.google && window.google.accounts) {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
+                // 確保在 Google 服務載入後再次檢查登入狀態
+                this.checkStoredCredential();
                 this.updateAvatar(); // 更新頭像狀態
                 return;
             }
@@ -2113,6 +2206,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             script.onload = () => {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
+                // 確保在 Google 服務載入後再次檢查登入狀態
+                this.checkStoredCredential();
                 this.updateAvatar(); // 更新頭像狀態
             };
 
@@ -2221,6 +2316,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 composed: true
             }));
 
+            // 觸發 localStorage 更新事件，通知其他組件實例
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'google_auth_credential',
+                newValue: response.credential,
+                oldValue: null,
+                storageArea: localStorage
+            }));
+
         } catch (error) {
             this.handleLoginFailure('處理登入回調失敗: ' + error.message);
         }
@@ -2277,6 +2380,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 bubbles: true,
                 composed: true
             }));
+
+            // 觸發 storage 事件，通知其他組件實例
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'inffits_api_response',
+                newValue: JSON.stringify(data),
+                oldValue: null,
+                storageArea: localStorage
+            }));
         } catch (error) {
             console.warn('保存 API 回應數據失敗:', error);
         }
@@ -2287,7 +2398,12 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (!this.apiResponse) {
             const stored = localStorage.getItem('inffits_api_response');
             if (stored) {
-                this.apiResponse = JSON.parse(stored);
+                try {
+                    this.apiResponse = JSON.parse(stored);
+                } catch (error) {
+                    console.warn('解析 API 回應數據失敗:', error);
+                    this.apiResponse = null;
+                }
             }
         }
         return this.apiResponse;
@@ -2338,6 +2454,14 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.dispatchEvent(new CustomEvent('google-logout', {
             bubbles: true,
             composed: true
+        }));
+
+        // 觸發 localStorage 更新事件，通知其他組件實例
+        window.dispatchEvent(new StorageEvent('storage', {
+            key: 'google_auth_credential',
+            newValue: null,
+            oldValue: this.credential,
+            storageArea: localStorage
         }));
     }
 
