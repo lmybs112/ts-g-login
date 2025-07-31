@@ -12,7 +12,7 @@
 class InfGoogleLoginComponent extends HTMLElement {
     constructor() {
         super();
-
+        
         // 建立 Shadow DOM
         this.attachShadow({
             mode: 'open'
@@ -26,17 +26,115 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.isAuthenticated = false;
         this.credential = null;
         this.targetContainerId = null; // 新增：目標容器 ID
-
+        
+        // 添加 timeout 追蹤器，用於清理
+        this.activeTimeouts = new Set();
+        this.activeIntervals = new Set();
+        
+        // 監聽 localStorage 變化
+        window.addEventListener('storage', this.handleStorageChange.bind(this));
+        
         // 綁定方法到 this 上下文
         this.handleCredentialResponse = this.handleCredentialResponse.bind(this);
         this.handleLoginFailure = this.handleLoginFailure.bind(this);
         this.handleStorageChange = this.handleStorageChange.bind(this);
-
+        
         // 檢查本地存儲的憑證
         this.checkStoredCredential();
+    }
 
-        // 監聽 localStorage 變更
-        window.addEventListener('storage', this.handleStorageChange);
+    // 安全的 timeout 包裝器
+    safeSetTimeout(callback, delay) {
+        const timeoutId = setTimeout(() => {
+            this.activeTimeouts.delete(timeoutId);
+            callback();
+        }, delay);
+        this.activeTimeouts.add(timeoutId);
+        return timeoutId;
+    }
+
+    // 安全的 interval 包裝器
+    safeSetInterval(callback, delay) {
+        const intervalId = setInterval(callback, delay);
+        this.activeIntervals.add(intervalId);
+        return intervalId;
+    }
+
+    // 清理所有活動的 timeout 和 interval
+    clearAllTimers() {
+        this.activeTimeouts.forEach(timeoutId => {
+            clearTimeout(timeoutId);
+        });
+        this.activeTimeouts.clear();
+        
+        this.activeIntervals.forEach(intervalId => {
+            clearInterval(intervalId);
+        });
+        this.activeIntervals.clear();
+    }
+
+    // 等待動畫完成的 Promise
+    waitForAnimation(element, animationName) {
+        return new Promise((resolve) => {
+            const handleAnimationEnd = (event) => {
+                if (event.animationName === animationName) {
+                    element.removeEventListener('animationend', handleAnimationEnd);
+                    resolve();
+                }
+            };
+            
+            element.addEventListener('animationend', handleAnimationEnd);
+            
+            // 如果動畫已經完成，立即 resolve
+            const computedStyle = window.getComputedStyle(element);
+            if (computedStyle.animationPlayState === 'finished' || 
+                !computedStyle.animationName || 
+                computedStyle.animationName === 'none') {
+                resolve();
+            }
+        });
+    }
+
+    // 等待 Google 服務載入的 Promise
+    waitForGoogleServices() {
+        return new Promise((resolve, reject) => {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                resolve();
+                return;
+            }
+            
+            // 檢查是否已經在載入中
+            if (window.googleLoadingPromise) {
+                window.googleLoadingPromise.then(resolve).catch(reject);
+                return;
+            }
+            
+            // 創建載入 Promise
+            window.googleLoadingPromise = new Promise((innerResolve, innerReject) => {
+                const maxWaitTime = 10000; // 10秒超時
+                const checkInterval = 100;
+                let elapsedTime = 0;
+                
+                const checkGoogle = () => {
+                    if (window.google && window.google.accounts && window.google.accounts.id) {
+                        innerResolve();
+                        return;
+                    }
+                    
+                    elapsedTime += checkInterval;
+                    if (elapsedTime >= maxWaitTime) {
+                        innerReject(new Error('Google 服務載入超時'));
+                        return;
+                    }
+                    
+                    this.safeSetTimeout(checkGoogle, checkInterval);
+                };
+                
+                checkGoogle();
+            });
+            
+            window.googleLoadingPromise.then(resolve).catch(reject);
+        });
     }
 
     // 檢查存儲的憑證
@@ -503,10 +601,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 modalContent.style.animation = 'slideOutToRight 0.3s cubic-bezier(0.06, 0.43, 0.26, 0.99) forwards';
 
                 // 等待動畫完成後再隱藏
-                setTimeout(() => {
+                this.waitForAnimation(modalContent, 'slideOutToRight').then(() => {
                     this.hideModalInContainer(targetContainer);
                     this.showOriginalContent(targetContainer);
-                }, 300);
+                });
             } else {
                 this.hideModalInContainer(targetContainer);
                 this.showOriginalContent(targetContainer);
@@ -1347,10 +1445,13 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 重新初始化
             this.onGoogleLoaded();
 
-            // 延遲後再次嘗試
-            setTimeout(() => {
+            // 等待 Google 服務載入後再次嘗試
+            this.waitForGoogleServices().then(() => {
                 this.triggerGoogleSignIn();
-            }, 1000);
+            }).catch((error) => {
+                console.error('Google 服務載入失敗:', error);
+                this.fallbackGoogleSignIn();
+            });
         } catch (error) {
             console.error('重新初始化失敗:', error);
             this.fallbackGoogleSignIn();
@@ -1427,7 +1528,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 });
 
                 // 監聽登入成功事件
-                const checkLoginSuccess = setInterval(() => {
+                const checkLoginSuccess = this.safeSetInterval(() => {
                     if (this.getUserInfo()) {
                         clearInterval(checkLoginSuccess);
                         document.body.removeChild(container);
@@ -1435,12 +1536,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }, 500);
 
                 // 5秒後自動清理
-                setTimeout(() => {
+                const cleanupTimeout = setTimeout(() => {
                     clearInterval(checkLoginSuccess);
                     if (container.parentNode) {
                         document.body.removeChild(container);
                     }
                 }, 5000);
+                
+                // 保存 timeout ID 以便清理
+                this.activeTimeouts.add(cleanupTimeout);
             } else {
                 document.body.removeChild(container);
                 this.triggerDirectGoogleSignIn();
@@ -1470,7 +1574,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 window.google.accounts.id.initialize(config);
 
                 // 延遲一下再觸發，確保初始化完成
-                setTimeout(() => {
+                const initTimeout = setTimeout(() => {
                     try {
                         window.google.accounts.id.prompt((notification) => {
                             if (notification.isNotDisplayed()) {
@@ -1484,6 +1588,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                         this.triggerDirectGoogleSignIn();
                     }
                 }, 200);
+                
+                // 保存 timeout ID 以便清理
+                this.activeTimeouts.add(initTimeout);
             }
         } catch (error) {
             console.error('備用登入方法也失敗:', error);
@@ -1509,7 +1616,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 'width=500,height=600,scrollbars=yes,resizable=yes');
 
             // 監聽授權結果
-            const checkAuthResult = setInterval(() => {
+            const checkAuthResult = this.safeSetInterval(() => {
                 try {
                     if (authWindow.closed) {
                         clearInterval(checkAuthResult);
@@ -1649,8 +1756,15 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 組件從 DOM 移除時
     disconnectedCallback() {
-        // 移除 localStorage 監聽器
-        window.removeEventListener('storage', this.handleStorageChange);
+        console.log('inf-google-login 組件已從 DOM 中移除');
+        
+        // 清理所有活動的 timeout 和 interval
+        this.clearAllTimers();
+        
+        // 移除事件監聽器
+        window.removeEventListener('storage', this.handleStorageChange.bind(this));
+        
+        // 清理其他資源
         this.cleanup();
     }
 
