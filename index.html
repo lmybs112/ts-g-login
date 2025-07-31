@@ -53,10 +53,10 @@
             <p>請使用以下組件測試 Google OAuth2 登入功能：</p>
         <div id="intro-content-advanced">
             <!-- Google 登入 Web Component -->
-            <google-login 
+            <inf-google-login 
                 client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
                 auto-select="true">
-            </google-login>
+            </inf-google-login>
         </div>
 
             <div class="status" id="userInfo">
@@ -99,7 +99,7 @@
         });
         
         // 監聽 Google 登入事件
-        document.addEventListener('google-login-success', function(event) {
+        document.addEventListener('inf-google-login-success', function(event) {
             console.log('Google 登入成功事件觸發');
             // 事件觸發時，數據已經保存到 localStorage，直接更新顯示
             updateUserDetails();

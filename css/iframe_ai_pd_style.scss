@@ -351,13 +351,13 @@ body {
     padding: 8px;
     width: 100% !important;
     max-height: 365px;
-    &:has(.google-login-modal-container){
+    &:has(.inf-google-login-modal-container){
       padding: 14px 21px;
     }
     // height: 100% !important;
     @media screen and (min-width: 480px) {
       max-height: 480px;
-      &:has(.google-login-modal-container){
+      &:has(.inf-google-login-modal-container){
         padding: 21px 18px;
       }
     }
@@ -1201,6 +1201,15 @@ body {
       text-align: center;
     }
   }
+}
+#container-recom{
+  &:has(.inf-google-login-modal-container){
+    padding: 14px 21px;
+    @media screen and (min-width: 480px) {
+    padding: 21px 18px;
+  }
+}
+
 }
 
 #container-recom .c_header {

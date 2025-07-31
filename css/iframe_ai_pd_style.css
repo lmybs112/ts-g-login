@@ -265,14 +265,14 @@ body {
   width: 100% !important;
   max-height: 365px;
 }
-.intro-modal .intro-content:has(.google-login-modal-container) {
+.intro-modal .intro-content:has(.inf-google-login-modal-container) {
   padding: 14px 21px;
 }
 @media screen and (min-width: 480px) {
   .intro-modal .intro-content {
     max-height: 480px;
   }
-  .intro-modal .intro-content:has(.google-login-modal-container) {
+  .intro-modal .intro-content:has(.inf-google-login-modal-container) {
     padding: 21px 18px;
   }
 }
@@ -969,6 +969,15 @@ body {
 }
 .c_header .header-text #recommend-desc {
   text-align: center;
+}
+
+#container-recom:has(.inf-google-login-modal-container) {
+  padding: 14px 21px;
+}
+@media screen and (min-width: 480px) {
+  #container-recom:has(.inf-google-login-modal-container) {
+    padding: 21px 18px;
+  }
 }
 
 #container-recom .c_header {

@@ -229,7 +229,7 @@
         function loadGoogleLoginComponent() {
           return new Promise((resolve, reject) => {
             // 檢查是否已經載入
-            if (customElements.get('google-login')) {
+            if (customElements.get('inf-google-login')) {
               resolve();
               return;
             }
@@ -1264,11 +1264,11 @@
                                 <div class="intro-logo intro-modal__logo intro-modal__logo--inf">
                                   <img src="img/intro-logo.png" alt="intro logo" />
                                 </div>
-                                <google-login 
+                                <inf-google-login 
                                     client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
                                     auto-select="true"
                                     style="position: absolute; right: 8px; top: 8px;">
-                                </google-login>
+                                </inf-google-login>
                               </div>
                               <div class="intro-logo intro-modal__logo">
                                 <img src="img/start-animation.gif" alt="start animation" loading="lazy" />

@@ -9,7 +9,7 @@
  * - 事件驅動架構
  * - 支援任何框架或原生 JavaScript
  */
-class GoogleLoginComponent extends HTMLElement {
+class InfGoogleLoginComponent extends HTMLElement {
     constructor() {
         super();
 
@@ -25,6 +25,7 @@ class GoogleLoginComponent extends HTMLElement {
         this.loginUri = null;
         this.isAuthenticated = false;
         this.credential = null;
+        this.targetContainerId = null; // 新增：目標容器 ID
 
         // 綁定方法到 this 上下文
         this.handleCredentialResponse = this.handleCredentialResponse.bind(this);
@@ -175,7 +176,7 @@ class GoogleLoginComponent extends HTMLElement {
 
     // 監聽的屬性變更
     static get observedAttributes() {
-        return ['client-id', 'auto-select', 'data-client-id', 'data-auto-select', 'data-login-uri'];
+        return ['client-id', 'auto-select', 'data-client-id', 'data-auto-select', 'data-login-uri', 'target-container-id', 'data-target-container-id'];
     }
 
     // 屬性變更回調
@@ -193,6 +194,10 @@ class GoogleLoginComponent extends HTMLElement {
                 case 'data-login-uri':
                     this.loginUri = newValue;
                     break;
+                case 'target-container-id':
+                case 'data-target-container-id':
+                    this.targetContainerId = newValue;
+                    break;
             }
 
             // 如果組件已連接且 Google 已載入，重新初始化
@@ -204,6 +209,12 @@ class GoogleLoginComponent extends HTMLElement {
 
     // 組件掛載到 DOM 時
     connectedCallback() {
+        // 讀取屬性值
+        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id');
+        this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
+        this.loginUri = this.getAttribute('data-login-uri');
+        this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
+
         // 載入 Google Fonts
         this.loadGoogleFonts();
 
@@ -326,7 +337,7 @@ class GoogleLoginComponent extends HTMLElement {
         }
 
         // 設置 Google 登入按鈕
-        const googleLoginButton = this.shadowRoot.getElementById('google-login-button');
+        const googleLoginButton = this.shadowRoot.getElementById('inf-google-login-button');
         if (googleLoginButton) {
             googleLoginButton.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -367,6 +378,17 @@ class GoogleLoginComponent extends HTMLElement {
 
     // 獲取當前顯示的內容區域
     getCurrentContentContainer() {
+        // 如果指定了目標容器 ID，優先使用
+        if (this.targetContainerId) {
+            const targetContainer = document.getElementById(this.targetContainerId);
+            if (targetContainer) {
+                return targetContainer;
+            } else {
+                console.warn(`指定的目標容器 ID "${this.targetContainerId}" 不存在`);
+            }
+        }
+
+        // 如果沒有指定目標容器，使用原本的邏輯
         const advancedContainer = document.getElementById('intro-content-advanced');
         const simpleContainer = document.getElementById('intro-content-simple');
         
@@ -504,11 +526,11 @@ class GoogleLoginComponent extends HTMLElement {
                 <div class="intro-logo intro-modal__logo intro-modal__logo--inf">
                     <img src="img/intro-logo.png" alt="intro logo" />
                 </div>
-                <google-login 
+                <inf-google-login 
                     client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
                     auto-select="true"
                     style="position: absolute; right: 8px; top: 8px;">
-                </google-login>
+                </inf-google-login>
             </div>
             <div class="intro-logo intro-modal__logo">
                 <img src="img/start-animation.gif" alt="start animation" loading="lazy" />
@@ -556,7 +578,7 @@ class GoogleLoginComponent extends HTMLElement {
 
     // 重新初始化容器中的 Google Login 組件
     reinitializeGoogleLoginInContainer(container) {
-        const googleLoginElement = container.querySelector('google-login');
+        const googleLoginElement = container.querySelector('inf-google-login');
         if (googleLoginElement) {
             // 重新初始化 Google Login 組件
             if (googleLoginElement.connectedCallback) {
@@ -582,7 +604,7 @@ class GoogleLoginComponent extends HTMLElement {
     // 隱藏容器內的模態框
     hideModalInContainer(container) {
         // 移除模態框內容
-        const modalContainer = container.querySelector('.google-login-modal-container');
+        const modalContainer = container.querySelector('.inf-google-login-modal-container');
         if (modalContainer) {
             modalContainer.remove();
         }
@@ -591,7 +613,7 @@ class GoogleLoginComponent extends HTMLElement {
     // 創建模態框內容
     createModalContent(type) {
         const modalDiv = document.createElement('div');
-        modalDiv.className = 'google-login-modal-container';
+        modalDiv.className = 'inf-google-login-modal-container';
         modalDiv.style.cssText = `
             width: 100%;
             height: 100%;
@@ -1009,7 +1031,7 @@ class GoogleLoginComponent extends HTMLElement {
                     </div>
                     
                     <div class="login-modal__button-container">
-                        <button class="login-modal__google-button" id="modal-google-login-button">
+                        <button class="login-modal__google-button" id="modal-inf-google-login-button">
                             <svg class="login-modal__google-icon" width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <g clip-path="url(#clip0_7461_9318)">
                                     <path d="M15.8099 8.17192C15.8099 7.5164 15.7567 7.03805 15.6416 6.54199H8.15625V9.50065H12.55C12.4614 10.2359 11.9831 11.3432 10.92 12.0873L10.9051 12.1863L13.2719 14.0198L13.4358 14.0362C14.9417 12.6454 15.8099 10.5991 15.8099 8.17192Z" fill="#4285F4"/>
@@ -1110,7 +1132,7 @@ class GoogleLoginComponent extends HTMLElement {
             }
 
             // Google 登入按鈕
-            const googleLoginButton = container.querySelector('#modal-google-login-button');
+            const googleLoginButton = container.querySelector('#modal-inf-google-login-button');
             if (googleLoginButton) {
                 googleLoginButton.addEventListener('click', () => {
                     this.triggerGoogleSignIn();
@@ -1501,7 +1523,7 @@ class GoogleLoginComponent extends HTMLElement {
                 this.hideLoginModal();
 
                 // 觸發成功事件
-                this.dispatchEvent(new CustomEvent('google-login-success', {
+                this.dispatchEvent(new CustomEvent('inf-google-login-success', {
                     detail: {
                         user: userInfo,
                         accessToken: accessToken,
@@ -1585,15 +1607,15 @@ class GoogleLoginComponent extends HTMLElement {
                 }
                 .avatar-container {
                     position: relative;
-                    width: var(--google-login-size, 40px);
-                    height: var(--google-login-size, 40px);
-                    border-radius: var(--google-login-border-radius, 50%);
+                    width: var(--inf-google-login-size, 40px);
+                    height: var(--inf-google-login-size, 40px);
+                    border-radius: var(--inf-google-login-border-radius, 50%);
                     overflow: hidden;
                     transition: border-color 0.3s ease;
                 }
                 
                 .avatar-container:hover {
-                    opacity: var(--google-login-hover-opacity, 0.8);
+                    opacity: var(--inf-google-login-hover-opacity, 0.8);
                     cursor: pointer;
                 }
                 
@@ -1721,14 +1743,14 @@ class GoogleLoginComponent extends HTMLElement {
                     background-color: #D7D7D6;
                 }
                 
-                .google-login-button-container {
+                .inf-google-login-button-container {
                     display: flex;
                     flex-direction: column;
                     gap: 10px;
                     width: 100%;
                 }
                 
-                .google-login-button {
+                .inf-google-login-button {
                     display: flex;
                     justify-content: center;
                     align-items: center;
@@ -1742,11 +1764,11 @@ class GoogleLoginComponent extends HTMLElement {
                     position: relative;
                 }
                 
-                .google-login-button:hover {
+                .inf-google-login-button:hover {
                     background-color: #E8E8E8;
                 }
                 
-                .google-login-text {
+                .inf-google-login-text {
                     font-weight: 500;
                     font-size: 17px;
                     line-height: 1.2941176470588236em;
@@ -1975,8 +1997,8 @@ class GoogleLoginComponent extends HTMLElement {
                             <div class="divider-line"></div>
                         </div>
                         
-                        <div class="google-login-button-container">
-                            <button class="google-login-button" id="google-login-button">
+                        <div class="inf-google-login-button-container">
+                            <button class="inf-google-login-button" id="inf-google-login-button">
                                 <svg class="google-icon" width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <g clip-path="url(#clip0_7461_9318)">
                                         <path d="M15.8099 8.17192C15.8099 7.5164 15.7567 7.03805 15.6416 6.54199H8.15625V9.50065H12.55C12.4614 10.2359 11.9831 11.3432 10.92 12.0873L10.9051 12.1863L13.2719 14.0198L13.4358 14.0362C14.9417 12.6454 15.8099 10.5991 15.8099 8.17192Z" fill="#4285F4"/>
@@ -1990,7 +2012,7 @@ class GoogleLoginComponent extends HTMLElement {
                                         </clipPath>
                                     </defs>
                                 </svg>
-                                <span class="google-login-text">繼續使用 Google 登入</span>
+                                <span class="inf-google-login-text">繼續使用 Google 登入</span>
                             </button>
                         </div>
                     </div>
@@ -2188,7 +2210,7 @@ class GoogleLoginComponent extends HTMLElement {
             this.hideLoginModal();
 
             // 觸發成功事件
-            this.dispatchEvent(new CustomEvent('google-login-success', {
+            this.dispatchEvent(new CustomEvent('inf-google-login-success', {
                 detail: {
                     credential: response.credential,
                     user: payload,
@@ -2276,7 +2298,7 @@ class GoogleLoginComponent extends HTMLElement {
         console.error('Google 登入失敗:', error);
 
         // 觸發失敗事件
-        this.dispatchEvent(new CustomEvent('google-login-failure', {
+        this.dispatchEvent(new CustomEvent('inf-google-login-failure', {
             detail: {
                 error: error.message || error,
                 timestamp: new Date().toISOString()
@@ -2404,8 +2426,8 @@ class GoogleLoginComponent extends HTMLElement {
 }
 
 // 註冊 Web Component
-if (!customElements.get('google-login')) {
-    customElements.define('google-login', GoogleLoginComponent);
+if (!customElements.get('inf-google-login')) {
+    customElements.define('inf-google-login', InfGoogleLoginComponent);
     console.log('Google Login Web Component 已註冊');
 } else {
     console.warn('Google Login Web Component 已經存在，跳過註冊');

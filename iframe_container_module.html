@@ -582,6 +582,12 @@
           <span id="recommend-title">專屬商品推薦</span>
           <p id="recommend-desc">根據您的偏好，精選以下單品。</p>
         </div>
+        <inf-google-login 
+          client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
+          auto-select="true"
+          target-container-id="container-recom"
+          style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%);">
+        </inf-google-login>
       </div>
       <div class="selection_scroll">
         <div class="selection">
@@ -610,11 +616,11 @@
       >
         <div style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative;">
           <p class="intro-coupon-modal__title">專屬資訊</p>
-          <google-login 
+          <inf-google-login 
             client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
             auto-select="true"
             style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">
-          </google-login>
+          </inf-google-login>
         </div>
         <div class="intro-coupon-modal__header" style="max-width: 100%;">
           <h3>熱銷排行榜</h3>
@@ -672,23 +678,23 @@
     <script src="src/inf-google-login.js"></script>
     <style>
       /* Google Login 組件自定義樣式 */
-      google-login {
-        --google-login-size: 28px;
-        --google-login-border-radius: 50%;
-        --google-login-hover-opacity: 0.8;
+      inf-google-login {
+        --inf-google-login-size: 28px;
+        --inf-google-login-border-radius: 50%;
+        --inf-google-login-hover-opacity: 0.8;
       }
       
       /* 確保 Google Login 組件在專屬資訊中正確顯示 */
-      .intro-coupon-modal__content google-login,
-      .intro-modal__content google-login {
+      .intro-coupon-modal__content inf-google-login,
+      .intro-modal__content inf-google-login {
         z-index: 10;
       }
       
       /* 響應式設計 */
       @media screen and (min-width: 480px) {
-        .intro-coupon-modal__content google-login,
-        .intro-modal__content google-login {
-          --google-login-size: 32px;
+        .intro-coupon-modal__content inf-google-login,
+        .intro-modal__content inf-google-login {
+          --inf-google-login-size: 32px;
         }
       }
     </style>
