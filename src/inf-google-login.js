@@ -274,11 +274,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.checkStoredCredential();
         this.updateAvatar(); // 初始化頭像顯示
         this.loadGoogleIdentityServices();
-
-        // Debug 模式：添加模擬登入按鈕（僅在開發環境）
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            this.addDebugButtons();
-        }
     }
 
     // 載入 Google Fonts
@@ -2463,89 +2458,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             oldValue: this.credential,
             storageArea: localStorage
         }));
-    }
-
-    // Debug 方法：模擬已登入狀態
-    async debugSimulateLogin(credential = 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImRkNTMwMTIwNGZjMWQ2YTBkNjhjNzgzYTM1Y2M5YzEwYjI1ZTFmNGEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyNjU4MjE3MDQyMzYtZmtkdDRycnZwbXVoZjQ0MmM3cjJkZmcxNmk3MWM2cWcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIyNjU4MjE3MDQyMzYtZmtkdDRycnZwbXVoZjQ0MmM3cjJkZmcxNmk3MWM2cWcuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDU0NzQ4MzI4NjQ0NDUxMDYxMDkiLCJlbWFpbCI6ImluZmZpdHMuZGV2ZWxvcG1lbnRAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTc1Mzg2MjA2MSwibmFtZSI6ImluZkZJVFMgRGV2ZWxvcG1lbnQiLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jS3ZXY2Q3REhQYUk4bENaU0p2NVdodm1YdEJXb2VKOFZhR3UtZGZqamZDRnNneXhRPXM5Ni1jIiwiZ2l2ZW5fbmFtZSI6ImluZkZJVFMiLCJmYW1pbHlfbmFtZSI6IkRldmVsb3BtZW50IiwiaWF0IjoxNzUzODYyMzYxLCJleHAiOjE3NTM4NjU5NjEsImp0aSI6IjQxODhmZThlMTQxYTY2ZjE4YmQ1NTg5YzRjMmFiMjYwZmFhN2Y4YmYifQ.MWOVHIAGIaSJlcA-MG8aEYoz15E2_I0-hu2t2f7ccaBOfhEOr6WC0tFtWNTr56KVlmzpk6IbObiWgYjqOi2oBCQYieSqpmA0G52KMXr7S3GQgXnxAvIX-332gQ-n9AKUmFaUZeOLOXLfdUHj_BzUuLWLwHsbqFP1SjN9aA7hopqrjz-LTr83iFxt_-eQJppTs_k8cZc4vhx9HjuuoUCG7ELVgm7cRUZJfCjp7hEcYd5T0HS_ygKYftF9ymroB05zehP_mABA1ZTN72WB08UZAuvM8yCVQNXBY8FSpuZDwwSya3S00DzF3ou4P_VUYaluU5v88hLZLSWeG0XINTifNw') {
-        console.log('🔧 Debug: 使用真實憑證模擬登入流程');
-        console.log('📋 使用憑證:', credential);
-
-        try {
-            // 使用真實的 handleCredentialResponse 流程
-            const response = {
-                credential: credential
-            };
-
-            // 調用原本的登入處理流程
-            await this.handleCredentialResponse(response);
-
-            console.log('✅ Debug: 真實登入流程完成');
-
-        } catch (error) {
-            console.error('❌ Debug: 模擬登入失敗:', error);
-            this.handleLoginFailure(error);
-        }
-    }
-
-    // Debug 方法：清除模擬登入狀態
-    debugClearLogin() {
-        console.log('🔧 Debug: 清除模擬登入狀態');
-        this.signOut();
-    }
-
-    // 添加 Debug 按鈕
-    addDebugButtons() {
-        // 創建 debug 容器
-        const debugContainer = document.createElement('div');
-        debugContainer.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 10001;
-            background: rgba(0,0,0,0.8);
-            padding: 10px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            color: white;
-        `;
-
-        debugContainer.innerHTML = `
-            <div style="margin-bottom: 8px; font-weight: bold;">🔧 Debug 模式</div>
-            <button id="debug-login" style="
-                background: #4285f4;
-                color: white;
-                border: none;
-                padding: 4px 8px;
-                margin: 2px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 11px;
-            ">模擬登入</button>
-            <button id="debug-logout" style="
-                background: #ea4335;
-                color: white;
-                border: none;
-                padding: 4px 8px;
-                margin: 2px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 11px;
-            ">模擬登出</button>
-        `;
-
-        document.body.appendChild(debugContainer);
-
-        // 添加事件監聽器
-        document.getElementById('debug-login').addEventListener('click', () => {
-            this.debugSimulateLogin();
-        });
-
-        document.getElementById('debug-logout').addEventListener('click', () => {
-            this.debugClearLogin();
-        });
-
-        console.log('🔧 Debug 按鈕已添加');
     }
 }
 
