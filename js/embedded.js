@@ -1128,6 +1128,7 @@
             MRID: ids.member_id,
             recom_num: "6",
             PID: ids.skuContent,
+            SP_PID:'skip'
             // ctype_val: JSON.stringify(["underwear"]),
           };
           if (!hide_size) {
@@ -1173,8 +1174,12 @@
                   acc[item.productid] = bestSize;
                   return acc;
                 }, {});
-                if (response["bhv"]) {
-                  response["bhv"].forEach((item) => {
+                
+                // 檢查 bhv 是否為空陣列，如果是則使用 sp_atc
+                const dataSource = (response["bhv"] && response["bhv"].length > 0) ? response["bhv"] : response["sp_atc"];
+                
+                if (dataSource) {
+                  dataSource.forEach((item) => {
                     item.size_tag = size_tag[item.id];
                   });
                 }
@@ -1188,10 +1193,13 @@
               //corr
               //or let jsonData_corr = getRandomElements(response['corr'], 12).map((item) => {})
               //bhv
+              // 檢查 bhv 是否為空陣列，如果是則使用 sp_atc
+              const dataSource = (response["bhv"] && response["bhv"].length > 0) ? response["bhv"] : response["sp_atc"];
+              
               let jsonData =
                 customEdm && customEdm.length > 0
                   ? customEdm
-                  : getRandomElements(response["bhv"],response["bhv"].length < 6 ? response["bhv"].length : 6).map((item) => {
+                  : getRandomElements(dataSource, dataSource.length < 6 ? dataSource.length : 6).map((item) => {
                       let newItem = Object.assign({}, item);
                       newItem.sale_price = hide_discount
                         ? null
