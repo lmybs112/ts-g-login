@@ -265,9 +265,15 @@ body {
   width: 100% !important;
   max-height: 365px;
 }
+.intro-modal .intro-content:has(.google-login-modal-container) {
+  padding: 14px 21px;
+}
 @media screen and (min-width: 480px) {
   .intro-modal .intro-content {
     max-height: 480px;
+  }
+  .intro-modal .intro-content:has(.google-login-modal-container) {
+    padding: 21px 18px;
   }
 }
 .intro-modal__logo {

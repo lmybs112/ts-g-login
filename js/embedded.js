@@ -225,6 +225,30 @@
     //embedded script
     function loadEmbeddedScript($) {
       (function ($) {
+        // 動態載入 Google Login 組件
+        function loadGoogleLoginComponent() {
+          return new Promise((resolve, reject) => {
+            // 檢查是否已經載入
+            if (customElements.get('google-login')) {
+              resolve();
+              return;
+            }
+
+            // 創建 script 元素載入 Google Login 組件
+            var googleLoginScript = document.createElement('script');
+            googleLoginScript.src = 'src/inf-google-login.js';
+            googleLoginScript.onload = function() {
+              console.log('Google Login 組件載入成功');
+              resolve();
+            };
+            googleLoginScript.onerror = function() {
+              console.error('Google Login 組件載入失敗');
+              reject(new Error('Google Login 組件載入失敗'));
+            };
+            document.head.appendChild(googleLoginScript);
+          });
+        }
+
         // 動態添加 Google 字體連結
         var googleFontLink = document.createElement("link");
         googleFontLink.rel = "preconnect";
@@ -1232,10 +1256,19 @@
             .catch((err) => {
               console.error(err);
                             // 動態生成 intro-content-simple 來取代 intro-content-advanced
-                            const simpleContent = `
+                            // 確保 Google Login 組件已載入
+                            loadGoogleLoginComponent().then(() => {
+                              const simpleContent = `
                             <div id="intro-content-simple" class="intro-content intro-modal__content" style="opacity: 0; transition: opacity 0.3s ease-in-out;">
-                              <div class="intro-logo intro-modal__logo intro-modal__logo--inf">
-                                <img src="img/intro-logo.png" alt="intro logo" />
+                              <div style="display: flex; justify-content: center; align-items: center; width: 100%; position: relative;">
+                                <div class="intro-logo intro-modal__logo intro-modal__logo--inf">
+                                  <img src="img/intro-logo.png" alt="intro logo" />
+                                </div>
+                                <google-login 
+                                    client-id="265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com"
+                                    auto-select="true"
+                                    style="position: absolute; right: 8px; top: 8px;">
+                                </google-login>
                               </div>
                               <div class="intro-logo intro-modal__logo">
                                 <img src="img/start-animation.gif" alt="start animation" loading="lazy" />
@@ -1321,6 +1354,13 @@
                           // 移除重複的事件綁定，iframe.js 中已有完整的 start-button 事件處理邏輯
                           
                           // 移除重複的圖標事件綁定，iframe.js 中已有完整的圖標事件處理邏輯
+                            }).catch((error) => {
+                              console.error('載入 Google Login 組件失敗:', error);
+                              // 即使載入失敗，也繼續顯示內容
+                              $("#intro-content-advanced").remove();
+                              $("#intro-page").append(simpleContent);
+                              $("#loadingbar").hide();
+                            });
             });
         }
 

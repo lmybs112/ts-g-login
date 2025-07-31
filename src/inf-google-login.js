@@ -348,10 +348,11 @@ class GoogleLoginComponent extends HTMLElement {
         const simpleContainer = document.getElementById('intro-content-simple');
         
         // 檢查哪個容器目前可見
-        if (advancedContainer && advancedContainer.style.display !== 'none') {
-            return advancedContainer;
-        } else if (simpleContainer && simpleContainer.style.display !== 'none') {
+        // 優先檢查 simple 容器，因為它可能是動態生成的
+        if (simpleContainer && simpleContainer.style.display !== 'none' && simpleContainer.style.opacity !== '0') {
             return simpleContainer;
+        } else if (advancedContainer && advancedContainer.style.display !== 'none') {
+            return advancedContainer;
         } else if (simpleContainer) {
             // 如果都沒有明確顯示，預設使用 simple
             return simpleContainer;
@@ -428,27 +429,47 @@ class GoogleLoginComponent extends HTMLElement {
     // 隱藏原本內容
     hideOriginalContent(container) {
         // 保存原本內容的引用
-        this.originalContent = container.innerHTML;
+        this.originalContainer = container;
         this.originalContainerId = container.id;
-
-        // 隱藏原本內容
-        container.style.display = 'none';
+        
+        // 將原本內容移動到隱藏位置，而不是複製
+        const hiddenContainer = document.createElement('div');
+        hiddenContainer.style.cssText = `
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+        `;
+        
+        // 移動所有子元素到隱藏容器
+        while (container.firstChild) {
+            hiddenContainer.appendChild(container.firstChild);
+        }
+        
+        document.body.appendChild(hiddenContainer);
+        this.hiddenContent = hiddenContainer;
     }
 
     // 顯示原本內容
     showOriginalContent(container) {
-        if (this.originalContent) {
-            // 檢查是否為動態生成的 simple 內容
-            if (this.originalContainerId === 'intro-content-simple') {
-                // 重新觸發 embedded.js 中的動態生成邏輯
-                this.recreateSimpleContent(container);
-            } else {
-                // 對於 advanced 內容，直接恢復
-                container.innerHTML = this.originalContent;
-                container.style.display = 'block';
+        if (this.originalContainer && this.hiddenContent) {
+            // 將原本內容移回原容器
+            while (this.hiddenContent.firstChild) {
+                container.appendChild(this.hiddenContent.firstChild);
             }
-            this.originalContent = null;
+            
+            // 移除隱藏的容器
+            if (this.hiddenContent.parentNode) {
+                this.hiddenContent.parentNode.removeChild(this.hiddenContent);
+            }
+            
+            this.originalContainer = null;
             this.originalContainerId = null;
+            this.hiddenContent = null;
         }
     }
 
@@ -523,13 +544,13 @@ class GoogleLoginComponent extends HTMLElement {
 
     // 在容器內顯示模態框
     showModalInContainer(container, type) {
-        // 清空容器
-        container.innerHTML = '';
-        container.style.display = 'block';
-
         // 創建模態框內容
         const modalContent = this.createModalContent(type);
+        
+        // 直接將模態框內容添加到容器
         container.appendChild(modalContent);
+        container.style.opacity = '1';
+        container.style.pointerEvents = 'auto';
 
         // 添加事件監聽器
         this.setupModalEventListeners(container, type);
@@ -537,7 +558,11 @@ class GoogleLoginComponent extends HTMLElement {
 
     // 隱藏容器內的模態框
     hideModalInContainer(container) {
-        container.innerHTML = '';
+        // 移除模態框內容
+        const modalContainer = container.querySelector('.google-login-modal-container');
+        if (modalContainer) {
+            modalContainer.remove();
+        }
     }
 
     // 創建模態框內容
@@ -553,11 +578,18 @@ class GoogleLoginComponent extends HTMLElement {
             background: white;
             border-radius: 8px;
             position: relative;
+            overflow: hidden;
         `;
 
         // 添加 CSS 樣式
         const styleElement = document.createElement('style');
         styleElement.textContent = `
+            /* 容器過渡效果 */
+            #intro-content-advanced,
+            #intro-content-simple {
+                transition: opacity 0.3s ease-in-out, pointer-events 0.3s ease-in-out;
+            }
+            
             /* 全局字體設定 */
             * {
                 font-family: 'Noto Sans TC', 'Figtree', sans-serif;
@@ -640,6 +672,17 @@ class GoogleLoginComponent extends HTMLElement {
             
             .profile-modal__back-arrow {
                 cursor: pointer;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+           @media screen and (min-width: 480px) {
+                .profile-modal__back-arrow {
+                    width: 36px;
+                    height: 36px;
+                }
             }
             
             .profile-modal__title {
