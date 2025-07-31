@@ -104,6 +104,23 @@ class GoogleLoginComponent extends HTMLElement {
         const defaultAvatar = this.shadowRoot.getElementById('default-avatar');
         const avatarImage = this.shadowRoot.getElementById('avatar-image');
 
+        // 檢查 Google Identity Services 是否已載入
+        if (!this.isGoogleLoaded) {
+            console.log('Google Identity Services 尚未載入，隱藏頭像');
+            // 如果 Google 服務未載入，隱藏整個頭像容器
+            const avatarContainer = this.shadowRoot.getElementById('avatar-container');
+            if (avatarContainer) {
+                avatarContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        // 確保頭像容器可見
+        const avatarContainer = this.shadowRoot.getElementById('avatar-container');
+        if (avatarContainer) {
+            avatarContainer.style.display = 'inline-block';
+        }
+
         // 優先使用 API 回應中的 picture，如果沒有則使用 Google 用戶資訊中的 picture
         let pictureUrl = null;
         const apiResponse = this.getApiResponse();
@@ -191,8 +208,14 @@ class GoogleLoginComponent extends HTMLElement {
         this.loadGoogleFonts();
 
         this.render();
-        this.updateAvatar(); // 初始化頭像顯示
         this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
+        
+        // 檢查 Google 服務是否已經載入
+        if (window.google && window.google.accounts) {
+            this.isGoogleLoaded = true;
+        }
+        
+        this.updateAvatar(); // 初始化頭像顯示
         this.loadGoogleIdentityServices();
 
         // Debug 模式：添加模擬登入按鈕（僅在開發環境）
@@ -2055,10 +2078,9 @@ class GoogleLoginComponent extends HTMLElement {
             if (window.google && window.google.accounts) {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
+                this.updateAvatar(); // 更新頭像狀態
                 return;
             }
-
-
 
             // 標準載入方式
             const script = document.createElement('script');
@@ -2069,10 +2091,13 @@ class GoogleLoginComponent extends HTMLElement {
             script.onload = () => {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
+                this.updateAvatar(); // 更新頭像狀態
             };
 
             script.onerror = () => {
                 console.error('無法載入 Google Identity Services');
+                this.isGoogleLoaded = false;
+                this.updateAvatar(); // 更新頭像狀態（隱藏頭像）
                 this.handleLoginFailure('無法載入 Google Identity Services');
             };
 
@@ -2080,6 +2105,8 @@ class GoogleLoginComponent extends HTMLElement {
 
         } catch (error) {
             console.error('載入 Google 服務時發生錯誤:', error);
+            this.isGoogleLoaded = false;
+            this.updateAvatar(); // 更新頭像狀態（隱藏頭像）
             this.handleLoginFailure('載入 Google 服務時發生錯誤: ' + error.message);
         }
     }
