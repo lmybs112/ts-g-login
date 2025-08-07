@@ -571,6 +571,19 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.handleLogout();
             });
         }
+
+        // 監聽預設使用者切換事件
+        if (!this.defaultUserEventListenerAdded) {
+            document.addEventListener('set-default-user', (event) => {
+                console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
+                event.preventDefault();
+                event.stopPropagation();
+                const userKey = event.detail.userKey;
+                console.log('🔄 準備設置預設使用者為:', userKey);
+                this.setDefaultUser(userKey);
+            });
+            this.defaultUserEventListenerAdded = true;
+        }
     }
 
     // 處理頭像點擊
@@ -1507,9 +1520,25 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 檢查 API 回應中是否有 BodyData
         if (apiResponse.BodyData && typeof apiResponse.BodyData === 'object') {
             
-            // 整理 BodyData 資料
-
-            const bodyDataHtml = this.formatBodyData(apiResponse.BodyData);
+            // 整理 BodyData 資料，傳遞 BodyData_ptr 參數
+            // const fakeBodyData = {
+            //     "User1": {
+            //         "Gender": "M",
+            //         "HV": "180",
+            //         "WV": "70"
+            //     },
+            //     "User2": {
+            //         "Gender": "M",
+            //         "HV": "180",
+            //         "WV": "70"
+            //     },
+            //      "User3": {
+            //         "Gender": "M",
+            //         "HV": "180",
+            //         "WV": "70"
+            //     }
+            // }
+            const bodyDataHtml = this.formatBodyData(apiResponse.BodyData, apiResponse.BodyData_ptr);
             
             if (bodyDataHtml) {
                 bodyDataContent.innerHTML = bodyDataHtml;
@@ -1523,9 +1552,19 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 格式化 BodyData 資料
-    formatBodyData(bodyData) {
+    formatBodyData(bodyData, bodyDataPtr) {
         if (!bodyData || typeof bodyData !== 'object') {
             return '';
+        }
+
+        // 確定預設使用者
+        let defaultUserKey = bodyDataPtr;
+        if (!defaultUserKey || !bodyData[defaultUserKey]) {
+            // 如果 BodyData_ptr 為空或不存在，使用第一個 key
+            const userKeys = Object.keys(bodyData);
+            if (userKeys.length > 0) {
+                defaultUserKey = userKeys[0];
+            }
         }
 
         let formattedHtml = '<div style="display: flex; flex-direction: column; gap: 16px;">';
@@ -1534,6 +1573,10 @@ class InfGoogleLoginComponent extends HTMLElement {
         Object.keys(bodyData).forEach(userKey => {
             const userData = bodyData[userKey];
             if (userData && typeof userData === 'object') {
+                // 檢查是否為預設使用者
+                const isDefaultUser = userKey === defaultUserKey;
+                console.log(`🔍 處理使用者 ${userKey}，是否為預設使用者: ${isDefaultUser}`);
+                
                 // 計算 BMI（如果有身高和體重）
                 let bmiHtml = '';
                 if (userData.HV && userData.HV.trim() !== '' && userData.WV && userData.WV.trim() !== '') {
@@ -1586,7 +1629,79 @@ class InfGoogleLoginComponent extends HTMLElement {
                         padding: 16px;
                         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                         transition: all 0.2s ease;
+                        position: relative;
                     ">
+                        ${isDefaultUser ? `
+                        <button 
+                            onclick="console.log('🎯 點擊預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
+                                detail: { userKey: '${userKey}' },
+                                bubbles: true,
+                                composed: true 
+                            }))"
+                            style="
+                                position: absolute;
+                                top: 8px;
+                                right: 8px;
+                                background: linear-gradient(135deg, #10B981, #059669);
+                                color: white;
+                                padding: 6px 10px;
+                                border-radius: 12px;
+                                font-size: 11px;
+                                font-weight: 600;
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
+                                box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+                                border: none;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                font-family: inherit;
+                                z-index: 1000;
+                                min-width: 40px;
+                                min-height: 24px;
+                            "
+                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
+                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'"
+                            title="點擊設為預設使用者"
+                        >
+                            預設
+                        </button>
+                        ` : `
+                        <button 
+                            onclick="console.log('🎯 點擊設為預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
+                                detail: { userKey: '${userKey}' },
+                                bubbles: true,
+                                composed: true 
+                            }))"
+                            style="
+                                position: absolute;
+                                top: 8px;
+                                right: 8px;
+                                background: linear-gradient(135deg, #6B7280, #4B5563);
+                                color: white;
+                                padding: 6px 10px;
+                                border-radius: 12px;
+                                font-size: 11px;
+                                font-weight: 600;
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
+                                box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+                                border: none;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                font-family: inherit;
+                                z-index: 1000;
+                                min-width: 60px;
+                                min-height: 24px;
+                            "
+                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(107, 114, 128, 0.4)'"
+                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(107, 114, 128, 0.3)'"
+                            title="點擊設為預設使用者"
+                        >
+                            設為預設
+                        </button>
+                        `}
                         <div style="
                             display: flex;
                             align-items: center;
@@ -2967,6 +3082,151 @@ class InfGoogleLoginComponent extends HTMLElement {
             oldValue: this.credential,
             storageArea: localStorage
         }));
+    }
+
+    // 設置預設使用者
+    async setDefaultUser(userKey) {
+        try {
+            // 獲取當前 API 回應
+            const currentApiResponse = this.getApiResponse();
+            if (!currentApiResponse || !currentApiResponse.BodyData) {
+                console.warn('❌ 沒有可用的 BodyData 來更新預設使用者');
+                return;
+            }
+
+            // 檢查使用者是否存在
+            if (!currentApiResponse.BodyData[userKey]) {
+                console.warn(`❌ 使用者 ${userKey} 不存在於 BodyData 中`);
+                return;
+            }
+
+            // 獲取當前憑證
+            const credential = localStorage.getItem('google_auth_credential');
+            if (!credential) {
+                console.warn('❌ 沒有可用的憑證來更新預設使用者');
+                return;
+            }
+
+            // 準備 API 請求資料
+            const payload = {
+                BodyData: currentApiResponse.BodyData,
+                BodyData_ptr: userKey,
+                update_bodydata: true,
+                credential: credential,
+                IDTYPE: "Google"
+            };
+
+            console.log('🔄 正在更新預設使用者為:', userKey);
+
+            // 調用 API 更新預設使用者
+            const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // 401 錯誤處理：憑證失效，自動登出
+                    console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
+                    this.signOut();
+                    this.dispatchEvent(new CustomEvent('credential-expired', {
+                        detail: {
+                            message: '憑證已失效，已自動登出',
+                            timestamp: new Date().toISOString()
+                        },
+                        bubbles: true,
+                        composed: true
+                    }));
+                    throw new Error(`憑證已失效，已自動登出`);
+                }
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ 預設使用者更新成功:', data);
+
+            // 保存新的 API 回應
+            this.saveApiResponse(data);
+
+            // 更新顯示
+            this.updateBodyDataDisplay(data);
+
+            // 觸發事件通知其他組件
+            this.dispatchEvent(new CustomEvent('default-user-updated', {
+                detail: {
+                    userKey: userKey,
+                    apiResponse: data,
+                    timestamp: new Date().toISOString()
+                },
+                bubbles: true,
+                composed: true
+            }));
+
+            // 觸發 localStorage 更新事件
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'inffits_api_response',
+                newValue: JSON.stringify(data),
+                oldValue: localStorage.getItem('inffits_api_response'),
+                storageArea: localStorage
+            }));
+
+        } catch (error) {
+            console.error('❌ 更新預設使用者失敗:', error);
+            
+            // 顯示錯誤提示（可選）
+            this.showErrorNotification('更新預設使用者失敗: ' + error.message);
+        }
+    }
+
+    // 顯示錯誤通知
+    showErrorNotification(message) {
+        // 創建錯誤通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        // 添加動畫樣式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // 3秒後自動移除
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
     }
 }
 
