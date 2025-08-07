@@ -26,6 +26,10 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.isAuthenticated = false;
         this.credential = null;
         this.targetContainerId = null; // 新增：目標容器 ID
+        this.apiRefreshInProgress = false; // 防止重複調用 API
+        
+        // 靜態屬性：全局 API 刷新控制（所有實例共享）
+        InfGoogleLoginComponent.lastApiRefreshTime = InfGoogleLoginComponent.lastApiRefreshTime || 0;
         
         // 添加 timeout 追蹤器，用於清理
         this.activeTimeouts = new Set();
@@ -39,8 +43,8 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.handleLoginFailure = this.handleLoginFailure.bind(this);
         this.handleStorageChange = this.handleStorageChange.bind(this);
         
-        // 檢查本地存儲的憑證
-        this.checkStoredCredential();
+        // 檢查本地存儲的憑證（初始化時不刷新 API，等到掛載時再刷新）
+        this.checkStoredCredential(false);
     }
 
     // 安全的 timeout 包裝器
@@ -138,17 +142,85 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 檢查存儲的憑證
-    checkStoredCredential() {
+    checkStoredCredential(shouldRefreshApi = false) {
         const storedCredential = localStorage.getItem('google_auth_credential');
         if (storedCredential) {
             this.credential = storedCredential;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
-            this.getApiResponse(); // 載入 API 回應數據
+            
+            if (shouldRefreshApi) {
+                // 只在頁面刷新時重新取得最新的個人資料
+                this.refreshApiData();
+            } else {
+                // 其他情況使用本地快取的 API 資料
+                this.getApiResponse();
+            }
         } else {
             // 如果沒有憑證，確保狀態為未登入
             this.credential = null;
             this.isAuthenticated = false;
+        }
+    }
+
+    // 刷新 API 資料以確保個人資料為最新
+    async refreshApiData() {
+        if (!this.credential) {
+            console.warn('無憑證，無法刷新 API 資料');
+            return;
+        }
+
+        // 全局防重複調用：如果 5 秒內已經調用過，就跳過
+        const now = Date.now();
+        if (now - InfGoogleLoginComponent.lastApiRefreshTime < 5000) {
+
+            // 仍然載入本地快取的資料
+            this.getApiResponse();
+            return;
+        }
+
+        // 實例級別防重複調用
+        if (this.apiRefreshInProgress) {
+
+            return;
+        }
+
+        try {
+            this.apiRefreshInProgress = true;
+            InfGoogleLoginComponent.lastApiRefreshTime = now;
+
+            
+            // 重新調用 API 獲取最新資料
+            const freshApiData = await this.callInfFitsAPI(this.credential);
+            
+            if (freshApiData) {
+
+                // 觸發資料更新事件
+                this.dispatchEvent(new CustomEvent('api-data-refreshed', {
+                    detail: {
+                        apiResponse: freshApiData,
+                        timestamp: new Date().toISOString()
+                    },
+                    bubbles: true,
+                    composed: true
+                }));
+            }
+        } catch (error) {
+            console.warn('⚠️ 刷新個人資料失敗，使用本地快取資料:', error);
+            
+            // 🔐 如果是憑證失效錯誤（401），不載入本地快取，因為用戶已被登出
+            if (error.message && error.message.includes('憑證已失效')) {
+
+                return;
+            }
+            
+            // 如果是其他錯誤，仍然載入本地的 API 回應數據
+            this.getApiResponse();
+        } finally {
+            // 重置標記，但延遲一段時間以避免短時間內重複調用
+            setTimeout(() => {
+                this.apiRefreshInProgress = false;
+            }, 1000);
         }
     }
 
@@ -245,7 +317,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 檢查 Google Identity Services 是否已載入
         if (!this.isGoogleLoaded) {
-            console.log('Google Identity Services 尚未載入，隱藏頭像');
+
             // 如果 Google 服務未載入，隱藏整個頭像容器
             const avatarContainer = this.shadowRoot.getElementById('avatar-container');
             if (avatarContainer) {
@@ -261,7 +333,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         // 再次檢查登入狀態，確保同步
-        this.checkStoredCredential();
+        this.checkStoredCredential(false); // 只同步狀態，不刷新 API
 
         // 優先使用 API 回應中的 picture，如果沒有則使用 Google 用戶資訊中的 picture
         let pictureUrl = null;
@@ -270,10 +342,8 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         if (apiResponse && apiResponse.picture) {
             pictureUrl = apiResponse.picture;
-            console.log('使用 API 回傳的 picture:', pictureUrl);
         } else if (userInfo && userInfo.picture) {
             pictureUrl = userInfo.picture;
-            console.log('使用 Google 用戶資訊的 picture:', pictureUrl);
         }
 
         if (this.isAuthenticated && pictureUrl) {
@@ -369,8 +439,16 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
         
         // 確保在組件連接時檢查並同步登入狀態
-        this.checkStoredCredential();
+        this.checkStoredCredential(true); // 組件掛載到 DOM 時刷新 API 資料
         this.updateAvatar(); // 初始化頭像顯示
+        
+        // 🔧 如果已有 API 資料，立即更新 BodyData
+        const existingApiResponse = this.getApiResponse();
+        if (existingApiResponse) {
+            this.updateBodyDataDisplay(existingApiResponse);
+        } else {
+        }
+        
         this.loadGoogleIdentityServices();
     }
 
@@ -392,7 +470,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 監聽字體載入完成事件
         fontLink.onload = () => {
-            console.log('Google Fonts 載入完成：Noto Sans TC, Figtree');
         };
 
         fontLink.onerror = () => {
@@ -405,9 +482,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         const avatarContainer = this.shadowRoot.getElementById('avatar-container');
 
         if (avatarContainer) {
-            console.log('設置頭像點擊事件監聽器');
             avatarContainer.addEventListener('click', (event) => {
-                console.log('頭像被點擊');
                 event.preventDefault();
                 event.stopPropagation();
                 this.handleAvatarClick();
@@ -501,16 +576,16 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 處理頭像點擊
     handleAvatarClick() {
         // 再次檢查登入狀態，確保同步
-        this.checkStoredCredential();
-        console.log('處理頭像點擊，登入狀態:', this.isAuthenticated);
+        this.checkStoredCredential(false); // 只同步狀態，不刷新 API
+        
+        // 檢查當前 API 資料狀態
+        const currentApiResponse = this.getApiResponse();
 
         if (this.isAuthenticated) {
             // 已登入：顯示個人資訊畫面
-            console.log('用戶已登入，顯示個人資訊畫面');
             this.showProfileModal();
         } else {
             // 未登入：顯示登入畫面
-            console.log('用戶未登入，顯示登入畫面');
             this.showLoginModal();
         }
     }
@@ -577,10 +652,14 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 顯示個人資訊畫面
     showProfileModal() {
+        
         // 查找當前顯示的目標容器
         const targetContainer = this.getCurrentContentContainer();
         if (!targetContainer) {
             console.error('找不到當前顯示的內容容器');
+            
+            // 🔧 備用方案：顯示 shadow DOM 中的個人資訊模態框
+            this.showShadowDOMProfileModal();
             return;
         }
 
@@ -589,6 +668,20 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 創建並顯示個人資訊畫面
         this.showModalInContainer(targetContainer, 'profile');
+    }
+
+    // 顯示 shadow DOM 中的個人資訊模態框
+    showShadowDOMProfileModal() {
+        const profileModal = this.shadowRoot.getElementById('profile-modal');
+        if (profileModal) {
+            // 先更新個人資訊內容
+            this.updateProfileInfo();
+            
+            // 顯示模態框
+            profileModal.classList.add('show');
+        } else {
+            console.error('找不到 shadow DOM 個人資訊模態框');
+        }
     }
 
     // 隱藏個人資訊畫面
@@ -609,6 +702,17 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.hideModalInContainer(targetContainer);
                 this.showOriginalContent(targetContainer);
             }
+        } else {
+            // 🔧 備用方案：隱藏 shadow DOM 中的個人資訊模態框
+            this.hideShadowDOMProfileModal();
+        }
+    }
+
+    // 隱藏 shadow DOM 中的個人資訊模態框
+    hideShadowDOMProfileModal() {
+        const profileModal = this.shadowRoot.getElementById('profile-modal');
+        if (profileModal) {
+            profileModal.classList.remove('show');
         }
     }
 
@@ -1198,17 +1302,13 @@ class InfGoogleLoginComponent extends HTMLElement {
     getProfileModalHTML() {
         const userInfo = this.getUserInfo();
         const apiResponse = this.getApiResponse();
+        
 
-        // 獲取頭像 URL
-        let pictureUrl = null;
-        if (apiResponse && apiResponse.picture) {
-            pictureUrl = apiResponse.picture;
-        } else if (userInfo && userInfo.picture) {
-            pictureUrl = userInfo.picture;
-        }
+        // 優先使用 API 回傳的資料，fallback 到 userInfo
+        const displayName = (apiResponse && apiResponse.name) ? apiResponse.name : (userInfo && userInfo.name) ? userInfo.name : '尚未提供';
+        const displayEmail = (apiResponse && apiResponse.email) ? apiResponse.email : (userInfo && userInfo.email) ? userInfo.email : '尚未提供';
+        const displayPicture = (apiResponse && apiResponse.picture) ? apiResponse.picture : (userInfo && userInfo.picture) ? userInfo.picture : '';
 
-        // 確保用戶資訊存在
-        const safeUserInfo = userInfo || {};
 
         return `
             <div class="profile-modal">
@@ -1226,7 +1326,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 <div class="profile-modal__content">
                     <div class="profile-modal__avatar-section">
                         <div class="profile-modal__avatar">
-                            <img src="${pictureUrl || ''}" alt="用戶頭像" class="profile-modal__avatar-img" onerror="this.style.display='none'">
+                            <img src="${displayPicture}" alt="用戶頭像" class="profile-modal__avatar-img" onerror="this.style.display='none'">
                         </div>
                     </div>
                     
@@ -1234,28 +1334,36 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">姓名</div>
-                                <div class="profile-modal__info-value">${safeUserInfo.name || '尚未提供'}</div>
+                                <div class="profile-modal__info-value">${displayName}</div>
                             </div>
                         </div>
                         
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">電子郵件</div>
-                                <div class="profile-modal__info-value">${safeUserInfo.email || '尚未提供'}</div>
+                                <div class="profile-modal__info-value">${displayEmail}</div>
                             </div>
                         </div>
                         
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">電話號碼</div>
-                                <div class="profile-modal__info-value">${safeUserInfo.phone || '尚未提供'}</div>
+                                <div class="profile-modal__info-value">尚未提供</div>
                             </div>
                         </div>
                         
                         <div class="profile-modal__info-item">
                             <div class="profile-modal__info-label">
                                 <div class="profile-modal__info-label-text">出生日期</div>
-                                <div class="profile-modal__info-value">${safeUserInfo.birthday || '尚未提供'}</div>
+                                <div class="profile-modal__info-value">尚未提供</div>
+                            </div>
+                        </div>
+                        
+                        <!-- BodyData 身體資料區域 -->
+                        <div class="profile-modal__info-item" id="modal-body-data-section" style="display: none;">
+                            <div class="profile-modal__info-label">
+                                <div class="profile-modal__info-label-text">身體資料</div>
+                                <div class="profile-modal__info-value" id="modal-body-data-content">尚未提供</div>
                             </div>
                         </div>
                     </div>
@@ -1298,6 +1406,42 @@ class InfGoogleLoginComponent extends HTMLElement {
                     this.handleLogout();
                 });
             }
+
+            // 🔧 修復：顯示個人資訊畫面時，更新個人資訊內容（包含 BodyData）
+            this.updateDynamicModalProfile(container);
+        }
+    }
+
+    // 更新動態模態框中的個人資訊（包含所有 API 資料）
+    updateDynamicModalProfile(container) {
+        const apiResponse = this.getApiResponse();
+
+        if (apiResponse) {
+            // 使用短暫延遲確保 DOM 元素已完全渲染
+            setTimeout(() => {
+                
+                // 更新姓名
+                const nameElement = container.querySelector('.profile-modal__info-item:nth-child(1) .profile-modal__info-value');
+                if (nameElement && apiResponse.name) {
+                    nameElement.textContent = apiResponse.name;
+                }
+                
+                // 更新電子郵件
+                const emailElement = container.querySelector('.profile-modal__info-item:nth-child(2) .profile-modal__info-value');
+                if (emailElement && apiResponse.email) {
+                    emailElement.textContent = apiResponse.email;
+                }
+                
+                // 更新頭像
+                const avatarElement = container.querySelector('.profile-modal__avatar-img');
+                if (avatarElement && apiResponse.picture) {
+                    avatarElement.src = apiResponse.picture;
+                }
+                
+                // 更新 BodyData
+                this.updateBodyDataDisplay(apiResponse);
+            }, 100);
+        } else {
         }
     }
 
@@ -1306,30 +1450,22 @@ class InfGoogleLoginComponent extends HTMLElement {
         const userInfo = this.getUserInfo();
         const apiResponse = this.getApiResponse();
 
-        // 確保用戶資訊存在
-        const safeUserInfo = userInfo || {};
+        // 優先使用 API 回傳的資料，fallback 到 userInfo
+        const displayName = (apiResponse && apiResponse.name) ? apiResponse.name : (userInfo && userInfo.name) ? userInfo.name : '尚未提供';
+        const displayEmail = (apiResponse && apiResponse.email) ? apiResponse.email : (userInfo && userInfo.email) ? userInfo.email : '尚未提供';
+        const displayPicture = (apiResponse && apiResponse.picture) ? apiResponse.picture : (userInfo && userInfo.picture) ? userInfo.picture : null;
 
-        // 更新頭像 - 優先使用 API 回應中的 picture
+
+        // 更新頭像
         const profileAvatarImage = this.shadowRoot.getElementById('profile-avatar-image');
-        if (profileAvatarImage) {
-            let pictureUrl = null;
-            if (apiResponse && apiResponse.picture) {
-                pictureUrl = apiResponse.picture;
-                console.log('個人資訊使用 API 回傳的 picture:', pictureUrl);
-            } else if (safeUserInfo.picture) {
-                pictureUrl = safeUserInfo.picture;
-                console.log('個人資訊使用 Google 用戶資訊的 picture:', pictureUrl);
-            }
-
-            if (pictureUrl) {
-                profileAvatarImage.src = pictureUrl;
-            }
+        if (profileAvatarImage && displayPicture) {
+            profileAvatarImage.src = displayPicture;
         }
 
         // 更新姓名
         const profileName = this.shadowRoot.getElementById('profile-name');
         if (profileName) {
-            profileName.textContent = safeUserInfo.name || '尚未提供';
+            profileName.textContent = displayName;
         }
 
         // 更新電子郵件
@@ -1337,22 +1473,275 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (profileEmail) {
             const emailSpan = profileEmail.querySelector('span');
             if (emailSpan) {
-                emailSpan.textContent = safeUserInfo.email || '尚未提供';
+                emailSpan.textContent = displayEmail;
             }
         }
 
         // 更新其他資訊（如果有 API 回應數據）
         if (apiResponse) {
-            // 這裡可以根據 API 回應更新其他欄位
-            // 例如：出生日期、電話號碼等
+            // 處理 BodyData 身體資料
+            this.updateBodyDataDisplay(apiResponse);
+        } else {
         }
     }
 
+    // 更新 BodyData 身體資料顯示
+    updateBodyDataDisplay(apiResponse) {
+        
+        // 首先嘗試在動態模態框中查找（優先級較高）
+        let bodyDataSection = document.getElementById('modal-body-data-section');
+        let bodyDataContent = document.getElementById('modal-body-data-content');
+        
+        // 如果在動態模態框中找不到，則尋找 shadow DOM 中的元素
+        if (!bodyDataSection || !bodyDataContent) {
+            bodyDataSection = this.shadowRoot.getElementById('body-data-section');
+            bodyDataContent = this.shadowRoot.getElementById('body-data-content');
+        }
+        
+        if (!bodyDataSection || !bodyDataContent) {
+            console.warn('❌ 找不到 BodyData 顯示元素');
+            // 調試：列出所有可能的元素
+            return;
+        }
 
+        // 檢查 API 回應中是否有 BodyData
+        if (apiResponse.BodyData && typeof apiResponse.BodyData === 'object') {
+            
+            // 整理 BodyData 資料
+
+            const bodyDataHtml = this.formatBodyData(apiResponse.BodyData);
+            
+            if (bodyDataHtml) {
+                bodyDataContent.innerHTML = bodyDataHtml;
+                bodyDataSection.style.display = 'block'; // 顯示 BodyData 區域
+            } else {
+                bodyDataSection.style.display = 'none'; // 隱藏 BodyData 區域
+            }
+        } else {
+            bodyDataSection.style.display = 'none'; // 隱藏 BodyData 區域
+        }
+    }
+
+    // 格式化 BodyData 資料
+    formatBodyData(bodyData) {
+        if (!bodyData || typeof bodyData !== 'object') {
+            return '';
+        }
+
+        let formattedHtml = '<div style="display: flex; flex-direction: column; gap: 16px;">';
+        // 遍歷所有 User 資料
+
+        Object.keys(bodyData).forEach(userKey => {
+            const userData = bodyData[userKey];
+            if (userData && typeof userData === 'object') {
+                // 計算 BMI（如果有身高和體重）
+                let bmiHtml = '';
+                if (userData.HV && userData.HV.trim() !== '' && userData.WV && userData.WV.trim() !== '') {
+                    const height = parseFloat(userData.HV) / 100; // 轉換為公尺
+                    const weight = parseFloat(userData.WV);
+                    if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
+                        const bmi = (weight / (height * height)).toFixed(1);
+                    
+                    let bmiStatus = '';
+                    let bmiColor = '';
+                    if (bmi < 18.5) {
+                        bmiStatus = '體重過輕';
+                        bmiColor = '#3B82F6';
+                    } else if (bmi < 24) {
+                        bmiStatus = '正常範圍';
+                        bmiColor = '#10B981';
+                    } else if (bmi < 27) {
+                        bmiStatus = '體重過重';
+                        bmiColor = '#F59E0B';
+                    } else {
+                        bmiStatus = '肥胖';
+                        bmiColor = '#EF4444';
+                    }
+                    
+                    bmiHtml = `
+                        <div style="
+                            margin-top: 12px;
+                            padding: 10px;
+                            background: linear-gradient(135deg, ${bmiColor}10, ${bmiColor}05);
+                            border-left: 3px solid ${bmiColor};
+                            border-radius: 6px;
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #4B5563; font-size: 13px; font-weight: 500;">BMI 指數</span>
+                                <div style="text-align: right;">
+                                    <div style="color: ${bmiColor}; font-size: 16px; font-weight: 600;">${bmi}</div>
+                                    <div style="color: ${bmiColor}; font-size: 11px; margin-top: 2px;">${bmiStatus}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    }
+                }
+
+                formattedHtml += `
+                    <div style="
+                        background: linear-gradient(135deg, #FFFFFF, #F8FAFC);
+                        border: 1px solid #E2E8F0;
+                        border-radius: 12px;
+                        padding: 16px;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                        transition: all 0.2s ease;
+                    ">
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            margin-bottom: 16px;
+                            padding-bottom: 12px;
+                            border-bottom: 1px solid #E2E8F0;
+                        ">
+                            <div style="
+                                width: 32px;
+                                height: 32px;
+                                background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+                                border-radius: 8px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                margin-right: 12px;
+                            ">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="white"/>
+                                    <path d="M12 14C7.03125 14 3 18.0312 3 23H21C21 18.0312 16.9688 14 12 14Z" fill="white"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div style="
+                                    font-weight: 600;
+                                    color: #1E293B;
+                                    font-size: 15px;
+                                    line-height: 1.2;
+                                ">${userKey.replace('User', '使用者 ')}</div>
+                                <div style="
+                                    color: #64748B;
+                                    font-size: 12px;
+                                    margin-top: 2px;
+                                ">身體測量資料</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                `;
+                
+                // 性別資料 - 始終顯示
+                const genderValue = userData.Gender ? 
+                    (userData.Gender === 'M' ? '男性' : userData.Gender === 'F' ? '女性' : userData.Gender) : 
+                    '尚未提供';
+                const genderColor = userData.Gender ? '#1E293B' : '#9CA3AF';
+                const genderIcon = userData.Gender === 'M' ? 
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#3B82F6"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#3B82F6"/></svg>' :
+                    userData.Gender === 'F' ?
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#EC4899"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#EC4899"/></svg>' :
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#9CA3AF"/><path d="M12 14C7.03125 14 3 18.0312 3 23H21C21 18.0312 16.9688 14 12 14Z" fill="#9CA3AF"/></svg>';
+                
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${genderIcon}
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">性別</span>
+                        </div>
+                        <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;">${genderValue}</span>
+                    </div>
+                `;
+                
+                // 身高資料 - 始終顯示
+                const heightValue = userData.HV && userData.HV.trim() !== '' ? `${userData.HV} cm` : '尚未提供';
+                const heightColor = userData.HV && userData.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 2L12 22M8 6L12 2L16 6M8 18L12 22L16 18" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">身高</span>
+                        </div>
+                        <span style="color: ${heightColor}; font-size: 14px; font-weight: 600;">${heightValue}</span>
+                    </div>
+                `;
+                
+                // 體重資料 - 始終顯示
+                const weightValue = userData.WV && userData.WV.trim() !== '' ? `${userData.WV} kg` : '尚未提供';
+                const weightColor = userData.WV && userData.WV.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1Z" fill="#F59E0B"/>
+                            </svg>
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">體重</span>
+                        </div>
+                        <span style="color: ${weightColor}; font-size: 14px; font-weight: 600;">${weightValue}</span>
+                    </div>
+                `;
+                
+                // 胸圍資料 - 始終顯示，沒有值就顯示「尚未提供」
+                const ccValue = userData.CC && userData.CC.trim() !== '' ? `${userData.CC} cm` : '尚未提供';
+                const ccValueColor = userData.CC && userData.CC.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        grid-column: 1 / -1;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="#8B5CF6" stroke-width="2" fill="none"/>
+                                <circle cx="12" cy="12" r="3" fill="#8B5CF6"/>
+                            </svg>
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">胸圍</span>
+                        </div>
+                        <span style="color: ${ccValueColor}; font-size: 14px; font-weight: 600;">${ccValue}</span>
+                    </div>
+                `;
+                
+                formattedHtml += '</div>' + bmiHtml + '</div>';
+            }
+        });
+        
+        formattedHtml += '</div>';
+        
+        // 如果沒有任何資料，返回空字串
+        if (formattedHtml === '<div style="display: flex; flex-direction: column; gap: 16px;"></div>') {
+            return '';
+        }
+        
+        return formattedHtml;
+    }
 
     // 處理登出
     handleLogout() {
-        console.log('用戶點擊登出按鈕');
 
         // 隱藏個人資訊畫面
         this.hideProfileModal();
@@ -1376,9 +1765,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 觸發 Google 登入
     triggerGoogleSignIn() {
-        console.log('觸發 Google 登入');
         if (window.google && window.google.accounts) {
-            console.log('Google 服務已載入，調用 prompt()');
 
             // 檢查是否有活躍的 Google 會話
             const hasActiveSession = this.checkGoogleSession();
@@ -1387,22 +1774,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 使用標準的 prompt 方法
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed()) {
-                        console.log('Google 登入提示未顯示:', notification.getNotDisplayedReason());
 
                         // 針對空會話問題，直接使用 OAuth2 方法
                         if (notification.getNotDisplayedReason() === 'no_session' ||
                             notification.getNotDisplayedReason() === 'browser_not_supported' ||
                             notification.getNotDisplayedReason() === 'invalid_client') {
-                            console.log('檢測到會話問題，使用 OAuth2 登入方法');
                             this.triggerDirectGoogleSignIn();
                         } else {
                             // 如果無法顯示，嘗試其他方式
                             this.fallbackGoogleSignIn();
                         }
                     } else if (notification.isSkippedMoment()) {
-                        console.log('Google 登入被跳過:', notification.getSkippedReason());
                     } else if (notification.isDismissedMoment()) {
-                        console.log('Google 登入被取消');
                     }
                 });
             } catch (error) {
@@ -1425,7 +1808,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 cookie.trim().startsWith('SSID=')
             );
 
-            console.log('Google 會話檢查:', googleCookies.length > 0 ? '有活躍會話' : '無活躍會話');
             return googleCookies.length > 0;
         } catch (error) {
             console.warn('檢查 Google 會話失敗:', error);
@@ -1435,7 +1817,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 重新初始化 Google 登入
     reinitializeGoogleSignIn() {
-        console.log('重新初始化 Google 登入');
         try {
             // 清除現有配置
             if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -1460,7 +1841,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 直接 Google 登入方法（處理空會話問題）
     useDirectGoogleSignIn() {
-        console.log('使用直接 Google 登入方法');
         try {
             // 創建一個容器來放置 Google 登入按鈕
             const container = document.createElement('div');
@@ -1557,7 +1937,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 備用 Google 登入方法
     fallbackGoogleSignIn() {
-        console.log('使用備用 Google 登入方法');
         try {
             if (window.google && window.google.accounts && window.google.accounts.id) {
                 const config = {
@@ -1578,7 +1957,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     try {
                         window.google.accounts.id.prompt((notification) => {
                             if (notification.isNotDisplayed()) {
-                                console.log('備用方法也無法顯示:', notification.getNotDisplayedReason());
                                 // 最後嘗試直接調用
                                 this.triggerDirectGoogleSignIn();
                             }
@@ -1600,7 +1978,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 直接觸發 Google 登入（最後手段）
     triggerDirectGoogleSignIn() {
-        console.log('使用直接觸發方法');
         try {
             // 構建 OAuth2 授權 URL
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -1643,7 +2020,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 處理 OAuth2 授權成功
     async handleAuthSuccess(accessToken) {
-        console.log('OAuth2 授權成功，處理 access token');
         try {
             // 使用 access token 獲取用戶資訊
             const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -1666,7 +2042,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
                 // 檢查 API 回應中是否有 picture 欄位，如果有則更新用戶資訊
                 if (apiResponse && apiResponse.picture) {
-                    console.log('API 回傳 picture:', apiResponse.picture);
                     // 更新用戶資訊中的 picture
                     userInfo.picture = apiResponse.picture;
                     this.saveUserInfo(userInfo);
@@ -1738,7 +2113,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
             this.updateAvatar();
         } else if (event.key === 'inffits_api_response') {
-            // API 回應數據更新時，重新檢查登入狀態
+            // API 回應數據更新時，只更新本地快取，不重新檢查登入狀態（避免死迴圈）
             if (event.newValue) {
                 try {
                     this.apiResponse = JSON.parse(event.newValue);
@@ -1749,14 +2124,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             } else {
                 this.apiResponse = null;
             }
-            this.checkStoredCredential();
             this.updateAvatar();
         }
     }
 
     // 組件從 DOM 移除時
     disconnectedCallback() {
-        console.log('inf-google-login 組件已從 DOM 中移除');
         
         // 清理所有活動的 timeout 和 interval
         this.clearAllTimers();
@@ -2282,8 +2655,16 @@ class InfGoogleLoginComponent extends HTMLElement {
                             
                             <div class="info-item">
                                 <div class="info-content">
-                                    <div class="info-label">密碼</div>
-                                    <div class="info-value">••••••••••••</div>
+                                    <div class="info-label">出生日期</div>
+                                    <div class="info-value" id="profile-birthday">尚未提供</div>
+                                </div>
+                            </div>
+                            
+                            <!-- BodyData 身體資料區域 -->
+                            <div class="info-item" id="body-data-section" style="display: none;">
+                                <div class="info-content">
+                                    <div class="info-label">身體資料</div>
+                                    <div class="info-value" id="body-data-content">尚未提供</div>
                                 </div>
                             </div>
                         </div>
@@ -2301,7 +2682,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
                 // 確保在 Google 服務載入後再次檢查登入狀態
-                this.checkStoredCredential();
+                this.checkStoredCredential(false); // 只同步狀態，不刷新 API
                 this.updateAvatar(); // 更新頭像狀態
                 return;
             }
@@ -2316,7 +2697,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
                 // 確保在 Google 服務載入後再次檢查登入狀態
-                this.checkStoredCredential();
+                this.checkStoredCredential(false); // 只同步狀態，不刷新 API
                 this.updateAvatar(); // 更新頭像狀態
             };
 
@@ -2345,7 +2726,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // Google 服務載入完成後的回調
     onGoogleLoaded() {
-        console.log('Google Identity Services 已載入');
 
         if (!this.clientId) {
             console.error('缺少 client-id 屬性，請設置您的 Google OAuth2 客戶端 ID');
@@ -2369,7 +2749,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             window.google.accounts.id.initialize(config);
 
-            console.log('Google Identity Services 初始化完成');
 
         } catch (error) {
             console.error('初始化 Google 登入失敗:', error);
@@ -2378,7 +2757,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 處理 Google 登入回調
     async handleCredentialResponse(response) {
-        console.log('Google 登入回調收到 credential');
 
         if (!response.credential) {
             this.handleLoginFailure('未收到有效的登入憑證');
@@ -2400,7 +2778,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 檢查 API 回應中是否有 picture 欄位，如果有則更新用戶資訊
             if (apiResponse && apiResponse.picture) {
-                console.log('API 回傳 picture:', apiResponse.picture);
                 // 更新用戶資訊中的 picture
                 if (payload) {
                     payload.picture = apiResponse.picture;
@@ -2441,7 +2818,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 調用 infFITS API
     async callInfFitsAPI(credential) {
         try {
-            console.log('🔄 調用 infFITS API...');
 
             const payload = {
                 credential: credential,
@@ -2457,11 +2833,31 @@ class InfGoogleLoginComponent extends HTMLElement {
             });
 
             if (!response.ok) {
+                // 🔐 401 錯誤處理：憑證失效，自動登出
+                if (response.status === 401) {
+                    console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
+                    
+                    // 執行登出操作
+                    this.signOut();
+                    
+                    // 觸發憑證失效事件
+                    this.dispatchEvent(new CustomEvent('credential-expired', {
+                        detail: {
+                            status: response.status,
+                            statusText: response.statusText,
+                            timestamp: new Date().toISOString()
+                        },
+                        bubbles: true,
+                        composed: true
+                    }));
+                    
+                    throw new Error(`憑證已失效，已自動登出 (${response.status}: ${response.statusText})`);
+                }
+                
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log("✅ infFITS API 回應:", data);
 
             // 保存 API 回應數據
             this.saveApiResponse(data);
@@ -2513,6 +2909,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     console.warn('解析 API 回應數據失敗:', error);
                     this.apiResponse = null;
                 }
+            } else {
             }
         }
         return this.apiResponse;
@@ -2535,7 +2932,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 清理資源
     cleanup() {
-        console.log('Google Login Component 已清理');
     }
 
     // 公開方法：手動觸發登入
@@ -2550,7 +2946,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 window.google.accounts.id.disableAutoSelect();
                 // 清除 Google 的會話狀態
                 window.google.accounts.id.revoke(this.clientId, () => {
-                    console.log('Google 會話已撤銷');
                 });
             } catch (error) {
                 console.warn('Google 登出清理失敗:', error);
@@ -2578,7 +2973,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 // 註冊 Web Component
 if (!customElements.get('inf-google-login')) {
     customElements.define('inf-google-login', InfGoogleLoginComponent);
-    console.log('Google Login Web Component 已註冊');
 } else {
     console.warn('Google Login Web Component 已經存在，跳過註冊');
 }
