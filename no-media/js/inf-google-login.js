@@ -1172,6 +1172,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 flex-direction: column;
                 align-items: center;
                 padding: 20px 0;
+                max-width: 450px;
+                margin: 0 auto;
+                width: 100%;
             }
 
 
@@ -1210,6 +1213,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 flex-direction: column;
                 gap: 10px;
                 width: 100%;
+                max-width: 400px;
+                margin: 0 auto;
             }
             
             .login-modal__google-button {
@@ -2295,8 +2300,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }
                 .avatar-container {
                     position: relative;
-                    width: var(--inf-google-login-size, 40px);
-                    height: var(--inf-google-login-size, 40px);
+                    width: var(--inf-google-login-width, var(--inf-google-login-size, 40px));
+                    height: var(--inf-google-login-height, var(--inf-google-login-size, 40px));
                     border-radius: var(--inf-google-login-border-radius, 50%);
                     overflow: hidden;
                     transition: border-color 0.3s ease;
@@ -3236,3 +3241,205 @@ if (!customElements.get('inf-google-login')) {
 } else {
     console.warn('Google Login Web Component 已經存在，跳過註冊');
 }
+
+// 自動初始化函數
+function createGoogleLoginComponents(configs = [
+    {
+        avatarContainerId: 'header_BF',
+        modalContainerId: 'container_BF_mbinfo',
+        avatarStyle: {
+            desktop: {
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
+            },
+            mobile: {
+                position: 'absolute',
+                left: '8px',
+                top: '8px',
+                width: '24px',
+                height: '24px',
+                zIndex: 1000
+            }
+        }
+    },
+    {
+        avatarContainerId: 'SB_Prod_cart',
+        modalContainerId: 'SizeBox',
+        avatarStyle: {
+            desktop: {
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
+            },
+            mobile: {
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
+            }
+        }
+    }
+]) {
+    // 判斷當前螢幕尺寸
+    function isDesktop() {
+        return window.innerWidth >= 480;
+    }
+    
+    // 獲取當前適用的樣式
+    function getCurrentStyle(avatarStyle) {
+        if (typeof avatarStyle === 'object' && avatarStyle.desktop && avatarStyle.mobile) {
+            // 新的響應式格式
+            return isDesktop() ? avatarStyle.desktop : avatarStyle.mobile;
+        } else {
+            // 向後兼容：舊的單一樣式格式
+            return avatarStyle || {
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
+            };
+        }
+    }
+    
+    // 應用樣式到組件
+    function applyStyleToComponent(component, avatarStyle) {
+        const currentStyle = getCurrentStyle(avatarStyle);
+        
+        // 將 avatarStyle 物件轉換為 CSS 字串和 CSS 變數
+        const cssProperties = [];
+        const cssVariables = [];
+        
+        Object.entries(currentStyle).forEach(([property, value]) => {
+            // 將 camelCase 轉換為 kebab-case
+            const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+            
+            // 特殊處理 width 和 height，設定為 CSS 變數
+            if (property === 'width') {
+                cssVariables.push(`--inf-google-login-width: ${value};`);
+            } else if (property === 'height') {
+                cssVariables.push(`--inf-google-login-height: ${value};`);
+            } else {
+                cssProperties.push(`${cssProperty}: ${value};`);
+            }
+        });
+        
+        const cssText = [...cssProperties, ...cssVariables].join('\n                    ');
+        
+        component.style.cssText = `
+            ${cssText}
+        `;
+    }
+    
+    // 更新現有組件的樣式（不重新創建）
+    function updateExistingComponents() {
+        configs.forEach(config => {
+            const { 
+                avatarContainerId, 
+                avatarStyle
+            } = config;
+            
+            // 處理選擇器（支援 ID 和 CSS 選擇器）
+            let containers;
+            if (avatarContainerId.includes(' ')) {
+                containers = document.querySelectorAll(avatarContainerId);
+            } else if (avatarContainerId.startsWith('#')) {
+                containers = document.querySelectorAll(avatarContainerId);
+            } else {
+                const container = document.getElementById(avatarContainerId);
+                containers = container ? [container] : [];
+            }
+            
+            containers.forEach(container => {
+                const existingComponents = container.querySelectorAll('inf-google-login');
+                existingComponents.forEach(component => {
+                    applyStyleToComponent(component, avatarStyle);
+                });
+            });
+        });
+    }
+    
+    function initComponents() {
+        configs.forEach(config => {
+            const { 
+                avatarContainerId, 
+                modalContainerId, 
+                avatarStyle
+            } = config;
+            
+            // 處理選擇器（支援 ID 和 CSS 選擇器）
+            let containers;
+            if (avatarContainerId.includes(' ')) {
+                // 如果是 CSS 選擇器（包含空格），使用 querySelectorAll
+                containers = document.querySelectorAll(avatarContainerId);
+            } else if (avatarContainerId.startsWith('#')) {
+                // 如果是 ID 選擇器，使用 querySelectorAll（處理重複 ID）
+                containers = document.querySelectorAll(avatarContainerId);
+            } else {
+                // 如果是純 ID，使用 getElementById
+                const container = document.getElementById(avatarContainerId);
+                containers = container ? [container] : [];
+            }
+            
+            containers.forEach(container => {
+                // 清理已存在的 Google 登入組件
+                const existingComponents = container.querySelectorAll('inf-google-login');
+                existingComponents.forEach(component => {
+                    component.remove();
+                });
+                
+                const googleLoginComponent = document.createElement('inf-google-login');
+                googleLoginComponent.setAttribute('client-id', '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com');
+                googleLoginComponent.setAttribute('auto-select', 'true');
+                
+                // 設置模態框目標容器 ID
+                if (modalContainerId) {
+                    googleLoginComponent.setAttribute('target-container-id', modalContainerId);
+                }
+                
+                // 應用響應式樣式
+                applyStyleToComponent(googleLoginComponent, avatarStyle);
+                
+                container.style.position = 'relative';
+                container.appendChild(googleLoginComponent);
+            });
+        });
+    }
+
+    // 等待 DOM 載入完成後初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initComponents);
+    } else {
+        initComponents();
+    }
+    
+    // 監聽視窗大小變化，重新應用樣式
+    let resizeTimeout;
+    let lastScreenSize = isDesktop();
+    
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const currentScreenSize = isDesktop();
+            
+            // 只有當螢幕尺寸跨越 480px 邊界時才更新樣式
+            if (currentScreenSize !== lastScreenSize) {
+                lastScreenSize = currentScreenSize;
+                // 只更新現有組件的樣式，不重新創建
+                updateExistingComponents();
+            }
+        }, 250); // 防抖動延遲
+    });
+}
+
+// 不自動執行，等待外層指定目標 ID

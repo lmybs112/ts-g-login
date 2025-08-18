@@ -13,9 +13,9 @@ let isFirst = true;
 let throttleTimer = null;
 let formatTagGroupMap = {};
 let isFetchCouponCalled = false;
-let isForPreview = window.location.href
+let isForPreview = true || window.location.href
   .toLocaleLowerCase()
-  .includes("myinffits");
+  .includes("myinffits")
 
 let isForReferral = window.location.href
   .toLocaleLowerCase()
@@ -594,7 +594,7 @@ const fetchCoupon = async () => {
             return `
             <div class="intro-coupon-modal__content-container-content" style="position: relative;">
                 <div class="intro-coupon-modal__content-container-content-icon">
-                  <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet">
+                  <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet" style="width: 30px; height: 30px;">
                     <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#000000" stroke="none">
                       <path d="M78 4189 c-23 -12 -46 -35 -58 -59 -19 -38 -20 -58 -20 -520 0 -462 1 -482 20 -520 23 -46 81 -80 134 -80 111 0 228 -50 311 -134 71 -71 110 -147 127 -247 23 -131 -23 -277 -118 -379 -74 -79 -214 -140 -320 -140 -53 0 -111 -34 -134 -80 -19 -38 -20 -58 -20 -520 0 -462 1 -482 20 -520 13 -26 34 -47 60 -60 39 -20 53 -20 2480 -20 2427 0 2441 0 2480 20 26 13 47 34 60 60 20 39 20 56 20 1570 0 1514 0 1531 -20 1570 -13 26 -34 47 -60 60 -39 20 -53 20 -2482 20 -2413 -1 -2443 -1 -2480 -21z m1134 -378 c3 -107 13 -132 72 -175 40 -30 120 -29 165 3 47 34 61 75 61 181 l0 90 1655 0 1655 0 0 -1350 0 -1350 -1660 0 -1660 0 0 90 c0 112 -20 159 -80 190 -50 25 -90 25 -140 0 -60 -31 -80 -78 -80 -190 l0 -90 -450 0 -450 0 0 308 0 308 52 14 c196 50 374 200 471 395 56 115 71 183 71 325 0 129 -10 186 -56 295 -55 132 -183 276 -313 353 -67 39 -177 82 -210 82 -13 0 -15 38 -15 310 l0 310 454 0 454 0 4 -99z"></path>
                       <path d="M2765 3596 c-84 -21 -147 -57 -211 -121 -177 -176 -177 -453 1 -630 258 -259 695 -118 757 244 24 141 -22 281 -127 387 -112 113 -269 158 -420 120z m175 -306 c45 -23 80 -80 80 -130 0 -76 -74 -150 -151 -150 -46 0 -108 39 -130 82 -37 72 -14 151 57 194 48 29 92 30 144 4z"></path>
@@ -667,7 +667,7 @@ const fetchCoupon = async () => {
           return `
           <div class="intro-coupon-modal__content-container-content">
               <div class="intro-coupon-modal__content-container-content-icon">
-                <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet">
+                <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 512.000000 512.000000" preserveAspectRatio="xMidYMid meet" style="width: 30px; height: 30px;">
                   <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" fill="#000000" stroke="none">
                     <path d="M78 4189 c-23 -12 -46 -35 -58 -59 -19 -38 -20 -58 -20 -520 0 -462 1 -482 20 -520 23 -46 81 -80 134 -80 111 0 228 -50 311 -134 71 -71 110 -147 127 -247 23 -131 -23 -277 -118 -379 -74 -79 -214 -140 -320 -140 -53 0 -111 -34 -134 -80 -19 -38 -20 -58 -20 -520 0 -462 1 -482 20 -520 13 -26 34 -47 60 -60 39 -20 53 -20 2480 -20 2427 0 2441 0 2480 20 26 13 47 34 60 60 20 39 20 56 20 1570 0 1514 0 1531 -20 1570 -13 26 -34 47 -60 60 -39 20 -53 20 -2482 20 -2413 -1 -2443 -1 -2480 -21z m1134 -378 c3 -107 13 -132 72 -175 40 -30 120 -29 165 3 47 34 61 75 61 181 l0 90 1655 0 1655 0 0 -1350 0 -1350 -1660 0 -1660 0 0 90 c0 112 -20 159 -80 190 -50 25 -90 25 -140 0 -60 -31 -80 -78 -80 -190 l0 -90 -450 0 -450 0 0 308 0 308 52 14 c196 50 374 200 471 395 56 115 71 183 71 325 0 129 -10 186 -56 295 -55 132 -183 276 -313 353 -67 39 -177 82 -210 82 -13 0 -15 38 -15 310 l0 310 454 0 454 0 4 -99z"></path>
                     <path d="M2765 3596 c-84 -21 -147 -57 -211 -121 -177 -176 -177 -453 1 -630 258 -259 695 -118 757 244 24 141 -22 281 -127 387 -112 113 -269 158 -420 120z m175 -306 c45 -23 80 -80 80 -130 0 -76 -74 -150 -151 -150 -46 0 -108 39 -130 82 -37 72 -14 151 57 194 48 29 92 30 144 4z"></path>
@@ -1058,6 +1058,18 @@ const fetchData = async () => {
         Route,
       options
     );
+    
+    // 檢查狀態碼，如果是 200 則發送 postMessage
+    if (response.status == 200) {
+      const messageData = {
+        type: "run_routeproduct_success",
+        status: response.status,
+        brand: Brand,
+        route: Route
+      };
+      window.parent.postMessage(messageData, "*");
+    }
+    
     const data = await response.json();
     // $("#loadingbar").hide();
     $("#pback").show();

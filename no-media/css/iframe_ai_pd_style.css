@@ -265,15 +265,9 @@ body {
   width: 100% !important;
   max-height: 365px;
 }
-.intro-modal .intro-content:has(.inf-google-login-modal-container) {
-  padding: 14px 21px;
-}
 @media screen and (min-width: 480px) {
   .intro-modal .intro-content {
     max-height: 480px;
-  }
-  .intro-modal .intro-content:has(.inf-google-login-modal-container) {
-    padding: 21px 18px;
   }
 }
 .intro-modal__logo {
@@ -788,12 +782,12 @@ body {
   -ms-flex-positive: 1;
       flex-grow: 1;
   height: 36px;
-  background-color: #2da2fb;
+  background-color: #333;
   box-shadow: none;
   transition: all 300ms ease-out;
 }
 .footer .result-actions #recommend-btn:hover {
-  background-color: #43adff;
+  background-color: #666;
 }
 @media screen and (min-width: 480px) {
   .footer .result-actions #recommend-btn {
@@ -969,15 +963,6 @@ body {
 }
 .c_header .header-text #recommend-desc {
   text-align: center;
-}
-
-#container-recom:has(.inf-google-login-modal-container) {
-  padding: 14px 21px;
-}
-@media screen and (min-width: 480px) {
-  #container-recom:has(.inf-google-login-modal-container) {
-    padding: 21px 18px;
-  }
 }
 
 #container-recom .c_header {
@@ -1412,8 +1397,8 @@ a.update_delete .discount-content .item-price--original {
   display: -ms-flexbox;
   display: flex;
   width: 100%;
-  height: 68px;
-  max-height: 68px;
+  height: 72px;
+  max-height: 72px;
   padding: 12px;
   -ms-flex-align: center;
       align-items: center;
@@ -1448,7 +1433,8 @@ a.update_delete .discount-content .item-price--original {
 }
 
 .intro-coupon-modal__content-container-content-line {
-  padding: 0 12px;
+  padding-left: 10px;
+  padding-right: 12px;
 }
 
 .intro-coupon-modal__content-container-content-text {
@@ -1515,7 +1501,7 @@ a.update_delete .discount-content .item-price--original {
 .intro-coupon-modal__content-container-content-footer .intro-coupon-modal__btn--coupon {
   text-align: center;
   font-family: "Noto Sans TC", "Figtree", sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-style: normal;
   font-weight: 500;
   line-height: 18px;
@@ -1707,6 +1693,7 @@ a.update_delete .discount-content .item-price--original {
     line-height: 19px;
     /* 105.556% */
     letter-spacing: 0.36px;
+    padding-bottom: 6px;
   }
   .intro-coupon-modal__content-container {
     display: -ms-flexbox;
@@ -1772,7 +1759,8 @@ a.update_delete .discount-content .item-price--original {
         align-items: center;
   }
   .intro-coupon-modal__content-container-content-line {
-    padding: 0 12px;
+    padding-left: 12px;
+    padding-right: 12px;
   }
   .intro-coupon-modal__content-container-content-text {
     display: -ms-flexbox;
@@ -1827,14 +1815,12 @@ a.update_delete .discount-content .item-price--original {
     /* 18px * 2 行，對應 line-height */
   }
   .intro-coupon-modal__content-container-content-footer .intro-coupon-modal__btn--coupon {
-    /* Noto Sans TC 16 */
     font-family: "Noto Sans TC", "Figtree", sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     font-style: normal;
-    font-weight: 700;
-    line-height: 22px;
-    /* 137.5% */
-    letter-spacing: 0.32px;
+    font-weight: 500;
+    line-height: 18px;
+    letter-spacing: 0.28px;
     width: -webkit-fit-content;
     width: -moz-fit-content;
     width: fit-content;
