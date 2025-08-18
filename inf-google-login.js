@@ -27,6 +27,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.credential = null;
         this.targetContainerId = null; // 新增：目標容器 ID
         this.apiRefreshInProgress = false; // 防止重複調用 API
+        this.modalContainerStyle = null; // 新增：模態框容器樣式配置
         
         // 靜態屬性：全局 API 刷新控制（所有實例共享）
         InfGoogleLoginComponent.lastApiRefreshTime = InfGoogleLoginComponent.lastApiRefreshTime || 0;
@@ -97,6 +98,26 @@ class InfGoogleLoginComponent extends HTMLElement {
                 resolve();
             }
         });
+    }
+
+    // 設置模態框容器樣式
+    setModalContainerStyle(style) {
+        this.modalContainerStyle = style;
+    }
+
+    // 獲取當前適用的樣式（響應式）
+    getCurrentStyle(styleConfig) {
+        if (!styleConfig) return null;
+        
+        const isDesktop = window.innerWidth >= 480;
+        
+        if (typeof styleConfig === 'object' && styleConfig.desktop && styleConfig.mobile) {
+            // 新的響應式格式
+            return isDesktop ? styleConfig.desktop : styleConfig.mobile;
+        } else {
+            // 向後兼容：舊的單一樣式格式
+            return styleConfig;
+        }
     }
 
     // 等待 Google 服務載入的 Promise
@@ -847,8 +868,8 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 在容器內顯示模態框
     showModalInContainer(container, type) {
-        // 創建模態框內容
-        const modalContent = this.createModalContent(type);
+        // 創建模態框內容，傳遞樣式配置
+        const modalContent = this.createModalContent(type, this.modalContainerStyle);
         
         // 直接將模態框內容添加到容器
         container.appendChild(modalContent);
@@ -869,10 +890,12 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 創建模態框內容
-    createModalContent(type) {
+    createModalContent(type, modalContainerStyle = null) {
         const modalDiv = document.createElement('div');
         modalDiv.className = 'inf-google-login-modal-container';
-        modalDiv.style.cssText = `
+        
+        // 預設樣式
+        const defaultStyle = `
             width: 100%;
             height: 100%;
             display: flex;
@@ -886,6 +909,23 @@ class InfGoogleLoginComponent extends HTMLElement {
             margin: 0 auto;
             padding-top: 20px;
         `;
+        
+        // 如果有自定義樣式，則應用自定義樣式
+        if (modalContainerStyle) {
+            const currentStyle = this.getCurrentStyle(modalContainerStyle);
+            const cssProperties = [];
+            
+            Object.entries(currentStyle).forEach(([property, value]) => {
+                // 將 camelCase 轉換為 kebab-case
+                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                cssProperties.push(`${cssProperty}: ${value};`);
+            });
+            
+            const customStyle = cssProperties.join('\n            ');
+            modalDiv.style.cssText = customStyle;
+        } else {
+            modalDiv.style.cssText = defaultStyle;
+        }
 
         // 添加 CSS 樣式
         const styleElement = document.createElement('style');
@@ -3404,50 +3444,14 @@ function createGoogleLoginComponents(configs = [
         `;
     }
 
-    // 應用樣式到模態框容器
-    function applyModalContainerStyle(modalContainerId, modalContainerStyle) {
-        if (!modalContainerStyle) return;
-        
-        const currentStyle = getCurrentStyle(modalContainerStyle);
-        
-        // 查找模態框容器
-        let modalContainers;
-        if (modalContainerId.includes(' ')) {
-            modalContainers = document.querySelectorAll(modalContainerId);
-        } else if (modalContainerId.startsWith('#')) {
-            modalContainers = document.querySelectorAll(modalContainerId);
-        } else {
-            const container = document.getElementById(modalContainerId);
-            modalContainers = container ? [container] : [];
-        }
-        
-        // 應用樣式到模態框容器
-        modalContainers.forEach(container => {
-            // 將樣式物件轉換為 CSS 字串
-            const cssProperties = [];
-            
-            Object.entries(currentStyle).forEach(([property, value]) => {
-                // 將 camelCase 轉換為 kebab-case
-                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-                cssProperties.push(`${cssProperty}: ${value};`);
-            });
-            
-            const cssText = cssProperties.join('\n                ');
-            
-            container.style.cssText = `
-                ${cssText}
-            `;
-        });
-    }
+
     
     // 更新現有組件的樣式（不重新創建）
     function updateExistingComponents() {
         configs.forEach(config => {
             const { 
                 avatarContainerId, 
-                modalContainerId,
-                avatarStyle,
-                modalContainerStyle
+                avatarStyle
             } = config;
             
             // 處理選擇器（支援 ID 和 CSS 選擇器）
@@ -3467,9 +3471,6 @@ function createGoogleLoginComponents(configs = [
                     applyStyleToComponent(component, avatarStyle);
                 });
             });
-            
-            // 更新模態框容器樣式
-            applyModalContainerStyle(modalContainerId, modalContainerStyle);
         });
     }
     
@@ -3512,15 +3513,17 @@ function createGoogleLoginComponents(configs = [
                     googleLoginComponent.setAttribute('target-container-id', modalContainerId);
                 }
                 
+                // 設置模態框容器樣式
+                if (modalContainerStyle) {
+                    googleLoginComponent.setModalContainerStyle(modalContainerStyle);
+                }
+                
                 // 應用響應式樣式
                 applyStyleToComponent(googleLoginComponent, avatarStyle);
                 
                 container.style.position = 'relative';
                 container.appendChild(googleLoginComponent);
             });
-            
-            // 應用模態框容器樣式
-            applyModalContainerStyle(modalContainerId, modalContainerStyle);
         });
     }
 
