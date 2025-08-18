@@ -3704,6 +3704,13 @@ function createGoogleLoginComponents(configs = [
                 
                 container.style.position = 'relative';
                 container.appendChild(googleLoginComponent);
+                
+                // 確保樣式正確應用
+                if (googleLoginComponent.reapplyStyles) {
+                    setTimeout(() => {
+                        googleLoginComponent.reapplyStyles();
+                    }, 50);
+                }
             });
         });
     }
@@ -3744,6 +3751,16 @@ function createGoogleLoginComponents(configs = [
         if (shouldInit) {
             console.log('檢測到 intro-content 變化，重新初始化 Google Login 組件');
             initComponents();
+            
+            // 延遲一點時間，然後重新應用樣式到所有現有的組件
+            setTimeout(() => {
+                const allComponents = document.querySelectorAll('inf-google-login');
+                allComponents.forEach(component => {
+                    if (component.reapplyStyles) {
+                        component.reapplyStyles();
+                    }
+                });
+            }, 200);
         }
     });
     
@@ -3755,6 +3772,16 @@ function createGoogleLoginComponents(configs = [
         attributeFilter: ['style', 'class']
     });
     
+    // 全局重新應用樣式函數
+    const globalReapplyStyles = () => {
+        const allComponents = document.querySelectorAll('inf-google-login');
+        allComponents.forEach(component => {
+            if (component.reapplyStyles) {
+                component.reapplyStyles();
+            }
+        });
+    };
+    
     // 監聽 startover 按鈕點擊事件，強制重新初始化
     document.addEventListener('click', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
@@ -3762,6 +3789,10 @@ function createGoogleLoginComponents(configs = [
             // 延遲一點時間確保重置完成
             setTimeout(() => {
                 initComponents();
+                // 重新應用樣式
+                setTimeout(() => {
+                    globalReapplyStyles();
+                }, 150);
             }, 100);
         }
     });
@@ -3773,7 +3804,32 @@ function createGoogleLoginComponents(configs = [
             // 延遲一點時間確保重置完成
             setTimeout(() => {
                 initComponents();
+                // 重新應用樣式
+                setTimeout(() => {
+                    globalReapplyStyles();
+                }, 150);
             }, 100);
+        }
+    });
+    
+    // 監聽可能的重新輸入按鈕
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        const isResetButton = target && (
+            target.id === 'startover' || 
+            target.closest('#startover') ||
+            target.textContent.includes('重新輸入') ||
+            target.textContent.includes('重新開始') ||
+            target.textContent.includes('重新') ||
+            target.className.includes('reset') ||
+            target.className.includes('restart')
+        );
+        
+        if (isResetButton) {
+            console.log('檢測到重置按鈕點擊，重新應用樣式');
+            setTimeout(() => {
+                globalReapplyStyles();
+            }, 200);
         }
     });
     
@@ -3791,6 +3847,8 @@ function createGoogleLoginComponents(configs = [
                 lastScreenSize = currentScreenSize;
                 // 只更新現有組件的樣式，不重新創建
                 updateExistingComponents();
+                // 重新應用樣式
+                globalReapplyStyles();
             }
         }, 250); // 防抖動延遲
     });
