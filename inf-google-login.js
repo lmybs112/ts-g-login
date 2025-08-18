@@ -596,11 +596,11 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 監聽預設使用者切換事件
         if (!this.defaultUserEventListenerAdded) {
             document.addEventListener('set-default-user', (event) => {
-                console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
+                // console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
                 event.preventDefault();
                 event.stopPropagation();
                 const userKey = event.detail.userKey;
-                console.log('🔄 準備設置預設使用者為:', userKey);
+                // console.log('🔄 準備設置預設使用者為:', userKey);
                 this.setDefaultUser(userKey);
             });
             this.defaultUserEventListenerAdded = true;
@@ -1620,7 +1620,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (userData && typeof userData === 'object') {
                 // 檢查是否為預設使用者
                 const isDefaultUser = userKey === defaultUserKey;
-                console.log(`🔍 處理使用者 ${userKey}，是否為預設使用者: ${isDefaultUser}`);
+                // console.log(`🔍 處理使用者 ${userKey}，是否為預設使用者: ${isDefaultUser}`);
                 
                 // 計算 BMI（如果有身高和體重）
                 let bmiHtml = '';
@@ -3285,6 +3285,58 @@ if (!customElements.get('inf-google-login')) {
 // 自動初始化函數
 function createGoogleLoginComponents(configs = [
     {
+        avatarContainerId: 'intro-content-simple',
+        modalContainerId: 'intro-content-simple',
+        avatarStyle: {
+            desktop: {
+                position: 'absolute',
+                right: '20px',
+                top: '20px',
+                width: '32px',
+                height: '32px',
+                zIndex: 1000
+            },
+            mobile: {
+                position: 'absolute',
+                right: '15px',
+                top: '15px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
+            }
+        },
+        modalContainerStyle: {
+            desktop: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '440px',
+                margin: '0 auto',
+                paddingTop: '20px'
+            },
+            mobile: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '100%',
+                margin: '0 auto',
+                paddingTop: '10px'
+            }
+        }
+    },
+    {
         avatarContainerId: 'header_BF',
         modalContainerId: 'container_BF_mbinfo',
         avatarStyle: {
@@ -3530,6 +3582,114 @@ function createGoogleLoginComponents(configs = [
     } else {
         initComponents();
     }
+    
+    // 優化的 DOM 變化監聽器，處理 intro-content-simple 和 intro-content-advanced
+    const observer = new MutationObserver((mutations) => {
+        let shouldInit = false;
+        
+        mutations.forEach((mutation) => {
+            // 檢查新增的節點
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    // 檢查是否為 intro-content-simple 或 intro-content-advanced
+                    if (node.id === 'intro-content-simple' || 
+                        node.id === 'intro-content-advanced' ||
+                        node.querySelector('#intro-content-simple') ||
+                        node.querySelector('#intro-content-advanced')) {
+                        shouldInit = true;
+                    }
+                }
+            });
+            
+            // 檢查屬性變化（例如 style 變化）
+            if (mutation.type === 'attributes' && 
+                (mutation.target.id === 'intro-content-simple' || 
+                 mutation.target.id === 'intro-content-advanced')) {
+                shouldInit = true;
+            }
+        });
+        
+        if (shouldInit) {
+            // console.log('檢測到 intro-content 變化，重新初始化 Google Login 組件');
+            initComponents();
+        }
+    });
+    
+    // 開始監聽整個文檔的變化
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+    });
+    
+    // 使用 requestAnimationFrame 進行精確的檢查，確保元素完全渲染
+    const checkContentElements = () => {
+        const introContentSimple = document.getElementById('intro-content-simple');
+        const introContentAdvanced = document.getElementById('intro-content-advanced');
+        
+        // 檢查哪個元素目前可見
+        let visibleElement = null;
+        
+        if (introContentSimple && 
+            introContentSimple.style.display !== 'none' && 
+            introContentSimple.style.opacity !== '0' &&
+            introContentSimple.offsetParent !== null) {
+            visibleElement = introContentSimple;
+        } else if (introContentAdvanced && 
+                   introContentAdvanced.style.display !== 'none' &&
+                   introContentAdvanced.offsetParent !== null) {
+            visibleElement = introContentAdvanced;
+        }
+        
+        // 如果找到可見元素且沒有 Google login 組件，則初始化
+        if (visibleElement && !visibleElement.querySelector('inf-google-login')) {
+            console.log(`檢測到可見的 ${visibleElement.id}，初始化 Google Login 組件`);
+            initComponents();
+        }
+    };
+    
+    // 使用 requestAnimationFrame 確保在下一幀渲染時檢查
+    const rafCheck = () => {
+        requestAnimationFrame(() => {
+            checkContentElements();
+            // 如果元素還在變化中，繼續檢查
+            if (document.getElementById('intro-content-simple') || document.getElementById('intro-content-advanced')) {
+                rafCheck();
+            }
+        });
+    };
+    
+    // 監聽 DOM 變化時觸發 RAF 檢查
+    const originalObserver = observer;
+    const enhancedObserver = new MutationObserver((mutations) => {
+        let hasContentChange = false;
+        
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.id === 'intro-content-simple' || 
+                            node.id === 'intro-content-advanced' ||
+                            node.querySelector('#intro-content-simple') ||
+                            node.querySelector('#intro-content-advanced')) {
+                            hasContentChange = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        if (hasContentChange) {
+            rafCheck();
+        }
+    });
+    
+    // 同時使用兩個觀察器
+    enhancedObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
     
     // 監聽視窗大小變化，重新應用樣式
     let resizeTimeout;

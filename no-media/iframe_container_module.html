@@ -12,9 +12,9 @@
     /> -->
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="robots" content="noindex" />
-    <link href=".//css/iframe_style.min.css" rel="stylesheet" type="text/css" />
+    <link href="./../css/iframe_style.min.css" rel="stylesheet" type="text/css" />
     <link
-      href="./css/iframe_ai_pd_style.css"
+      href="./../css/iframe_ai_pd_style.css"
       rel="stylesheet"
       type="text/css"
     />
@@ -676,6 +676,28 @@
                       {
                           avatarContainerId: '#intro-content-advanced',
                           modalContainerId: 'intro-content-advanced',
+                          avatarStyle: {
+                              desktop: {
+                                  position: 'absolute',
+                                  right: '16px',
+                                  top: '16px',
+                                  width: '32px',
+                                  height: '32px',
+                                  zIndex: 1000
+                              },
+                              mobile: {
+                                  position: 'absolute',
+                                  right: '12px',
+                                  top: '12px',
+                                  width: '24px',
+                                  height: '24px',
+                                  zIndex: 1000
+                              }
+                          }
+                      },
+                      {
+                          avatarContainerId: '#intro-content-simple',
+                          modalContainerId: 'intro-content-simple',
                           avatarStyle: {
                               desktop: {
                                   position: 'absolute',
