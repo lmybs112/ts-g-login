@@ -905,9 +905,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             border-radius: 8px;
             position: relative;
             overflow: hidden;
-            max-width: 440px;
-            margin: 0 auto;
-            padding-top: 20px;
         `;
         
         // 如果有自定義樣式，則應用自定義樣式
