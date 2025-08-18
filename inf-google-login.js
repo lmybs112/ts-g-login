@@ -609,6 +609,9 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 處理頭像點擊
     handleAvatarClick() {
+        // 重新設定 CSS 樣式，確保樣式正確
+        this.reapplyStyles();
+        
         // 再次檢查登入狀態，確保同步
         this.checkStoredCredential(false); // 只同步狀態，不刷新 API
         
@@ -621,6 +624,86 @@ class InfGoogleLoginComponent extends HTMLElement {
         } else {
             // 未登入：顯示登入畫面
             this.showLoginModal();
+        }
+    }
+    
+    // 重新應用樣式的方法
+    reapplyStyles() {
+        // 找到對應的配置
+        const configs = [
+            {
+                avatarContainerId: 'intro-content-simple',
+                avatarStyle: {
+                    desktop: {
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        width: '32px',
+                        height: '32px',
+                        zIndex: 1000
+                    },
+                    mobile: {
+                        position: 'absolute',
+                        right: '15px',
+                        top: '15px',
+                        width: '28px',
+                        height: '28px',
+                        zIndex: 1000
+                    }
+                }
+            },
+            {
+                avatarContainerId: 'intro-content-advanced',
+                avatarStyle: {
+                    desktop: {
+                        position: 'absolute',
+                        right: '20px',
+                        top: '20px',
+                        width: '32px',
+                        height: '32px',
+                        zIndex: 1000
+                    },
+                    mobile: {
+                        position: 'absolute',
+                        right: '15px',
+                        top: '15px',
+                        width: '28px',
+                        height: '28px',
+                        zIndex: 1000
+                    }
+                }
+            }
+        ];
+        
+        configs.forEach(config => {
+            const container = document.getElementById(config.avatarContainerId);
+            if (container) {
+                const component = container.querySelector('inf-google-login');
+                if (component) {
+                    const currentStyle = this.getCurrentStyle(config.avatarStyle);
+                    Object.entries(currentStyle).forEach(([property, value]) => {
+                        const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                        component.style.setProperty(cssProperty, value);
+                    });
+                }
+            }
+        });
+    }
+    
+    // 獲取當前樣式的輔助方法
+    getCurrentStyle(avatarStyle) {
+        const isDesktop = window.innerWidth >= 480;
+        if (avatarStyle && typeof avatarStyle === 'object' && avatarStyle.desktop && avatarStyle.mobile) {
+            return isDesktop ? avatarStyle.desktop : avatarStyle.mobile;
+        } else {
+            return avatarStyle || {
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
+            };
         }
     }
 
