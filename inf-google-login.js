@@ -884,7 +884,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             overflow: hidden;
             max-width: 440px;
             margin: 0 auto;
-            padding: 20px 0;
+            padding-top: 20px;
         `;
 
         // 添加 CSS 樣式
