@@ -629,6 +629,33 @@ class InfGoogleLoginComponent extends HTMLElement {
     
     // 重新應用樣式的方法
     reapplyStyles() {
+        // 添加 CSS 規則來設定 SizeBox_cart 的 modal 容器樣式
+        const styleId = 'sizebox-cart-modal-style';
+        let existingStyle = document.getElementById(styleId);
+        if (!existingStyle) {
+            existingStyle = document.createElement('style');
+            existingStyle.id = styleId;
+            document.head.appendChild(existingStyle);
+        }
+        
+        existingStyle.textContent = `
+            #SizeBox_cart .inf-google-login-modal-container {
+                max-width: 90% !important;
+                margin: 0 auto !important;
+                padding-top: 20px !important;
+                width: 100% !important;
+                height: 100% !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                background: white !important;
+                border-radius: 8px !important;
+                position: relative !important;
+                overflow: hidden !important;
+            }
+        `;
+        
+        // 找到對應的配置
         // 找到對應的配置
         const configs = [
             {
