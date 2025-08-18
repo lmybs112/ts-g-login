@@ -103,6 +103,11 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 設置模態框容器樣式
     setModalContainerStyle(style) {
         this.modalContainerStyle = style;
+        // 確保樣式被正確保存
+        if (style) {
+            this._modalContainerStyleConfig = style;
+            console.log('✅ 模態框樣式已保存:', style);
+        }
     }
 
     // 獲取當前適用的樣式（響應式）
@@ -447,6 +452,11 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
         this.loginUri = this.getAttribute('data-login-uri');
         this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
+
+        // 確保樣式配置被正確保存
+        if (this.modalContainerStyle && !this._modalContainerStyleConfig) {
+            this._modalContainerStyleConfig = this.modalContainerStyle;
+        }
 
         // 載入 Google Fonts
         this.loadGoogleFonts();
@@ -869,7 +879,10 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 在容器內顯示模態框
     showModalInContainer(container, type) {
         // 創建模態框內容，傳遞樣式配置
-        const modalContent = this.createModalContent(type, this.modalContainerStyle);
+        // 優先使用保存的樣式配置
+        const styleToUse = this._modalContainerStyleConfig || this.modalContainerStyle;
+        console.log('🎨 使用模態框樣式:', styleToUse);
+        const modalContent = this.createModalContent(type, styleToUse);
         
         // 直接將模態框內容添加到容器
         container.appendChild(modalContent);
@@ -910,16 +923,20 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 如果有自定義樣式，則應用自定義樣式
         if (modalContainerStyle) {
             const currentStyle = this.getCurrentStyle(modalContainerStyle);
-            const cssProperties = [];
-            
-            Object.entries(currentStyle).forEach(([property, value]) => {
-                // 將 camelCase 轉換為 kebab-case
-                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-                cssProperties.push(`${cssProperty}: ${value};`);
-            });
-            
-            const customStyle = cssProperties.join('\n            ');
-            modalDiv.style.cssText = customStyle;
+            if (currentStyle) {
+                const cssProperties = [];
+                
+                Object.entries(currentStyle).forEach(([property, value]) => {
+                    // 將 camelCase 轉換為 kebab-case
+                    const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    cssProperties.push(`${cssProperty}: ${value};`);
+                });
+                
+                const customStyle = cssProperties.join('\n            ');
+                modalDiv.style.cssText = customStyle;
+            } else {
+                modalDiv.style.cssText = defaultStyle;
+            }
         } else {
             modalDiv.style.cssText = defaultStyle;
         }
@@ -3565,6 +3582,8 @@ function createGoogleLoginComponents(configs = [
                 // 設置模態框容器樣式
                 if (modalContainerStyle) {
                     googleLoginComponent.setModalContainerStyle(modalContainerStyle);
+                    // 確保樣式被正確保存到組件實例中
+                    googleLoginComponent.modalContainerStyle = modalContainerStyle;
                 }
                 
                 // 應用響應式樣式
