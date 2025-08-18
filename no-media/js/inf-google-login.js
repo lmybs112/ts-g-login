@@ -882,6 +882,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             border-radius: 8px;
             position: relative;
             overflow: hidden;
+            margin: 0 auto;
+            max-width: 90%;
+            box-sizing: border-box;
         `;
 
         // 添加 CSS 樣式
