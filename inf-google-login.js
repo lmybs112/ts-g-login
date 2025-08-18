@@ -733,79 +733,69 @@ class InfGoogleLoginComponent extends HTMLElement {
                         component.style.setProperty(cssProperty, value);
                     });
                     
-                    // 重新設定模態框樣式
+                    // 重新設定模態框樣式 - 只針對 Google login 組件內部的模態框
                     if (config.modalContainerId) {
                         const modalContainer = document.getElementById(config.modalContainerId);
                         if (modalContainer) {
-                            // 根據不同的容器設定不同的模態框樣式
-                            let modalStyle;
-                            if (config.avatarContainerId === 'SB_Prod_cart') {
-                                // SizeBox 的模態框樣式
-                                modalStyle = {
-                                    desktop: {
-                                        maxWidth: '90%',
-                                        margin: '0 auto',
-                                        paddingTop: '20px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'white',
-                                        borderRadius: '8px',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    },
-                                    mobile: {
-                                        maxWidth: '90%',
-                                        margin: '0 auto',
-                                        paddingTop: '20px',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'white',
-                                        borderRadius: '8px',
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }
-                                };
-                            } else {
-                                // 其他容器的模態框樣式
-                                modalStyle = {
-                                    desktop: {
-                                        width: '100%',
-                                        height: '100%',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'white',
-                                        borderRadius: '8px',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        maxWidth: '440px',
-                                        margin: '0 auto',
-                                        paddingTop: '20px'
-                                    },
-                                    mobile: {
-                                        width: '100%',
-                                        height: '100%',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'white',
-                                        borderRadius: '8px',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        maxWidth: '100%',
-                                        margin: '0 auto',
-                                        paddingTop: '10px'
-                                    }
-                                };
+                            // 只重新設定 Google login 組件內部的模態框樣式
+                            const googleLoginModal = modalContainer.querySelector('.inf-google-login-modal-container');
+                            if (googleLoginModal) {
+                                // 根據不同的容器設定不同的模態框樣式
+                                let modalStyle;
+                                if (config.avatarContainerId === 'SB_Prod_cart') {
+                                    // SizeBox 的模態框樣式
+                                    modalStyle = {
+                                        desktop: {
+                                            maxWidth: '90%',
+                                            margin: '0 auto',
+                                            paddingTop: '20px'
+                                        },
+                                        mobile: {
+                                            maxWidth: '90%',
+                                            margin: '0 auto',
+                                            paddingTop: '20px'
+                                        }
+                                    };
+                                } else {
+                                    // 其他容器的模態框樣式
+                                    modalStyle = {
+                                        desktop: {
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            background: 'white',
+                                            borderRadius: '8px',
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            maxWidth: '440px',
+                                            margin: '0 auto',
+                                            paddingTop: '20px'
+                                        },
+                                        mobile: {
+                                            width: '100%',
+                                            height: '100%',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            background: 'white',
+                                            borderRadius: '8px',
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            maxWidth: '100%',
+                                            margin: '0 auto',
+                                            paddingTop: '10px'
+                                        }
+                                    };
+                                }
+                                
+                                const currentModalStyle = this.getCurrentStyle(modalStyle);
+                                Object.entries(currentModalStyle).forEach(([property, value]) => {
+                                    const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                                    googleLoginModal.style.setProperty(cssProperty, value);
+                                });
                             }
-                            
-                            const currentModalStyle = this.getCurrentStyle(modalStyle);
-                            Object.entries(currentModalStyle).forEach(([property, value]) => {
-                                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-                                modalContainer.style.setProperty(cssProperty, value);
-                            });
                         }
                     }
                 }
