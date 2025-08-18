@@ -3267,6 +3267,36 @@ function createGoogleLoginComponents(configs = [
                 height: '24px',
                 zIndex: 1000
             }
+        },
+        modalContainerStyle: {
+            desktop: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '440px',
+                margin: '0 auto',
+                paddingTop: '20px'
+            },
+            mobile: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '100%',
+                margin: '0 auto',
+                paddingTop: '10px'
+            }
         }
     },
     {
@@ -3288,6 +3318,36 @@ function createGoogleLoginComponents(configs = [
                 width: '28px',
                 height: '28px',
                 zIndex: 1000
+            }
+        },
+        modalContainerStyle: {
+            desktop: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '440px',
+                margin: '0 auto',
+                paddingTop: '20px'
+            },
+            mobile: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '100%',
+                margin: '0 auto',
+                paddingTop: '10px'
             }
         }
     }
@@ -3343,13 +3403,51 @@ function createGoogleLoginComponents(configs = [
             ${cssText}
         `;
     }
+
+    // 應用樣式到模態框容器
+    function applyModalContainerStyle(modalContainerId, modalContainerStyle) {
+        if (!modalContainerStyle) return;
+        
+        const currentStyle = getCurrentStyle(modalContainerStyle);
+        
+        // 查找模態框容器
+        let modalContainers;
+        if (modalContainerId.includes(' ')) {
+            modalContainers = document.querySelectorAll(modalContainerId);
+        } else if (modalContainerId.startsWith('#')) {
+            modalContainers = document.querySelectorAll(modalContainerId);
+        } else {
+            const container = document.getElementById(modalContainerId);
+            modalContainers = container ? [container] : [];
+        }
+        
+        // 應用樣式到模態框容器
+        modalContainers.forEach(container => {
+            // 將樣式物件轉換為 CSS 字串
+            const cssProperties = [];
+            
+            Object.entries(currentStyle).forEach(([property, value]) => {
+                // 將 camelCase 轉換為 kebab-case
+                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                cssProperties.push(`${cssProperty}: ${value};`);
+            });
+            
+            const cssText = cssProperties.join('\n                ');
+            
+            container.style.cssText = `
+                ${cssText}
+            `;
+        });
+    }
     
     // 更新現有組件的樣式（不重新創建）
     function updateExistingComponents() {
         configs.forEach(config => {
             const { 
                 avatarContainerId, 
-                avatarStyle
+                modalContainerId,
+                avatarStyle,
+                modalContainerStyle
             } = config;
             
             // 處理選擇器（支援 ID 和 CSS 選擇器）
@@ -3369,6 +3467,9 @@ function createGoogleLoginComponents(configs = [
                     applyStyleToComponent(component, avatarStyle);
                 });
             });
+            
+            // 更新模態框容器樣式
+            applyModalContainerStyle(modalContainerId, modalContainerStyle);
         });
     }
     
@@ -3377,7 +3478,8 @@ function createGoogleLoginComponents(configs = [
             const { 
                 avatarContainerId, 
                 modalContainerId, 
-                avatarStyle
+                avatarStyle,
+                modalContainerStyle
             } = config;
             
             // 處理選擇器（支援 ID 和 CSS 選擇器）
@@ -3416,6 +3518,9 @@ function createGoogleLoginComponents(configs = [
                 container.style.position = 'relative';
                 container.appendChild(googleLoginComponent);
             });
+            
+            // 應用模態框容器樣式
+            applyModalContainerStyle(modalContainerId, modalContainerStyle);
         });
     }
 

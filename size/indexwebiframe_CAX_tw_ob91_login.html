@@ -7,16 +7,38 @@
         href="https://fonts.googleapis.com/css?family=Montserrat:100,100i,200,200i,300,300i,400,400i,500,500i,600&display=swap"
         rel="stylesheet">
     <script type="text/javascript">
-        var SCENE_RUN = false; function StartLoadingScript() { }        
+        var SCENE_RUN = false;
+
+        function StartLoadingScript() {}
     </script>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="robots" content="noindex">
     <link href="https://inffits.com/webDesign/HTML/css/webiframe_CAX.css" rel="stylesheet" type="text/css" />
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
         gtag('js', new Date());
-        window.addEventListener('message', function (event) { if (event.data['MsgHeader'] == 'IDRxGet') { if ((typeof event.data['ga_id'] !== 'undefined') && (event.data['ga_id'] != 'notfoundgaid')) { gtag('config', 'UA-150387789-1', { client_storage: 'none', client_id: event.data['ga_id'], cookie_flags: 'secure;samesite=none' }); console.log('gaid : ' + event.data['ga_id']) } else { gtag('config', 'UA-150387789-1', { client_storage: 'none', cookie_flags: 'secure;samesite=none' }); console.log('noid') } } });
+        window.addEventListener('message', function (event) {
+            if (event.data['MsgHeader'] == 'IDRxGet') {
+                if ((typeof event.data['ga_id'] !== 'undefined') && (event.data['ga_id'] != 'notfoundgaid')) {
+                    gtag('config', 'UA-150387789-1', {
+                        client_storage: 'none',
+                        client_id: event.data['ga_id'],
+                        cookie_flags: 'secure;samesite=none'
+                    });
+                    console.log('gaid : ' + event.data['ga_id'])
+                } else {
+                    gtag('config', 'UA-150387789-1', {
+                        client_storage: 'none',
+                        cookie_flags: 'secure;samesite=none'
+                    });
+                    console.log('noid')
+                }
+            }
+        });
     </script>
 </head>
 
@@ -58,7 +80,9 @@
     </div>
     <div class='container mbinfo animX' id='container_initial_gender' style='z-index: 101;'>
         <div class="c_header" id="header_BF">智慧尺寸推薦
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>輸入您的基本資訊</p>
         </div>
         <div style="position:absolute;top:0;bottom:0;left:0;right:0;margin:auto;height: 35%;width:68%;padding:5px;">
@@ -90,7 +114,9 @@
     </div>
     <div class='container mbinfo animX' id='container_settings' style='z-index: 101;'>
         <div class="c_header" id="header_BF">智慧尺寸推薦設定
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
         </div>
         <div style="position:absolute;top:0;bottom:0;left:0;right:0;margin:auto;height: 35%;width:68%;padding:5px;">
             <div id="sizeFast_block">
@@ -130,7 +156,9 @@
     <!-- MBinfo F -->
     <div class='container mbinfo animY' id="container_BF_mbinfo">
         <div class="c_header" id="header_BF">智慧尺寸推薦
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>輸入您的身材資訊</p>
         </div>
 
@@ -177,7 +205,9 @@
     </div>
     <div class='container mbinfo animX' id="container_inputinfo">
         <div class="c_header" id="header_inputinfo" style='margin-bottom:7.5%'>新增身材資訊
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>根據您的身材資訊 更精準推薦合適尺寸</p>
         </div>
         <div class="MeasInput">
@@ -286,7 +316,9 @@
     </div>
     <div class='container mbinfo animX' id="container_bracup">
         <div class="c_header" id="header_bracup">您的內衣尺寸
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>
                 知道身材尺寸嗎？ 點擊
                 <img class='round-add-btn-img' height='10px'>
@@ -354,7 +386,9 @@
     </div>
     <div class='container mbinfo animX' id="container_chest">
         <div class="c_header">您的胸圍資訊
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
         </div>
         <div class="subcon">
             <div class="subcon_HW">
@@ -389,7 +423,9 @@
     </div>
     <div class='container mbinfo animX' id="container_waistsize">
         <div class="c_header" id="header_waistsize">您的腰圍
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>最細的腰部區域</p>
         </div>
         <div class="waist_size">
@@ -419,7 +455,9 @@
     </div>
     <div class='container mbinfo updntype animX' id="container_uptype">
         <div class="c_header" id="header_uptype">您的身型
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>肩膀與上身屬於哪一種類型
             </p>
         </div>
@@ -459,7 +497,9 @@
     </div>
     <div class='container mbinfo updntype animX' id="container_dntype">
         <div class="c_header" id="header_dntype">您的身型
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>臀部與下身屬於哪一種類型
 
                 或點擊
@@ -506,7 +546,9 @@
     </div>
     <div class='container mbinfo updntype animX' id="container_wdtype">
         <div class="c_header" id="header_wdtype">您的身型
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>腹部屬於哪一種類型
             </p>
         </div>
@@ -533,7 +575,9 @@
     <!-- MBinfo M -->
     <div class='container mbinfo animX' id="container_Mwaistsize">
         <div class="c_header">您的腰圍
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>近期穿過最小的腰圍尺碼</p>
         </div>
         <div class="waist_size">
@@ -562,7 +606,9 @@
     </div>
     <div class='container mbinfo updntype animX' id="container_Muptype">
         <div class="c_header" id="header_Muptype">您的身型
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>肩膀與上身屬於哪一種類型
             </p>
         </div>
@@ -601,7 +647,9 @@
     </div>
     <div class='container mbinfo updntype animX' id="container_Mdntype">
         <div class="c_header" id="header_Mdntype">您的身型
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>臀部與下身屬於哪一種類型
 
                 或點擊
@@ -647,7 +695,9 @@
     </div>
     <div class='container mbinfo updntype animX' id="container_Mwdtype">
         <div class="c_header" id="header_Mwdtype">您的身型
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>腹部屬於哪一種類型
             </p>
         </div>
@@ -674,7 +724,9 @@
     <!-- MBinfo Add -->
     <div class='container mbinfo animX' id="container_FitP">
         <div class="c_header" id="header_typeshape">您的穿著喜好
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
             <p>喜歡哪一種穿著感受</p>
         </div>
         <div class="selection_FitP">
@@ -727,7 +779,9 @@
     </div>
     <div class='container mbinfo animX' id="container_lowerbody">
         <div class="c_header">您的身材資訊
-            <div class='c_header-btn' style='display:none'><!--<img class='caret-img' height='100%'>--></div>
+            <div class='c_header-btn' style='display:none'>
+                <!--<img class='caret-img' height='100%'>-->
+            </div>
         </div>
         <div class="subcon">
             <div class="subcon_HW">
@@ -938,23 +992,48 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src="https://inffits.com/webDesign/HTML/js/components/jquery-mousewheel.min.js"></script>
     <script src="https://inffits.com/webDesign/HTML/js/iframe/inf_main_CAX.min.js"></script>
-    
+
     <!-- 引入 inf-google-login.js 組件並指定目標容器 -->
     <script>
         // 動態載入 inf-google-login.js 組件
-        (function() {
+        (function () {
             const script = document.createElement('script');
             script.src = '/inf-google-login.js';
-            script.onload = function() {
+            script.onload = function () {
                 // 指定每個組件的頭像位置和模態框顯示位置
-                createGoogleLoginComponents([
-                    {
+                createGoogleLoginComponents([{
                         avatarContainerId: '#container_BF_mbinfo .c_header',
-                        modalContainerId: 'container_BF_mbinfo'
+                        modalContainerId: 'container_BF_mbinfo',
+                        modalContainerStyle: {
+                            desktop: {
+                                // 桌面版模態框樣式
+                                maxWidth: '440px',
+                                margin: '0 auto',
+                                paddingTop: '20px'
+                            },
+                            mobile: {
+                                maxWidth: '440px',
+                                margin: '0 auto',
+                                paddingTop: '20px'
+                            }
+                        }
                     },
                     {
                         avatarContainerId: 'SB_Prod_cart',
-                        modalContainerId: 'Sizebox_cart'
+                        modalContainerId: 'Sizebox_cart',
+                        modalContainerStyle: {
+                            desktop: {
+                                // 桌面版模態框樣式
+                                maxWidth: '440px',
+                                margin: '0 auto',
+                                paddingTop: '20px'
+                            },
+                            mobile: {
+                                maxWidth: '440px',
+                                margin: '0 auto',
+                                paddingTop: '20px'
+                            }
+                        }
                     }
                 ]);
             };
@@ -962,7 +1041,145 @@
         })();
     </script>
 
-    <script> function iOSversion() { if (/iP(hone|od|ad)/.test(navigator.platform)) { var v = (navigator.appVersion).match(/OS (\d+)_(\d+)_?(\d+)?/); return [parseInt(v[1], 10), parseInt(v[2], 10), parseInt(v[3] || 0, 10)]; } } iOS = iOSversion(); if (typeof iOS !== "undefined") { var iOSver = iOS[0]; } else { var iOSver = 15; } window.addEventListener("message", function (event) { console.log("GETEVENT"); if (event.data["MsgHeader"] == "IDRxGet") { TAKODA = true; console.log("GET IDRxGet"); $("#pback").show(); $("#Sizebox_cart").show(); onloadS("infFITS_OB91"); FitTextDefault = false; setTimeout(function () { $("#loadingbar_Buy").fadeOut(); }, 1500); TRIGGERS = true; if (iOSver >= 16) { $(".inputselectHW").css("text-align-last", "left"); $(".inputselect").css("text-align-last", "left") }; if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent.indexOf("Chrome") == -1 && window.outerWidth > 400) { $(".inputselectorheight_BF").css("text-indent", "43%"); $(".inputselectorweight_BF").css("text-indent", "46%"); } else if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent.indexOf("Chrome") == -1 && window.outerWidth < 399) { $(".inputselectorheight_BF").css("text-indent", "41%"); $(".inputselectorweight_BF").css("text-indent", "46%"); } else if (navigator.userAgent.indexOf("Firefox") != -1) { $(".inputselectorheight_BF").css("text-indent", "0%"); $(".inputselectorweight_BF").css("text-indent", "0%"); } }; "Display" == event.data.MsgHeader && ("FitPreference" == event.data.FitText ? ($("#first_recomtext")[0].innerText.includes("最佳") ? $("#first_recomtext")[0].innerText = "最佳穿著偏好" : $("#first_recomtext")[0].innerText = "穿著偏好", $("#sec_recomtext")[0].innerText = "穿著偏好") : "FitSize" == event.data.FitText && ($("#first_recomtext")[0].innerText.includes("最佳") ? $("#first_recomtext")[0].innerText = "最佳合適尺寸" : $("#first_recomtext")[0].innerText = "合適尺寸", $("#sec_recomtext")[0].innerText = "合適尺寸"), event.data.SizeOpt ? $("#first_recomtext")[0].innerText = "最佳" + $("#first_recomtext")[0].innerText.substr(-4) : $("#first_recomtext")[0].innerText = "" + $("#first_recomtext")[0].innerText.substr(-4), event.data.FontWeightBold ? ($("#recomSize").css("color", "black"), $("#recomText").css("color", "black"), $("#recomSize_sec").css("color", "black"), $("#recomText_sec").css("color", "black")) : console.log("default")); $(".Inputbtn").remove(); }, false); window.addEventListener("message", function (n) { if ("onloadS_Done" == n.data.MsgHeader) { $("#loadingbar_Buy").fadeOut(); window.parent.postMessage({ MsgHeader: "ToggleReady" }, "*"); setTimeout(function () { $("#confirm-button_gender").on("click touchend", function (e) { if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent.indexOf("Chrome") == -1) { centerSelect($("#HTxixPS_mbinfo")); centerSelect($("#wTxixPS_mbinfo")); } }) }, 300) } }); var SizeAIFast_switch; window.addEventListener("message", function (e) { if ("IDRxGet" == e.data.MsgHeader && (SizeAIFast_switch = e.data.SizeAIFast_switch), "onloadS_Done" == e.data.MsgHeader) { try { var i = localStorage.TID } catch (e) { i = (new Date).getTime } if (SizeAIFast_switch) try { SizeAIFast_switch = void 0 !== localStorage.SizeAIFast_switch ? localStorage.SizeAIFast_switch : SizeAIFast_switch.toString() } catch (e) { SizeAIFast_switch = "true" } "undefined" != typeof LSvd && LSvd && "true" == SizeAIFast_switch ? ($("#findmysize").click(), $("#container_BF_mbinfo").hide(), function e() { var t; 0 < GLOpR.length ? (t = { MsgHeader: "SizeAI_Fast", Auto: !0, Top_Size: $("#recomSize").text(), Sec_Size: $("#recomSize_sec").text(), Top_Per: $("#first_FTEXT").text(), Sec_Per: $("#sec_FTEXT").text(), Image: $("#pback").css("background-image"), sarr: sarr, LSvd: LSvd, TID: i, DP_CODE: GLOpR[0].DP_CODE }, setTimeout(function () { var e, t, i, a = [[], [], []]; for (i in JSON.parse(GLOpR[0].ITEM)) { var n = Object.keys(JSON.parse(GLOpR[0].ITEM)).indexOf(i); a[0].push(n), a[1].push(i), a[2].push(parseFloat(JSON.parse(GLOpR[0].ITEM)[i])) } e = a[2].indexOf(Math.max.apply(null, a[2])), t = a[2].indexOf(Math.min.apply(null, a[2])), $("#firstPer")[0].innerHTML = a[2][e].toFixed(0), $("#SecPer")[0].innerHTML = a[2][t].toFixed(0), "0" == $("#firstPer")[0].innerHTML && "0" == $("#SecPer")[0].innerHTML && setTimeout(function () { $("#firstPer")[0].innerHTML = a[2][e].toFixed(0), $("#SecPer")[0].innerHTML = a[2][t].toFixed(0) }, 1e3) }, 2e3), window.parent.postMessage(t, "*")) : setTimeout(e, 1e3) }()) : window.parent.postMessage({ MsgHeader: "SizeAI_Fast_pass", Image: $("#pback").css("background-image"), LSvd: !1 }, "*") } }), $("#confirm-button_FitP").on("touchend click", function () { document.querySelector("#form-wrapper").querySelectorAll(`input[type="radio"]`).forEach(function (e) { e.checked }) });</script>
+    <script>
+        function iOSversion() {
+            if (/iP(hone|od|ad)/.test(navigator.platform)) {
+                var v = (navigator.appVersion).match(/OS (\d+)_(\d+)_?(\d+)?/);
+                return [parseInt(v[1], 10), parseInt(v[2], 10), parseInt(v[3] || 0, 10)];
+            }
+        }
+        iOS = iOSversion();
+        if (typeof iOS !== "undefined") {
+            var iOSver = iOS[0];
+        } else {
+            var iOSver = 15;
+        }
+        window.addEventListener("message", function (event) {
+            console.log("GETEVENT");
+            if (event.data["MsgHeader"] == "IDRxGet") {
+                TAKODA = true;
+                console.log("GET IDRxGet");
+                $("#pback").show();
+                $("#Sizebox_cart").show();
+                onloadS("infFITS_OB91");
+                FitTextDefault = false;
+                setTimeout(function () {
+                    $("#loadingbar_Buy").fadeOut();
+                }, 1500);
+                TRIGGERS = true;
+                if (iOSver >= 16) {
+                    $(".inputselectHW").css("text-align-last", "left");
+                    $(".inputselect").css("text-align-last", "left")
+                };
+                if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent.indexOf("Chrome") == -
+                    1 && window.outerWidth > 400) {
+                    $(".inputselectorheight_BF").css("text-indent", "43%");
+                    $(".inputselectorweight_BF").css("text-indent", "46%");
+                } else if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent.indexOf(
+                    "Chrome") == -1 && window.outerWidth < 399) {
+                    $(".inputselectorheight_BF").css("text-indent", "41%");
+                    $(".inputselectorweight_BF").css("text-indent", "46%");
+                } else if (navigator.userAgent.indexOf("Firefox") != -1) {
+                    $(".inputselectorheight_BF").css("text-indent", "0%");
+                    $(".inputselectorweight_BF").css("text-indent", "0%");
+                }
+            };
+            "Display" == event.data.MsgHeader && ("FitPreference" == event.data.FitText ? ($(
+                    "#first_recomtext")[0].innerText.includes("最佳") ? $("#first_recomtext")[0].innerText =
+                    "最佳穿著偏好" : $("#first_recomtext")[0].innerText = "穿著偏好", $("#sec_recomtext")[0]
+                    .innerText = "穿著偏好") : "FitSize" == event.data.FitText && ($("#first_recomtext")[0]
+                    .innerText.includes("最佳") ? $("#first_recomtext")[0].innerText = "最佳合適尺寸" : $(
+                        "#first_recomtext")[0].innerText = "合適尺寸", $("#sec_recomtext")[0].innerText = "合適尺寸"
+                    ), event.data.SizeOpt ? $("#first_recomtext")[0].innerText = "最佳" + $(
+                    "#first_recomtext")[0].innerText.substr(-4) : $("#first_recomtext")[0].innerText = "" +
+                $("#first_recomtext")[0].innerText.substr(-4), event.data.FontWeightBold ? ($("#recomSize")
+                    .css("color", "black"), $("#recomText").css("color", "black"), $("#recomSize_sec").css(
+                        "color", "black"), $("#recomText_sec").css("color", "black")) : console.log(
+                    "default"));
+            $(".Inputbtn").remove();
+        }, false);
+        window.addEventListener("message", function (n) {
+            if ("onloadS_Done" == n.data.MsgHeader) {
+                $("#loadingbar_Buy").fadeOut();
+                window.parent.postMessage({
+                    MsgHeader: "ToggleReady"
+                }, "*");
+                setTimeout(function () {
+                    $("#confirm-button_gender").on("click touchend", function (e) {
+                        if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent
+                            .indexOf("Chrome") == -1) {
+                            centerSelect($("#HTxixPS_mbinfo"));
+                            centerSelect($("#wTxixPS_mbinfo"));
+                        }
+                    })
+                }, 300)
+            }
+        });
+        var SizeAIFast_switch;
+        window.addEventListener("message", function (e) {
+            if ("IDRxGet" == e.data.MsgHeader && (SizeAIFast_switch = e.data.SizeAIFast_switch),
+                "onloadS_Done" == e.data.MsgHeader) {
+                try {
+                    var i = localStorage.TID
+                } catch (e) {
+                    i = (new Date).getTime
+                }
+                if (SizeAIFast_switch) try {
+                    SizeAIFast_switch = void 0 !== localStorage.SizeAIFast_switch ? localStorage
+                        .SizeAIFast_switch : SizeAIFast_switch.toString()
+                } catch (e) {
+                    SizeAIFast_switch = "true"
+                }
+                "undefined" != typeof LSvd && LSvd && "true" == SizeAIFast_switch ? ($("#findmysize").click(),
+                    $("#container_BF_mbinfo").hide(),
+                    function e() {
+                        var t;
+                        0 < GLOpR.length ? (t = {
+                            MsgHeader: "SizeAI_Fast",
+                            Auto: !0,
+                            Top_Size: $("#recomSize").text(),
+                            Sec_Size: $("#recomSize_sec").text(),
+                            Top_Per: $("#first_FTEXT").text(),
+                            Sec_Per: $("#sec_FTEXT").text(),
+                            Image: $("#pback").css("background-image"),
+                            sarr: sarr,
+                            LSvd: LSvd,
+                            TID: i,
+                            DP_CODE: GLOpR[0].DP_CODE
+                        }, setTimeout(function () {
+                            var e, t, i, a = [
+                                [],
+                                [],
+                                []
+                            ];
+                            for (i in JSON.parse(GLOpR[0].ITEM)) {
+                                var n = Object.keys(JSON.parse(GLOpR[0].ITEM)).indexOf(i);
+                                a[0].push(n), a[1].push(i), a[2].push(parseFloat(JSON.parse(
+                                    GLOpR[0].ITEM)[i]))
+                            }
+                            e = a[2].indexOf(Math.max.apply(null, a[2])), t = a[2].indexOf(Math
+                                    .min.apply(null, a[2])), $("#firstPer")[0].innerHTML = a[2][
+                                    e
+                                ].toFixed(0), $("#SecPer")[0].innerHTML = a[2][t].toFixed(0),
+                                "0" == $("#firstPer")[0].innerHTML && "0" == $("#SecPer")[0]
+                                .innerHTML && setTimeout(function () {
+                                    $("#firstPer")[0].innerHTML = a[2][e].toFixed(0), $(
+                                        "#SecPer")[0].innerHTML = a[2][t].toFixed(0)
+                                }, 1e3)
+                        }, 2e3), window.parent.postMessage(t, "*")) : setTimeout(e, 1e3)
+                    }()) : window.parent.postMessage({
+                    MsgHeader: "SizeAI_Fast_pass",
+                    Image: $("#pback").css("background-image"),
+                    LSvd: !1
+                }, "*")
+            }
+        }), $("#confirm-button_FitP").on("touchend click", function () {
+            document.querySelector("#form-wrapper").querySelectorAll(`input[type="radio"]`).forEach(function (
+            e) {
+                e.checked
+            })
+        });
+    </script>
 </body>
 
 </html>
