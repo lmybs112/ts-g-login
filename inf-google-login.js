@@ -651,6 +651,36 @@ class InfGoogleLoginComponent extends HTMLElement {
                         height: '28px',
                         zIndex: 1000
                     }
+                },
+                modalContainerStyle: {
+                    desktop: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '440px',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    },
+                    mobile: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '100%',
+                        margin: '0 auto',
+                        paddingTop: '10px'
+                    }
                 }
             },
             {
@@ -673,11 +703,41 @@ class InfGoogleLoginComponent extends HTMLElement {
                         height: '28px',
                         zIndex: 1000
                     }
+                },
+                modalContainerStyle: {
+                    desktop: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '440px',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    },
+                    mobile: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '100%',
+                        margin: '0 auto',
+                        paddingTop: '10px'
+                    }
                 }
             },
             {
                 avatarContainerId: 'SB_Prod_cart',
-                modalContainerId: 'Sizebox_cart',
+                modalContainerId: 'SizeBox_cart',
                 avatarStyle: {
                     desktop: {
                         position: 'absolute',
@@ -694,6 +754,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                         width: '28px',
                         height: '28px',
                         zIndex: 1000
+                    }
+                },
+                modalContainerStyle: {
+                    desktop: {
+                        maxWidth: '90%',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    },
+                    mobile: {
+                        maxWidth: '90%',
+                        margin: '0 auto',
+                        paddingTop: '20px'
                     }
                 }
             },
@@ -717,6 +789,36 @@ class InfGoogleLoginComponent extends HTMLElement {
                         height: '24px',
                         zIndex: 1000
                     }
+                },
+                modalContainerStyle: {
+                    desktop: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '440px',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    },
+                    mobile: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '100%',
+                        margin: '0 auto',
+                        paddingTop: '10px'
+                    }
                 }
             }
         ];
@@ -733,61 +835,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                         component.style.setProperty(cssProperty, value);
                     });
                     
-                    // 重新設定模態框樣式
+                    // 重新設定 modal 容器樣式
                     if (config.modalContainerId) {
                         const modalContainer = document.getElementById(config.modalContainerId);
-                        if (modalContainer) {
-                            // 根據不同的容器設定不同的模態框樣式
-                            let modalStyle;
-                            if (config.avatarContainerId === 'SB_Prod_cart') {
-                                // SizeBox 的模態框樣式
-                                modalStyle = {
-                                    desktop: {
-                                        maxWidth: '90%',
-                                        margin: '0 auto',
-                                        paddingTop: '20px'
-                                    },
-                                    mobile: {
-                                        maxWidth: '90%',
-                                        margin: '0 auto',
-                                        paddingTop: '20px'
-                                    }
-                                };
-                            } else {
-                                // 其他容器的模態框樣式
-                                modalStyle = {
-                                    desktop: {
-                                        width: '100%',
-                                        height: '100%',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'white',
-                                        borderRadius: '8px',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        maxWidth: '440px',
-                                        margin: '0 auto',
-                                        paddingTop: '20px'
-                                    },
-                                    mobile: {
-                                        width: '100%',
-                                        height: '100%',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        background: 'white',
-                                        borderRadius: '8px',
-                                        position: 'relative',
-                                        overflow: 'hidden',
-                                        maxWidth: '100%',
-                                        margin: '0 auto',
-                                        paddingTop: '10px'
-                                    }
-                                };
-                            }
-                            
-                            const currentModalStyle = this.getCurrentStyle(modalStyle);
+                        if (modalContainer && config.modalContainerStyle) {
+                            const currentModalStyle = this.getCurrentStyle(config.modalContainerStyle);
                             Object.entries(currentModalStyle).forEach(([property, value]) => {
                                 const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
                                 modalContainer.style.setProperty(cssProperty, value);
@@ -3582,7 +3634,7 @@ function createGoogleLoginComponents(configs = [
     },
     {
         avatarContainerId: 'SB_Prod_cart',
-        modalContainerId: 'Sizebox_cart',
+        modalContainerId: 'SizeBox_cart',
         avatarStyle: {
             desktop: {
                 position: 'absolute',
@@ -3808,21 +3860,10 @@ function createGoogleLoginComponents(configs = [
             });
             
             // 檢查屬性變化
-            if (mutation.type === 'attributes') {
-                const target = mutation.target;
-                
-                // 檢查 intro-content 的變化
-                if (target.id === 'intro-content-simple' || target.id === 'intro-content-advanced') {
-                    shouldInit = true;
-                }
-                
-                // 檢查 Sizebox_cart 的顯示狀態變化
-                if (target.id === 'Sizebox_cart') {
-                    console.log('檢測到 Sizebox_cart 屬性變化，重新應用樣式');
-                    setTimeout(() => {
-                        globalReapplyStyles();
-                    }, 100);
-                }
+            if (mutation.type === 'attributes' && 
+                (mutation.target.id === 'intro-content-simple' || 
+                 mutation.target.id === 'intro-content-advanced')) {
+                shouldInit = true;
             }
         });
         
@@ -3930,24 +3971,6 @@ function createGoogleLoginComponents(configs = [
             }
         }, 250); // 防抖動延遲
     });
-    
-    // 專門監聽 Sizebox_cart 顯示狀態的函數
-    const checkSizeboxCartVisibility = () => {
-        const sizeboxCart = document.getElementById('Sizebox_cart');
-        if (sizeboxCart) {
-            const isVisible = sizeboxCart.style.display !== 'none' && 
-                             sizeboxCart.style.visibility !== 'hidden' && 
-                             sizeboxCart.offsetParent !== null;
-            
-            if (isVisible) {
-                console.log('檢測到 Sizebox_cart 顯示，重新應用樣式');
-                globalReapplyStyles();
-            }
-        }
-    };
-    
-    // 定期檢查 Sizebox_cart 的顯示狀態
-    setInterval(checkSizeboxCartVisibility, 500);
 }
 
 // 不自動執行，等待外層指定目標 ID
