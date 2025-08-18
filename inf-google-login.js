@@ -3570,14 +3570,12 @@ function createGoogleLoginComponents(configs = [
                 // 應用響應式樣式
                 applyStyleToComponent(googleLoginComponent, avatarStyle);
                 
-                // 如果有保存的樣式，優先使用保存的樣式
-                const savedData = savedComponentStyles.get(container.id);
-                if (savedData) {
-                    googleLoginComponent.style.cssText = savedData.style;
-                    Object.entries(savedData.attributes).forEach(([attrName, attrValue]) => {
-                        googleLoginComponent.setAttribute(attrName, attrValue);
-                    });
-                }
+                // 強制重新設定 CSS 樣式，確保樣式正確應用
+                const currentStyle = getCurrentStyle(avatarStyle);
+                Object.entries(currentStyle).forEach(([property, value]) => {
+                    const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    googleLoginComponent.style.setProperty(cssProperty, value);
+                });
                 
                 container.style.position = 'relative';
                 container.appendChild(googleLoginComponent);
@@ -3585,9 +3583,6 @@ function createGoogleLoginComponents(configs = [
         });
     }
 
-    // 保存樣式配置的全局變數
-    let savedComponentStyles = new Map();
-    
     // 等待 DOM 載入完成後初始化
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initComponents);
@@ -3595,55 +3590,9 @@ function createGoogleLoginComponents(configs = [
         initComponents();
     }
     
-    // 保存組件樣式的函數
-    const saveComponentStyles = () => {
-        const components = document.querySelectorAll('inf-google-login');
-        components.forEach((component, index) => {
-            const container = component.closest('#intro-content-simple, #intro-content-advanced');
-            if (container) {
-                const containerId = container.id;
-                const style = component.style.cssText;
-                const attributes = {};
-                
-                // 保存所有自定義屬性
-                for (let attr of component.attributes) {
-                    if (attr.name.startsWith('data-') || attr.name === 'client-id' || attr.name === 'auto-select' || attr.name === 'target-container-id') {
-                        attributes[attr.name] = attr.value;
-                    }
-                }
-                
-                savedComponentStyles.set(containerId, {
-                    style: style,
-                    attributes: attributes,
-                    containerId: containerId
-                });
-            }
-        });
-    };
-    
-    // 恢復組件樣式的函數
-    const restoreComponentStyles = () => {
-        savedComponentStyles.forEach((savedData, containerId) => {
-            const container = document.getElementById(containerId);
-            if (container) {
-                const component = container.querySelector('inf-google-login');
-                if (component) {
-                    // 恢復樣式
-                    component.style.cssText = savedData.style;
-                    
-                    // 恢復屬性
-                    Object.entries(savedData.attributes).forEach(([attrName, attrValue]) => {
-                        component.setAttribute(attrName, attrValue);
-                    });
-                }
-            }
-        });
-    };
-    
-    // 優化的 DOM 變化監聽器，處理 intro-content-simple 和 intro-content-advanced
+    // 簡化的 DOM 變化監聽器
     const observer = new MutationObserver((mutations) => {
         let shouldInit = false;
-        let shouldRestore = false;
         
         mutations.forEach((mutation) => {
             // 檢查新增的節點
@@ -3659,44 +3608,17 @@ function createGoogleLoginComponents(configs = [
                 }
             });
             
-            // 檢查屬性變化（例如 style 變化）
+            // 檢查屬性變化
             if (mutation.type === 'attributes' && 
                 (mutation.target.id === 'intro-content-simple' || 
                  mutation.target.id === 'intro-content-advanced')) {
                 shouldInit = true;
             }
-            
-            // 檢查是否有元素被移除（可能是 startover 觸發的重置）
-            if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-                mutation.removedNodes.forEach((node) => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        if (node.id === 'intro-content-simple' || 
-                            node.id === 'intro-content-advanced' ||
-                            node.querySelector('#intro-content-simple') ||
-                            node.querySelector('#intro-content-advanced')) {
-                            shouldRestore = true;
-                        }
-                    }
-                });
-            }
         });
-        
-        if (shouldRestore) {
-            console.log('檢測到元素被移除，保存當前樣式');
-            saveComponentStyles();
-        }
         
         if (shouldInit) {
             console.log('檢測到 intro-content 變化，重新初始化 Google Login 組件');
             initComponents();
-            
-            // 如果有保存的樣式，嘗試恢復
-            if (savedComponentStyles.size > 0) {
-                console.log('嘗試恢復保存的樣式');
-                requestAnimationFrame(() => {
-                    restoreComponentStyles();
-                });
-            }
         }
     });
     
@@ -3708,93 +3630,25 @@ function createGoogleLoginComponents(configs = [
         attributeFilter: ['style', 'class']
     });
     
-    // 使用 requestAnimationFrame 進行精確的檢查，確保元素完全渲染
-    const checkContentElements = () => {
-        const introContentSimple = document.getElementById('intro-content-simple');
-        const introContentAdvanced = document.getElementById('intro-content-advanced');
-        
-        // 檢查哪個元素目前可見
-        let visibleElement = null;
-        
-        if (introContentSimple && 
-            introContentSimple.style.display !== 'none' && 
-            introContentSimple.style.opacity !== '0' &&
-            introContentSimple.offsetParent !== null) {
-            visibleElement = introContentSimple;
-        } else if (introContentAdvanced && 
-                   introContentAdvanced.style.display !== 'none' &&
-                   introContentAdvanced.offsetParent !== null) {
-            visibleElement = introContentAdvanced;
-        }
-        
-        // 如果找到可見元素且沒有 Google login 組件，則初始化
-        if (visibleElement && !visibleElement.querySelector('inf-google-login')) {
-            console.log(`檢測到可見的 ${visibleElement.id}，初始化 Google Login 組件`);
-            initComponents();
-        }
-    };
-    
-    // 使用 requestAnimationFrame 確保在下一幀渲染時檢查
-    const rafCheck = () => {
-        requestAnimationFrame(() => {
-            checkContentElements();
-            // 如果元素還在變化中，繼續檢查
-            if (document.getElementById('intro-content-simple') || document.getElementById('intro-content-advanced')) {
-                rafCheck();
-            }
-        });
-    };
-    
-    // 監聽 DOM 變化時觸發 RAF 檢查
-    const originalObserver = observer;
-    const enhancedObserver = new MutationObserver((mutations) => {
-        let hasContentChange = false;
-        
-        mutations.forEach((mutation) => {
-            if (mutation.type === 'childList') {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === Node.ELEMENT_NODE) {
-                        if (node.id === 'intro-content-simple' || 
-                            node.id === 'intro-content-advanced' ||
-                            node.querySelector('#intro-content-simple') ||
-                            node.querySelector('#intro-content-advanced')) {
-                            hasContentChange = true;
-                        }
-                    }
-                });
-            }
-        });
-        
-        if (hasContentChange) {
-            rafCheck();
-        }
-    });
-    
-    // 同時使用兩個觀察器
-    enhancedObserver.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-    
-    // 監聽 startover 按鈕點擊事件
+    // 監聽 startover 按鈕點擊事件，強制重新初始化
     document.addEventListener('click', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
-            console.log('檢測到 startover 按鈕點擊，保存當前樣式');
-            // 在重置前保存當前樣式
+            console.log('檢測到 startover 按鈕點擊，強制重新初始化');
+            // 延遲一點時間確保重置完成
             setTimeout(() => {
-                saveComponentStyles();
-            }, 0);
+                initComponents();
+            }, 100);
         }
     });
     
     // 監聽 startover 按鈕的觸摸事件（移動設備）
     document.addEventListener('touchstart', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
-            console.log('檢測到 startover 按鈕觸摸，保存當前樣式');
-            // 在重置前保存當前樣式
+            console.log('檢測到 startover 按鈕觸摸，強制重新初始化');
+            // 延遲一點時間確保重置完成
             setTimeout(() => {
-                saveComponentStyles();
-            }, 0);
+                initComponents();
+            }, 100);
         }
     });
     
