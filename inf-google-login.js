@@ -672,6 +672,48 @@ class InfGoogleLoginComponent extends HTMLElement {
                         zIndex: 1000
                     }
                 }
+            },
+            {
+                avatarContainerId: 'SB_Prod_cart',
+                avatarStyle: {
+                    desktop: {
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        width: '28px',
+                        height: '28px',
+                        zIndex: 1000
+                    },
+                    mobile: {
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        width: '28px',
+                        height: '28px',
+                        zIndex: 1000
+                    }
+                }
+            },
+            {
+                avatarContainerId: 'header_BF',
+                avatarStyle: {
+                    desktop: {
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        width: '28px',
+                        height: '28px',
+                        zIndex: 1000
+                    },
+                    mobile: {
+                        position: 'absolute',
+                        left: '8px',
+                        top: '8px',
+                        width: '24px',
+                        height: '24px',
+                        zIndex: 1000
+                    }
+                }
             }
         ];
         
