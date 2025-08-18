@@ -745,12 +745,26 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     desktop: {
                                         maxWidth: '90%',
                                         margin: '0 auto',
-                                        paddingTop: '20px'
+                                        paddingTop: '20px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        background: 'white',
+                                        borderRadius: '8px',
+                                        position: 'relative',
+                                        overflow: 'hidden'
                                     },
                                     mobile: {
                                         maxWidth: '90%',
                                         margin: '0 auto',
-                                        paddingTop: '20px'
+                                        paddingTop: '20px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        background: 'white',
+                                        borderRadius: '8px',
+                                        position: 'relative',
+                                        overflow: 'hidden'
                                     }
                                 };
                             } else {
@@ -3792,6 +3806,7 @@ function createGoogleLoginComponents(configs = [
     // 簡化的 DOM 變化監聽器
     const observer = new MutationObserver((mutations) => {
         let shouldInit = false;
+        let shouldReapplyStyles = false;
         
         mutations.forEach((mutation) => {
             // 檢查新增的節點
@@ -3808,10 +3823,19 @@ function createGoogleLoginComponents(configs = [
             });
             
             // 檢查屬性變化
-            if (mutation.type === 'attributes' && 
-                (mutation.target.id === 'intro-content-simple' || 
-                 mutation.target.id === 'intro-content-advanced')) {
-                shouldInit = true;
+            if (mutation.type === 'attributes') {
+                const target = mutation.target;
+                
+                // 檢查 intro-content 的變化
+                if (target.id === 'intro-content-simple' || target.id === 'intro-content-advanced') {
+                    shouldInit = true;
+                }
+                
+                // 檢查 Sizebox_cart 的顯示狀態變化
+                if (target.id === 'Sizebox_cart') {
+                    console.log('檢測到 Sizebox_cart 屬性變化，重新應用樣式');
+                    shouldReapplyStyles = true;
+                }
             }
         });
         
@@ -3828,6 +3852,18 @@ function createGoogleLoginComponents(configs = [
                     }
                 });
             }, 200);
+        }
+        
+        if (shouldReapplyStyles) {
+            console.log('檢測到 Sizebox_cart 變化，重新應用樣式');
+            setTimeout(() => {
+                const allComponents = document.querySelectorAll('inf-google-login');
+                allComponents.forEach(component => {
+                    if (component.reapplyStyles) {
+                        component.reapplyStyles();
+                    }
+                });
+            }, 100);
         }
     });
     
@@ -3848,6 +3884,24 @@ function createGoogleLoginComponents(configs = [
             }
         });
     };
+    
+    // 專門監聽 Sizebox_cart 顯示狀態的函數
+    const checkSizeboxCartVisibility = () => {
+        const sizeboxCart = document.getElementById('Sizebox_cart');
+        if (sizeboxCart) {
+            const isVisible = sizeboxCart.style.display !== 'none' && 
+                             sizeboxCart.style.visibility !== 'hidden' && 
+                             sizeboxCart.offsetParent !== null;
+            
+            if (isVisible) {
+                console.log('檢測到 Sizebox_cart 顯示，重新應用樣式');
+                globalReapplyStyles();
+            }
+        }
+    };
+    
+    // 定期檢查 Sizebox_cart 的顯示狀態
+    setInterval(checkSizeboxCartVisibility, 500);
     
     // 監聽 startover 按鈕點擊事件，強制重新初始化
     document.addEventListener('click', (event) => {
