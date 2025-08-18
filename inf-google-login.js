@@ -99,23 +99,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         });
     }
 
-    // 檢查外層容器類型
-    findParentContainer() {
-        let currentElement = this.parentElement;
-        
-        while (currentElement) {
-            if (currentElement.id === 'Sizebox_cart') {
-                return 'Sizebox_cart';
-            }
-            if (currentElement.id === 'container_BF_mbinfo') {
-                return 'container_BF_mbinfo';
-            }
-            currentElement = currentElement.parentElement;
-        }
-        
-        return null;
-    }
-
     // 等待 Google 服務載入的 Promise
     waitForGoogleServices() {
         return new Promise((resolve, reject) => {
@@ -889,10 +872,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     createModalContent(type) {
         const modalDiv = document.createElement('div');
         modalDiv.className = 'inf-google-login-modal-container';
-        
-        // 檢查外層容器類型並設定對應樣式
-        const parentContainer = this.findParentContainer();
-        let modalStyles = `
+        modalDiv.style.cssText = `
             width: 100%;
             height: 100%;
             display: flex;
@@ -902,24 +882,10 @@ class InfGoogleLoginComponent extends HTMLElement {
             border-radius: 8px;
             position: relative;
             overflow: hidden;
+            max-width: 440px;
+            margin: 0 auto;
+            padding-top: 20px;
         `;
-        
-        // 根據外層容器調整樣式
-        if (parentContainer === 'Sizebox_cart' || parentContainer === 'container_BF_mbinfo') {
-            modalStyles += `
-                max-width: 100%;
-                margin: 0;
-                padding-top: 0;
-            `;
-        } else {
-            modalStyles += `
-                max-width: 440px;
-                margin: 0 auto;
-                padding-top: 20px;
-            `;
-        }
-        
-        modalDiv.style.cssText = modalStyles;
 
         // 添加 CSS 樣式
         const styleElement = document.createElement('style');
