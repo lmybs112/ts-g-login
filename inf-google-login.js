@@ -3585,15 +3585,15 @@ function createGoogleLoginComponents(configs = [
         });
     }
 
+    // 保存樣式配置的全局變數
+    let savedComponentStyles = new Map();
+    
     // 等待 DOM 載入完成後初始化
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initComponents);
     } else {
         initComponents();
     }
-    
-    // 保存樣式配置的全局變數
-    let savedComponentStyles = new Map();
     
     // 保存組件樣式的函數
     const saveComponentStyles = () => {
