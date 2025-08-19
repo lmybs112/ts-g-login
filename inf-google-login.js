@@ -1843,7 +1843,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 position: absolute;
                                 top: 8px;
                                 right: 8px;
-                                background: linear-gradient(135deg, #10B981, #059669);
+                                background: linear-gradient(135deg, #1E1E19, #0A0A08);
                                 color: white;
                                 padding: 6px 10px;
                                 border-radius: 12px;
@@ -1852,7 +1852,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 display: flex;
                                 align-items: center;
                                 gap: 4px;
-                                box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+                                box-shadow: 0 2px 4px rgba(30, 30, 25, 0.3);
                                 border: none;
                                 cursor: pointer;
                                 transition: all 0.2s ease;
@@ -1861,8 +1861,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 min-width: 40px;
                                 min-height: 24px;
                             "
-                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
-                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'"
+                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(30, 30, 25, 0.4)'"
+                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(30, 30, 25, 0.3)'"
                             title="點擊設為預設使用者"
                         >
                             預設
@@ -1878,7 +1878,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 position: absolute;
                                 top: 8px;
                                 right: 8px;
-                                background: linear-gradient(135deg, #6B7280, #4B5563);
+                                background: linear-gradient(135deg, #374151, #1F2937);
                                 color: white;
                                 padding: 6px 10px;
                                 border-radius: 12px;
@@ -1887,7 +1887,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 display: flex;
                                 align-items: center;
                                 gap: 4px;
-                                box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+                                box-shadow: 0 2px 4px rgba(55, 65, 81, 0.3);
                                 border: none;
                                 cursor: pointer;
                                 transition: all 0.2s ease;
@@ -1896,8 +1896,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 min-width: 60px;
                                 min-height: 24px;
                             "
-                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(107, 114, 128, 0.4)'"
-                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(107, 114, 128, 0.3)'"
+                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(55, 65, 81, 0.4)'"
+                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(55, 65, 81, 0.3)'"
                             title="點擊設為預設使用者"
                         >
                             設為預設
