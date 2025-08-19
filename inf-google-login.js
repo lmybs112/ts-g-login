@@ -165,9 +165,12 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 檢查存儲的憑證
     checkStoredCredential(shouldRefreshApi = false) {
         const storedCredential = localStorage.getItem('google_auth_credential');
+        console.log('🔧 檢查存儲的憑證:', storedCredential ? '有' : '無');
+        
         if (storedCredential) {
             this.credential = storedCredential;
             this.isAuthenticated = true;
+            console.log('🔧 設置為已登入狀態');
             this.getUserInfo(); // 載入用戶資訊
             
             if (shouldRefreshApi) {
@@ -181,6 +184,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 如果沒有憑證，確保狀態為未登入
             this.credential = null;
             this.isAuthenticated = false;
+            console.log('🔧 設置為未登入狀態');
         }
     }
 
@@ -322,10 +326,13 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (stored) {
                 try {
                     this.userInfo = JSON.parse(stored);
+                    console.log('🔧 從 localStorage 載入用戶資訊:', this.userInfo ? '成功' : '失敗');
                 } catch (error) {
                     console.warn('解析用戶資訊失敗:', error);
                     this.userInfo = null;
                 }
+            } else {
+                console.log('🔧 localStorage 中沒有用戶資訊');
             }
         }
         return this.userInfo;
@@ -336,9 +343,20 @@ class InfGoogleLoginComponent extends HTMLElement {
         const defaultAvatar = this.shadowRoot.getElementById('default-avatar');
         const avatarImage = this.shadowRoot.getElementById('avatar-image');
 
+        // 🔧 修復：檢查 shadowRoot 是否存在
+        if (!this.shadowRoot) {
+            console.warn('shadowRoot 不存在，無法更新頭像');
+            return;
+        }
+
+        // 檢查必要的 DOM 元素是否存在
+        if (!defaultAvatar || !avatarImage) {
+            console.warn('頭像 DOM 元素不存在，無法更新頭像');
+            return;
+        }
+
         // 檢查 Google Identity Services 是否已載入
         if (!this.isGoogleLoaded) {
-
             // 如果 Google 服務未載入，隱藏整個頭像容器
             const avatarContainer = this.shadowRoot.getElementById('avatar-container');
             if (avatarContainer) {
@@ -361,19 +379,27 @@ class InfGoogleLoginComponent extends HTMLElement {
         const apiResponse = this.getApiResponse();
         const userInfo = this.getUserInfo();
 
+        console.log('🔧 檢查頭像來源 - API 回應:', apiResponse ? '有' : '無', '用戶資訊:', userInfo ? '有' : '無');
+
         if (apiResponse && apiResponse.picture) {
             pictureUrl = apiResponse.picture;
+            console.log('🔧 使用 API 回應中的頭像:', pictureUrl);
         } else if (userInfo && userInfo.picture) {
             pictureUrl = userInfo.picture;
+            console.log('🔧 使用用戶資訊中的頭像:', pictureUrl);
+        } else {
+            console.log('🔧 沒有可用的頭像 URL');
         }
 
         if (this.isAuthenticated && pictureUrl) {
             // 顯示用戶頭像
+            console.log('🔧 顯示用戶頭像:', pictureUrl);
             avatarImage.src = pictureUrl;
             avatarImage.style.display = 'block';
             defaultAvatar.style.display = 'none';
         } else {
             // 顯示預設頭像
+            console.log('🔧 顯示預設頭像 - 登入狀態:', this.isAuthenticated, '頭像 URL:', pictureUrl);
             avatarImage.style.display = 'none';
             defaultAvatar.style.display = 'flex';
         }
@@ -461,7 +487,11 @@ class InfGoogleLoginComponent extends HTMLElement {
         
         // 確保在組件連接時檢查並同步登入狀態
         this.checkStoredCredential(true); // 組件掛載到 DOM 時刷新 API 資料
-        this.updateAvatar(); // 初始化頭像顯示
+        
+        // 🔧 修復：延遲更新頭像，確保 Google 服務已載入
+        setTimeout(() => {
+            this.updateAvatar(); // 初始化頭像顯示
+        }, 100);
         
         // 🔧 如果已有 API 資料，立即更新 BodyData
         const existingApiResponse = this.getApiResponse();
@@ -954,6 +984,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.originalContainer = null;
             this.originalContainerId = null;
             this.hiddenContent = null;
+            
+            // 🔧 修復：重新初始化容器中的 Google Login 組件，確保 avatar 狀態正確
+            this.reinitializeGoogleLoginInContainer(container);
+        } else {
+            // 🔧 修復：即使沒有隱藏內容，也要重新初始化容器中的 Google Login 組件
+            this.reinitializeGoogleLoginInContainer(container);
         }
     }
 
@@ -1019,10 +1055,26 @@ class InfGoogleLoginComponent extends HTMLElement {
     reinitializeGoogleLoginInContainer(container) {
         const googleLoginElement = container.querySelector('inf-google-login');
         if (googleLoginElement) {
+            console.log('🔧 找到 Google Login 組件，重新初始化中...');
+            
             // 重新初始化 Google Login 組件
             if (googleLoginElement.connectedCallback) {
                 googleLoginElement.connectedCallback();
             }
+            
+            // 🔧 修復：確保 avatar 狀態正確更新
+            if (googleLoginElement.updateAvatar) {
+                // 延遲執行，確保組件完全初始化
+                setTimeout(() => {
+                    // 再次檢查組件是否仍然存在且有效
+                    if (googleLoginElement && googleLoginElement.updateAvatar) {
+                        console.log('🔧 更新 avatar 狀態...');
+                        googleLoginElement.updateAvatar();
+                    }
+                }, 200); // 增加延遲時間到 200ms
+            }
+        } else {
+            console.warn('🔧 在容器中找不到 Google Login 組件:', container.id);
         }
     }
 
@@ -3225,11 +3277,13 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (stored) {
                 try {
                     this.apiResponse = JSON.parse(stored);
+                    console.log('🔧 從 localStorage 載入 API 回應:', this.apiResponse ? '成功' : '失敗');
                 } catch (error) {
                     console.warn('解析 API 回應數據失敗:', error);
                     this.apiResponse = null;
                 }
             } else {
+                console.log('🔧 localStorage 中沒有 API 回應數據');
             }
         }
         return this.apiResponse;
