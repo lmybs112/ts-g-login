@@ -994,15 +994,15 @@
     <script src="https://inffits.com/webDesign/HTML/js/iframe/inf_main_CAX.min.js"></script>
 
     <script>
-        // 動態載入 inf-google-login.js 組件
-        (function () {
+        document.addEventListener('DOMContentLoaded', () => {
             const script = document.createElement('script');
             script.src = '/inf-google-login.js';
-            script.onload = function () {
-                createGoogleLoginComponentsByType('size');
+            script.sync = true;
+            script.onload = () => {
+                window.createGoogleLoginComponentsByType('size');
             };
-            document.head.appendChild(script);
-        })();
+            document.body.appendChild(script);
+        });
     </script>
 
     <script>
@@ -1040,7 +1040,7 @@
                     $(".inputselectorheight_BF").css("text-indent", "43%");
                     $(".inputselectorweight_BF").css("text-indent", "46%");
                 } else if (navigator.userAgent.indexOf("Safari") != -1 && navigator.userAgent.indexOf(
-                    "Chrome") == -1 && window.outerWidth < 399) {
+                        "Chrome") == -1 && window.outerWidth < 399) {
                     $(".inputselectorheight_BF").css("text-indent", "41%");
                     $(".inputselectorweight_BF").css("text-indent", "46%");
                 } else if (navigator.userAgent.indexOf("Firefox") != -1) {
@@ -1049,12 +1049,13 @@
                 }
             };
             "Display" == event.data.MsgHeader && ("FitPreference" == event.data.FitText ? ($(
-                    "#first_recomtext")[0].innerText.includes("最佳") ? $("#first_recomtext")[0].innerText =
+                        "#first_recomtext")[0].innerText.includes("最佳") ? $("#first_recomtext")[0]
+                    .innerText =
                     "最佳穿著偏好" : $("#first_recomtext")[0].innerText = "穿著偏好", $("#sec_recomtext")[0]
                     .innerText = "穿著偏好") : "FitSize" == event.data.FitText && ($("#first_recomtext")[0]
                     .innerText.includes("最佳") ? $("#first_recomtext")[0].innerText = "最佳合適尺寸" : $(
                         "#first_recomtext")[0].innerText = "合適尺寸", $("#sec_recomtext")[0].innerText = "合適尺寸"
-                    ), event.data.SizeOpt ? $("#first_recomtext")[0].innerText = "最佳" + $(
+                ), event.data.SizeOpt ? $("#first_recomtext")[0].innerText = "最佳" + $(
                     "#first_recomtext")[0].innerText.substr(-4) : $("#first_recomtext")[0].innerText = "" +
                 $("#first_recomtext")[0].innerText.substr(-4), event.data.FontWeightBold ? ($("#recomSize")
                     .css("color", "black"), $("#recomText").css("color", "black"), $("#recomSize_sec").css(
@@ -1139,7 +1140,7 @@
             }
         }), $("#confirm-button_FitP").on("touchend click", function () {
             document.querySelector("#form-wrapper").querySelectorAll(`input[type="radio"]`).forEach(function (
-            e) {
+                e) {
                 e.checked
             })
         });

@@ -672,15 +672,15 @@
     <script src="js/embedded.js"></script>
 
     <script>
-          // 動態載入 inf-google-login.js 組件
-          (function() {
-              const script = document.createElement('script');
-              script.src = '/inf-google-login.js';
-              script.onload = function() {
-                  createGoogleLoginComponentsByType('product');
-              };
-              document.head.appendChild(script);
-          })();
+          document.addEventListener('DOMContentLoaded', () => {
+            const script = document.createElement('script');
+            script.src = '/inf-google-login.js';
+            script.sync = true;
+            script.onload = () => {
+              createGoogleLoginComponentsByType('product');
+            };
+            document.body.appendChild(script);
+        });
       </script>
     <style>
       .image-container.tag-selected {
