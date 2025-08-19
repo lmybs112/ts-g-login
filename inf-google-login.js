@@ -1575,10 +1575,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                             </div>
                         </div>
                         
-                        <!-- BodyData 身體資料區域 -->
+                        <!-- BodyData 使用者資料區域 -->
                         <div class="profile-modal__info-item" id="modal-body-data-section" style="display: none;">
                             <div class="profile-modal__info-label">
-                                <div class="profile-modal__info-label-text">身體資料</div>
+                                <div class="profile-modal__info-label-text">使用者資料</div>
                                 <div class="profile-modal__info-value" id="modal-body-data-content">尚未提供</div>
                             </div>
                         </div>
@@ -1778,11 +1778,27 @@ class InfGoogleLoginComponent extends HTMLElement {
                 const isDefaultUser = userKey === defaultUserKey;
                 // console.log(`🔍 處理使用者 ${userKey}，是否為預設使用者: ${isDefaultUser}`);
 
+                // 處理新的 BodyData 格式：支援 body 和 shoes 子物件
+                let bodyInfo = userData;
+                let shoesInfo = null;
+
+                // 檢查是否為新格式（包含 body 和 shoes）
+                if (userData.body && typeof userData.body === 'object') {
+                    bodyInfo = userData.body;
+                    shoesInfo = userData.shoes
+                    // {
+                    //     "HV": "24.1",
+                    //     "WV": "9.1",
+                    //     "FOOT_CIRCUM": "23.0",
+                    //     "CALF_CIRCUM": "20"
+                    // };
+                }
+
                 // 計算 BMI（如果有身高和體重）
                 let bmiHtml = '';
-                if (userData.HV && userData.HV.trim() !== '' && userData.WV && userData.WV.trim() !== '') {
-                    const height = parseFloat(userData.HV) / 100; // 轉換為公尺
-                    const weight = parseFloat(userData.WV);
+                if (bodyInfo.HV && bodyInfo.HV.trim() !== '' && bodyInfo.WV && bodyInfo.WV.trim() !== '') {
+                    const height = parseFloat(bodyInfo.HV) / 100; // 轉換為公尺
+                    const weight = parseFloat(bodyInfo.WV);
                     if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
                         const bmi = (weight / (height * height)).toFixed(1);
 
@@ -1804,7 +1820,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
                         bmiHtml = `
                         <div style="
-                            margin-top: 12px;
                             padding: 10px;
                             background: linear-gradient(135deg, ${bmiColor}10, ${bmiColor}05);
                             border-left: 3px solid ${bmiColor};
@@ -1943,38 +1958,24 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 `;
 
-                // 性別資料 - 始終顯示
-                const genderValue = userData.Gender ?
-                    (userData.Gender === 'M' ? '男性' : userData.Gender === 'F' ? '女性' : userData.Gender) :
-                    '尚未提供';
-                const genderColor = userData.Gender ? '#1E293B' : '#9CA3AF';
-                const genderIcon = userData.Gender === 'M' ?
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#3B82F6"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#3B82F6"/></svg>' :
-                    userData.Gender === 'F' ?
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#EC4899"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#EC4899"/></svg>' :
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#9CA3AF"/><path d="M12 14C7.03125 14 3 18.0312 3 23H21C21 18.0312 16.9688 14 12 14Z" fill="#9CA3AF"/></svg>';
-
+                // 添加身體資料標題
                 formattedHtml += `
                     <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
+                        grid-column: 1 / -1;
                     ">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            ${genderIcon}
-                            <span style="color: #475569; font-size: 13px; font-weight: 500;">性別</span>
+                        <div style="
+                            color: #475569;
+                            font-size: 14px;
+                            font-weight: 600;
+                        ">
+                            身體資料
                         </div>
-                        <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;">${genderValue}</span>
                     </div>
                 `;
 
                 // 身高資料 - 始終顯示
-                const heightValue = userData.HV && userData.HV.trim() !== '' ? `${userData.HV} cm` : '尚未提供';
-                const heightColor = userData.HV && userData.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
-
+                const heightValue = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? `${bodyInfo.HV} cm` : '尚未提供';
+                const heightColor = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
                 formattedHtml += `
                     <div style="
                         background: #F1F5F9;
@@ -1995,8 +1996,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 `;
 
                 // 體重資料 - 始終顯示
-                const weightValue = userData.WV && userData.WV.trim() !== '' ? `${userData.WV} kg` : '尚未提供';
-                const weightColor = userData.WV && userData.WV.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                const weightValue = bodyInfo.WV && bodyInfo.WV.trim() !== '' ? `${bodyInfo.WV} kg` : '尚未提供';
+                const weightColor = bodyInfo.WV && bodyInfo.WV.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
                 formattedHtml += `
                     <div style="
@@ -2017,9 +2018,38 @@ class InfGoogleLoginComponent extends HTMLElement {
                     </div>
                 `;
 
+                // 性別資料 - 始終顯示（撐滿整行）
+                const genderValue = bodyInfo.Gender ?
+                    (bodyInfo.Gender === 'M' ? '男性' : bodyInfo.Gender === 'F' ? '女性' : bodyInfo.Gender) :
+                    '尚未提供';
+                const genderColor = bodyInfo.Gender ? '#1E293B' : '#9CA3AF';
+                const genderIcon = bodyInfo.Gender === 'M' ?
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#3B82F6"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#3B82F6"/></svg>' :
+                    bodyInfo.Gender === 'F' ?
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#EC4899"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#EC4899"/></svg>' :
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#9CA3AF"/><path d="M12 14C7.03125 14 3 18.0312 3 23H21C21 18.0312 16.9688 14 12 14Z" fill="#9CA3AF"/></svg>';
+
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        grid-column: 1 / -1;
+                    ">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${genderIcon}
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">性別</span>
+                        </div>
+                        <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;">${genderValue}</span>
+                    </div>
+                `;
+
                 // 胸圍資料 - 始終顯示，沒有值就顯示「尚未提供」
-                const ccValue = userData.CC && userData.CC.trim() !== '' ? `${userData.CC} cm` : '尚未提供';
-                const ccValueColor = userData.CC && userData.CC.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                const ccValue = bodyInfo.CC && bodyInfo.CC.trim() !== '' ? `${bodyInfo.CC} cm` : '尚未提供';
+                const ccValueColor = bodyInfo.CC && bodyInfo.CC.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
                 formattedHtml += `
                     <div style="
@@ -2042,7 +2072,133 @@ class InfGoogleLoginComponent extends HTMLElement {
                     </div>
                 `;
 
-                formattedHtml += '</div>' + bmiHtml + '</div>';
+                // BMI 資料（如果有身高和體重）
+                if (bmiHtml) {
+                    formattedHtml += `
+                        <div style="
+                            grid-column: 1 / -1;
+                        ">
+                            ${bmiHtml}
+                        </div>
+                    `;
+                }
+
+                // 鞋子資料（整合到身體資料網格中）
+                if (shoesInfo && typeof shoesInfo === 'object') {
+                    // 添加鞋子尺寸標題和分隔線
+                    formattedHtml += `
+                        <div style="
+                            grid-column: 1 / -1;
+                        ">
+                            <div style="
+                                   color: #475569;
+                                    font-size: 14px;
+                                    font-weight: 600;
+                                    margin-top: 20px;
+                            ">
+                               鞋子尺寸
+                            </div>
+                        </div>
+                    `;
+
+                    // 裸足長
+                    const footLengthValue = shoesInfo.HV && shoesInfo.HV.trim() !== '' ? `${shoesInfo.HV} cm` : '尚未提供';
+                    const footLengthColor = shoesInfo.HV && shoesInfo.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2L12 22M8 6L12 2L16 6M8 18L12 22L16 18" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">裸足長</span>
+                            </div>
+                            <span style="color: ${footLengthColor}; font-size: 14px; font-weight: 600;">${footLengthValue}</span>
+                        </div>
+                    `;
+
+                    // 裸足寬
+                    const footWidthValue = shoesInfo.WV && shoesInfo.WV.trim() !== '' ? `${shoesInfo.WV} cm` : '尚未提供';
+                    const footWidthColor = shoesInfo.WV && shoesInfo.WV.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1Z" fill="#F59E0B"/>
+                                </svg>
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">裸足寬</span>
+                            </div>
+                            <span style="color: ${footWidthColor}; font-size: 14px; font-weight: 600;">${footWidthValue}</span>
+                        </div>
+                    `;
+
+                    // 腳圍
+                    const footCircumValue = shoesInfo.FOOT_CIRCUM && shoesInfo.FOOT_CIRCUM.trim() !== '' ? `${shoesInfo.FOOT_CIRCUM} cm` : '尚未提供';
+                    const footCircumColor = shoesInfo.FOOT_CIRCUM && shoesInfo.FOOT_CIRCUM.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            grid-column: 1 / -1;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="#8B5CF6" stroke-width="2" fill="none"/>
+                                    <circle cx="12" cy="12" r="3" fill="#8B5CF6"/>
+                                </svg>
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">腳圍</span>
+                            </div>
+                            <span style="color: ${footCircumColor}; font-size: 14px; font-weight: 600;">${footCircumValue}</span>
+                        </div>
+                    `;
+
+                    // 小腿圍
+                    const calfCircumValue = shoesInfo.CALF_CIRCUM && shoesInfo.CALF_CIRCUM.trim() !== '' ? `${shoesInfo.CALF_CIRCUM} cm` : '尚未提供';
+                    const calfCircumColor = shoesInfo.CALF_CIRCUM && shoesInfo.CALF_CIRCUM.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            grid-column: 1 / -1;
+                        ">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#8B5CF6"/>
+                                    <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" fill="#8B5CF6"/>
+                                </svg>
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">小腿圍</span>
+                            </div>
+                            <span style="color: ${calfCircumColor}; font-size: 14px; font-weight: 600;">${calfCircumValue}</span>
+                        </div>
+                    `;
+                }
+
+                formattedHtml += '</div></div>';
             }
         });
 
@@ -2974,10 +3130,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 </div>
                             </div>
                             
-                            <!-- BodyData 身體資料區域 -->
+                            <!-- BodyData 使用者資料區域 -->
                             <div class="info-item" id="body-data-section" style="display: none;">
                                 <div class="info-content">
-                                    <div class="info-label">身體資料</div>
+                                    <div class="info-label">使用者資料</div>
                                     <div class="info-value" id="body-data-content">尚未提供</div>
                                 </div>
                             </div>
