@@ -102,37 +102,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 設置模態框容器樣式
     setModalContainerStyle(style) {
-        // 如果沒有提供樣式，使用預設樣式
-        this.modalContainerStyle = style || {
-            desktop: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'white',
-                borderRadius: '8px',
-                position: 'relative',
-                overflow: 'hidden',
-                maxWidth: '90%',
-                margin: '0 auto',
-                paddingTop: '20px'
-            },
-            mobile: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'white',
-                borderRadius: '8px',
-                position: 'relative',
-                overflow: 'hidden',
-                maxWidth: '90%',
-                margin: '0 auto',
-                paddingTop: '20px'
-            }
-        };
+        this.modalContainerStyle = style;
     }
 
     // 獲取當前適用的樣式（響應式）
@@ -1054,11 +1024,11 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
-        // 在容器內顯示模態框
+    // 在容器內顯示模態框
     showModalInContainer(container, type) {
-        // 創建模態框內容，使用預設樣式配置
+        // 創建模態框內容，傳遞樣式配置
         const modalContent = this.createModalContent(type, this.modalContainerStyle);
-        
+
         // 直接將模態框內容添加到容器
         container.appendChild(modalContent);
         container.style.opacity = '1';
@@ -1082,49 +1052,35 @@ class InfGoogleLoginComponent extends HTMLElement {
         const modalDiv = document.createElement('div');
         modalDiv.className = 'inf-google-login-modal-container';
 
-        // 使用提供的樣式或預設樣式
-        const styleToUse = modalContainerStyle || {
-            desktop: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'white',
-                borderRadius: '8px',
-                position: 'relative',
-                overflow: 'hidden',
-                maxWidth: '90%',
-                margin: '0 auto',
-                paddingTop: '20px'
-            },
-            mobile: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'white',
-                borderRadius: '8px',
-                position: 'relative',
-                overflow: 'hidden',
-                maxWidth: '90%',
-                margin: '0 auto',
-                paddingTop: '20px'
-            }
-        };
-        
-        const currentStyle = this.getCurrentStyle(styleToUse);
-        const cssProperties = [];
+        // 預設樣式
+        const defaultStyle = `
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        `;
 
-        Object.entries(currentStyle).forEach(([property, value]) => {
-            // 將 camelCase 轉換為 kebab-case
-            const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-            cssProperties.push(`${cssProperty}: ${value};`);
-        });
+        // 如果有自定義樣式，則應用自定義樣式
+        if (modalContainerStyle) {
+            const currentStyle = this.getCurrentStyle(modalContainerStyle);
+            const cssProperties = [];
 
-        const customStyle = cssProperties.join('\n            ');
-        modalDiv.style.cssText = customStyle;
+            Object.entries(currentStyle).forEach(([property, value]) => {
+                // 將 camelCase 轉換為 kebab-case
+                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                cssProperties.push(`${cssProperty}: ${value};`);
+            });
+
+            const customStyle = cssProperties.join('\n            ');
+            modalDiv.style.cssText = customStyle;
+        } else {
+            modalDiv.style.cssText = defaultStyle;
+        }
 
         // 添加 CSS 樣式
         const styleElement = document.createElement('style');
@@ -3556,6 +3512,36 @@ function createGoogleLoginComponents(configs = [{
                 width: '24px',
                 height: '24px',
             }
+        },
+        modalContainerStyle: {
+            desktop: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '440px',
+                margin: '0 auto',
+                paddingTop: '20px'
+            },
+            mobile: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '100%',
+                margin: '0 auto',
+                paddingTop: '10px'
+            }
         }
     },
     {
@@ -3575,6 +3561,36 @@ function createGoogleLoginComponents(configs = [{
                 top: '10px',
                 width: '28px',
                 height: '28px',
+            }
+        },
+        modalContainerStyle: {
+            desktop: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '440px',
+                margin: '0 auto',
+                paddingTop: '20px'
+            },
+            mobile: {
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                background: 'white',
+                borderRadius: '8px',
+                position: 'relative',
+                overflow: 'hidden',
+                maxWidth: '100%',
+                margin: '0 auto',
+                paddingTop: '10px'
             }
         }
     }
@@ -3699,8 +3715,10 @@ function createGoogleLoginComponents(configs = [{
                     googleLoginComponent.setAttribute('target-container-id', modalContainerId);
                 }
 
-                // 設置模態框容器樣式（使用預設值或自定義值）
-                googleLoginComponent.setModalContainerStyle(modalContainerStyle);
+                // 設置模態框容器樣式
+                if (modalContainerStyle) {
+                    googleLoginComponent.setModalContainerStyle(modalContainerStyle);
+                }
 
                 // 應用響應式樣式
                 applyStyleToComponent(googleLoginComponent, avatarStyle);
