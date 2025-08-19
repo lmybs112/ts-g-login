@@ -12,7 +12,7 @@
 class InfGoogleLoginComponent extends HTMLElement {
     constructor() {
         super();
-        
+
         // 建立 Shadow DOM
         this.attachShadow({
             mode: 'open'
@@ -28,22 +28,22 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.targetContainerId = null; // 新增：目標容器 ID
         this.apiRefreshInProgress = false; // 防止重複調用 API
         this.modalContainerStyle = null; // 新增：模態框容器樣式配置
-        
+
         // 靜態屬性：全局 API 刷新控制（所有實例共享）
         InfGoogleLoginComponent.lastApiRefreshTime = InfGoogleLoginComponent.lastApiRefreshTime || 0;
-        
+
         // 添加 timeout 追蹤器，用於清理
         this.activeTimeouts = new Set();
         this.activeIntervals = new Set();
-        
+
         // 監聽 localStorage 變化
         window.addEventListener('storage', this.handleStorageChange.bind(this));
-        
+
         // 綁定方法到 this 上下文
         this.handleCredentialResponse = this.handleCredentialResponse.bind(this);
         this.handleLoginFailure = this.handleLoginFailure.bind(this);
         this.handleStorageChange = this.handleStorageChange.bind(this);
-        
+
         // 檢查本地存儲的憑證（初始化時不刷新 API，等到掛載時再刷新）
         this.checkStoredCredential(false);
     }
@@ -71,7 +71,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             clearTimeout(timeoutId);
         });
         this.activeTimeouts.clear();
-        
+
         this.activeIntervals.forEach(intervalId => {
             clearInterval(intervalId);
         });
@@ -87,13 +87,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                     resolve();
                 }
             };
-            
+
             element.addEventListener('animationend', handleAnimationEnd);
-            
+
             // 如果動畫已經完成，立即 resolve
             const computedStyle = window.getComputedStyle(element);
-            if (computedStyle.animationPlayState === 'finished' || 
-                !computedStyle.animationName || 
+            if (computedStyle.animationPlayState === 'finished' ||
+                !computedStyle.animationName ||
                 computedStyle.animationName === 'none') {
                 resolve();
             }
@@ -108,9 +108,9 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 獲取當前適用的樣式（響應式）
     getCurrentStyle(styleConfig) {
         if (!styleConfig) return null;
-        
+
         const isDesktop = window.innerWidth >= 480;
-        
+
         if (typeof styleConfig === 'object' && styleConfig.desktop && styleConfig.mobile) {
             // 新的響應式格式
             return isDesktop ? styleConfig.desktop : styleConfig.mobile;
@@ -127,37 +127,37 @@ class InfGoogleLoginComponent extends HTMLElement {
                 resolve();
                 return;
             }
-            
+
             // 檢查是否已經在載入中
             if (window.googleLoadingPromise) {
                 window.googleLoadingPromise.then(resolve).catch(reject);
                 return;
             }
-            
+
             // 創建載入 Promise
             window.googleLoadingPromise = new Promise((innerResolve, innerReject) => {
                 const maxWaitTime = 10000; // 10秒超時
                 const checkInterval = 100;
                 let elapsedTime = 0;
-                
+
                 const checkGoogle = () => {
                     if (window.google && window.google.accounts && window.google.accounts.id) {
                         innerResolve();
                         return;
                     }
-                    
+
                     elapsedTime += checkInterval;
                     if (elapsedTime >= maxWaitTime) {
                         innerReject(new Error('Google 服務載入超時'));
                         return;
                     }
-                    
+
                     this.safeSetTimeout(checkGoogle, checkInterval);
                 };
-                
+
                 checkGoogle();
             });
-            
+
             window.googleLoadingPromise.then(resolve).catch(reject);
         });
     }
@@ -169,7 +169,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.credential = storedCredential;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
-            
+
             if (shouldRefreshApi) {
                 // 只在頁面刷新時重新取得最新的個人資料
                 this.refreshApiData();
@@ -210,10 +210,10 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.apiRefreshInProgress = true;
             InfGoogleLoginComponent.lastApiRefreshTime = now;
 
-            
+
             // 重新調用 API 獲取最新資料
             const freshApiData = await this.callInfFitsAPI(this.credential);
-            
+
             if (freshApiData) {
 
                 // 觸發資料更新事件
@@ -228,13 +228,13 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         } catch (error) {
             console.warn('⚠️ 刷新個人資料失敗，使用本地快取資料:', error);
-            
+
             // 🔐 如果是憑證失效錯誤（401），不載入本地快取，因為用戶已被登出
             if (error.message && error.message.includes('憑證已失效')) {
 
                 return;
             }
-            
+
             // 如果是其他錯誤，仍然載入本地的 API 回應數據
             this.getApiResponse();
         } finally {
@@ -453,23 +453,22 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         this.render();
         this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
-        
+
         // 檢查 Google 服務是否已經載入
         if (window.google && window.google.accounts) {
             this.isGoogleLoaded = true;
         }
-        
+
         // 確保在組件連接時檢查並同步登入狀態
         this.checkStoredCredential(true); // 組件掛載到 DOM 時刷新 API 資料
         this.updateAvatar(); // 初始化頭像顯示
-        
+
         // 🔧 如果已有 API 資料，立即更新 BodyData
         const existingApiResponse = this.getApiResponse();
         if (existingApiResponse) {
             this.updateBodyDataDisplay(existingApiResponse);
-        } else {
-        }
-        
+        } else {}
+
         this.loadGoogleIdentityServices();
     }
 
@@ -490,8 +489,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         document.head.appendChild(fontLink);
 
         // 監聽字體載入完成事件
-        fontLink.onload = () => {
-        };
+        fontLink.onload = () => {};
 
         fontLink.onerror = () => {
             console.warn('Google Fonts 載入失敗，將使用系統預設字體');
@@ -611,10 +609,10 @@ class InfGoogleLoginComponent extends HTMLElement {
     handleAvatarClick() {
         // 重新設定 CSS 樣式，確保樣式正確
         this.reapplyStyles();
-        
+
         // 再次檢查登入狀態，確保同步
         this.checkStoredCredential(false); // 只同步狀態，不刷新 API
-        
+
         // 檢查當前 API 資料狀態
         const currentApiResponse = this.getApiResponse();
 
@@ -626,7 +624,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.showLoginModal();
         }
     }
-    
+
     // 重新應用樣式的方法
     reapplyStyles() {
         // 添加 CSS 規則來設定 SizeBox_cart 的 modal 容器樣式
@@ -637,7 +635,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             existingStyle.id = styleId;
             document.head.appendChild(existingStyle);
         }
-        
+
         existingStyle.textContent = `
             #SizeBox_cart .inf-google-login-modal-container {
                 max-width: 90% !important;
@@ -655,8 +653,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         `;
         // 找到對應的配置
-        const configs = [
-            {
+        const configs = [{
                 avatarContainerId: 'SB_Prod_cart',
                 modalContainerId: 'SizeBox_cart',
                 avatarStyle: {
@@ -739,7 +736,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }
             }
         ];
-        
+
         configs.forEach(config => {
             const container = document.getElementById(config.avatarContainerId);
             if (container) {
@@ -751,7 +748,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
                         component.style.setProperty(cssProperty, value);
                     });
-                    
+
                     // 重新設定 modal 容器樣式
                     if (config.modalContainerId) {
                         const modalContainer = document.getElementById(config.modalContainerId);
@@ -767,7 +764,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         });
     }
-    
+
     // 獲取當前樣式的輔助方法
     getCurrentStyle(avatarStyle) {
         const isDesktop = window.innerWidth >= 480;
@@ -801,7 +798,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 如果沒有指定目標容器，使用原本的邏輯
         const advancedContainer = document.getElementById('intro-content-advanced');
         const simpleContainer = document.getElementById('intro-content-simple');
-        
+
         // 檢查哪個容器目前可見
         // 優先檢查 simple 容器，因為它可能是動態生成的
         if (simpleContainer && simpleContainer.style.display !== 'none' && simpleContainer.style.opacity !== '0') {
@@ -815,7 +812,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 如果只有 advanced 存在，使用 advanced
             return advancedContainer;
         }
-        
+
         return null;
     }
 
@@ -846,12 +843,12 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 顯示個人資訊畫面
     showProfileModal() {
-        
+
         // 查找當前顯示的目標容器
         const targetContainer = this.getCurrentContentContainer();
         if (!targetContainer) {
             console.error('找不到當前顯示的內容容器');
-            
+
             // 🔧 備用方案：顯示 shadow DOM 中的個人資訊模態框
             this.showShadowDOMProfileModal();
             return;
@@ -870,7 +867,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (profileModal) {
             // 先更新個人資訊內容
             this.updateProfileInfo();
-            
+
             // 顯示模態框
             profileModal.classList.add('show');
         } else {
@@ -915,7 +912,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 保存原本內容的引用
         this.originalContainer = container;
         this.originalContainerId = container.id;
-        
+
         // 將原本內容移動到隱藏位置，而不是複製
         const hiddenContainer = document.createElement('div');
         hiddenContainer.style.cssText = `
@@ -928,13 +925,13 @@ class InfGoogleLoginComponent extends HTMLElement {
             opacity: 0;
             pointer-events: none;
         `;
-        
+
         // 移動所有子元素到隱藏容器，包括 avatar 元素
         // 使用 while 循環確保移動所有子元素，包括動態添加的 avatar
         while (container.firstChild) {
             hiddenContainer.appendChild(container.firstChild);
         }
-        
+
         document.body.appendChild(hiddenContainer);
         this.hiddenContent = hiddenContainer;
     }
@@ -946,12 +943,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             while (this.hiddenContent.firstChild) {
                 container.appendChild(this.hiddenContent.firstChild);
             }
-            
+
             // 移除隱藏的容器
             if (this.hiddenContent.parentNode) {
                 this.hiddenContent.parentNode.removeChild(this.hiddenContent);
             }
-            
+
             this.originalContainer = null;
             this.originalContainerId = null;
             this.hiddenContent = null;
@@ -1006,12 +1003,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 </div>
             </div>
         `;
-        
+
         // 設置內容並顯示
         container.innerHTML = simpleContent;
         container.style.display = 'block';
         container.style.opacity = '1';
-        
+
         // 重新初始化 Google Login 組件
         this.reinitializeGoogleLoginInContainer(container);
     }
@@ -1031,7 +1028,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     showModalInContainer(container, type) {
         // 創建模態框內容，傳遞樣式配置
         const modalContent = this.createModalContent(type, this.modalContainerStyle);
-        
+
         // 直接將模態框內容添加到容器
         container.appendChild(modalContent);
         container.style.opacity = '1';
@@ -1054,7 +1051,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     createModalContent(type, modalContainerStyle = null) {
         const modalDiv = document.createElement('div');
         modalDiv.className = 'inf-google-login-modal-container';
-        
+
         // 預設樣式
         const defaultStyle = `
             width: 100%;
@@ -1067,18 +1064,18 @@ class InfGoogleLoginComponent extends HTMLElement {
             position: relative;
             overflow: hidden;
         `;
-        
+
         // 如果有自定義樣式，則應用自定義樣式
         if (modalContainerStyle) {
             const currentStyle = this.getCurrentStyle(modalContainerStyle);
             const cssProperties = [];
-            
+
             Object.entries(currentStyle).forEach(([property, value]) => {
                 // 將 camelCase 轉換為 kebab-case
                 const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
                 cssProperties.push(`${cssProperty}: ${value};`);
             });
-            
+
             const customStyle = cssProperties.join('\n            ');
             modalDiv.style.cssText = customStyle;
         } else {
@@ -1521,7 +1518,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     getProfileModalHTML() {
         const userInfo = this.getUserInfo();
         const apiResponse = this.getApiResponse();
-        
+
 
         // 優先使用 API 回傳的資料，fallback 到 userInfo
         const displayName = (apiResponse && apiResponse.name) ? apiResponse.name : (userInfo && userInfo.name) ? userInfo.name : '尚未提供';
@@ -1638,30 +1635,29 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (apiResponse) {
             // 使用短暫延遲確保 DOM 元素已完全渲染
             setTimeout(() => {
-                
+
                 // 更新姓名
                 const nameElement = container.querySelector('.profile-modal__info-item:nth-child(1) .profile-modal__info-value');
                 if (nameElement && apiResponse.name) {
                     nameElement.textContent = apiResponse.name;
                 }
-                
+
                 // 更新電子郵件
                 const emailElement = container.querySelector('.profile-modal__info-item:nth-child(2) .profile-modal__info-value');
                 if (emailElement && apiResponse.email) {
                     emailElement.textContent = apiResponse.email;
                 }
-                
+
                 // 更新頭像
                 const avatarElement = container.querySelector('.profile-modal__avatar-img');
                 if (avatarElement && apiResponse.picture) {
                     avatarElement.src = apiResponse.picture;
                 }
-                
+
                 // 更新 BodyData
                 this.updateBodyDataDisplay(apiResponse);
             }, 100);
-        } else {
-        }
+        } else {}
     }
 
     // 更新個人資訊顯示
@@ -1700,23 +1696,22 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (apiResponse) {
             // 處理 BodyData 身體資料
             this.updateBodyDataDisplay(apiResponse);
-        } else {
-        }
+        } else {}
     }
 
     // 更新 BodyData 身體資料顯示
     updateBodyDataDisplay(apiResponse) {
-        
+
         // 首先嘗試在動態模態框中查找（優先級較高）
         let bodyDataSection = document.getElementById('modal-body-data-section');
         let bodyDataContent = document.getElementById('modal-body-data-content');
-        
+
         // 如果在動態模態框中找不到，則尋找 shadow DOM 中的元素
         if (!bodyDataSection || !bodyDataContent) {
             bodyDataSection = this.shadowRoot.getElementById('body-data-section');
             bodyDataContent = this.shadowRoot.getElementById('body-data-content');
         }
-        
+
         if (!bodyDataSection || !bodyDataContent) {
             console.warn('❌ 找不到 BodyData 顯示元素');
             // 調試：列出所有可能的元素
@@ -1725,7 +1720,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 檢查 API 回應中是否有 BodyData
         if (apiResponse.BodyData && typeof apiResponse.BodyData === 'object') {
-            
+
             // 整理 BodyData 資料，傳遞 BodyData_ptr 參數
             // const fakeBodyData = {
             //     "User1": {
@@ -1745,7 +1740,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             //     }
             // }
             const bodyDataHtml = this.formatBodyData(apiResponse.BodyData, apiResponse.BodyData_ptr);
-            
+
             if (bodyDataHtml) {
                 bodyDataContent.innerHTML = bodyDataHtml;
                 bodyDataSection.style.display = 'block'; // 顯示 BodyData 區域
@@ -1782,7 +1777,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 檢查是否為預設使用者
                 const isDefaultUser = userKey === defaultUserKey;
                 // console.log(`🔍 處理使用者 ${userKey}，是否為預設使用者: ${isDefaultUser}`);
-                
+
                 // 計算 BMI（如果有身高和體重）
                 let bmiHtml = '';
                 if (userData.HV && userData.HV.trim() !== '' && userData.WV && userData.WV.trim() !== '') {
@@ -1790,24 +1785,24 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const weight = parseFloat(userData.WV);
                     if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
                         const bmi = (weight / (height * height)).toFixed(1);
-                    
-                    let bmiStatus = '';
-                    let bmiColor = '';
-                    if (bmi < 18.5) {
-                        bmiStatus = '體重過輕';
-                        bmiColor = '#3B82F6';
-                    } else if (bmi < 24) {
-                        bmiStatus = '正常範圍';
-                        bmiColor = '#10B981';
-                    } else if (bmi < 27) {
-                        bmiStatus = '體重過重';
-                        bmiColor = '#F59E0B';
-                    } else {
-                        bmiStatus = '肥胖';
-                        bmiColor = '#EF4444';
-                    }
-                    
-                    bmiHtml = `
+
+                        let bmiStatus = '';
+                        let bmiColor = '';
+                        if (bmi < 18.5) {
+                            bmiStatus = '體重過輕';
+                            bmiColor = '#3B82F6';
+                        } else if (bmi < 24) {
+                            bmiStatus = '正常範圍';
+                            bmiColor = '#10B981';
+                        } else if (bmi < 27) {
+                            bmiStatus = '體重過重';
+                            bmiColor = '#F59E0B';
+                        } else {
+                            bmiStatus = '肥胖';
+                            bmiColor = '#EF4444';
+                        }
+
+                        bmiHtml = `
                         <div style="
                             margin-top: 12px;
                             padding: 10px;
@@ -1947,18 +1942,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 `;
-                
+
                 // 性別資料 - 始終顯示
-                const genderValue = userData.Gender ? 
-                    (userData.Gender === 'M' ? '男性' : userData.Gender === 'F' ? '女性' : userData.Gender) : 
+                const genderValue = userData.Gender ?
+                    (userData.Gender === 'M' ? '男性' : userData.Gender === 'F' ? '女性' : userData.Gender) :
                     '尚未提供';
                 const genderColor = userData.Gender ? '#1E293B' : '#9CA3AF';
-                const genderIcon = userData.Gender === 'M' ? 
+                const genderIcon = userData.Gender === 'M' ?
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#3B82F6"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#3B82F6"/></svg>' :
                     userData.Gender === 'F' ?
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#EC4899"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#EC4899"/></svg>' :
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#9CA3AF"/><path d="M12 14C7.03125 14 3 18.0312 3 23H21C21 18.0312 16.9688 14 12 14Z" fill="#9CA3AF"/></svg>';
-                
+
                 formattedHtml += `
                     <div style="
                         background: #F1F5F9;
@@ -1975,11 +1970,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;">${genderValue}</span>
                     </div>
                 `;
-                
+
                 // 身高資料 - 始終顯示
                 const heightValue = userData.HV && userData.HV.trim() !== '' ? `${userData.HV} cm` : '尚未提供';
                 const heightColor = userData.HV && userData.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
-                
+
                 formattedHtml += `
                     <div style="
                         background: #F1F5F9;
@@ -1998,11 +1993,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <span style="color: ${heightColor}; font-size: 14px; font-weight: 600;">${heightValue}</span>
                     </div>
                 `;
-                
+
                 // 體重資料 - 始終顯示
                 const weightValue = userData.WV && userData.WV.trim() !== '' ? `${userData.WV} kg` : '尚未提供';
                 const weightColor = userData.WV && userData.WV.trim() !== '' ? '#1E293B' : '#9CA3AF';
-                
+
                 formattedHtml += `
                     <div style="
                         background: #F1F5F9;
@@ -2021,11 +2016,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <span style="color: ${weightColor}; font-size: 14px; font-weight: 600;">${weightValue}</span>
                     </div>
                 `;
-                
+
                 // 胸圍資料 - 始終顯示，沒有值就顯示「尚未提供」
                 const ccValue = userData.CC && userData.CC.trim() !== '' ? `${userData.CC} cm` : '尚未提供';
                 const ccValueColor = userData.CC && userData.CC.trim() !== '' ? '#1E293B' : '#9CA3AF';
-                
+
                 formattedHtml += `
                     <div style="
                         background: #F1F5F9;
@@ -2046,18 +2041,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <span style="color: ${ccValueColor}; font-size: 14px; font-weight: 600;">${ccValue}</span>
                     </div>
                 `;
-                
+
                 formattedHtml += '</div>' + bmiHtml + '</div>';
             }
         });
-        
+
         formattedHtml += '</div>';
-        
+
         // 如果沒有任何資料，返回空字串
         if (formattedHtml === '<div style="display: flex; flex-direction: column; gap: 16px;"></div>') {
             return '';
         }
-        
+
         return formattedHtml;
     }
 
@@ -2105,9 +2100,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                             // 如果無法顯示，嘗試其他方式
                             this.fallbackGoogleSignIn();
                         }
-                    } else if (notification.isSkippedMoment()) {
-                    } else if (notification.isDismissedMoment()) {
-                    }
+                    } else if (notification.isSkippedMoment()) {} else if (notification.isDismissedMoment()) {}
                 });
             } catch (error) {
                 console.warn('標準 prompt 方法失敗，使用備用方法:', error);
@@ -2243,7 +2236,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         document.body.removeChild(container);
                     }
                 }, 5000);
-                
+
                 // 保存 timeout ID 以便清理
                 this.activeTimeouts.add(cleanupTimeout);
             } else {
@@ -2287,7 +2280,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         this.triggerDirectGoogleSignIn();
                     }
                 }, 200);
-                
+
                 // 保存 timeout ID 以便清理
                 this.activeTimeouts.add(initTimeout);
             }
@@ -2374,25 +2367,25 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 隱藏登入畫面
                 this.hideLoginModal();
 
-                            // 觸發成功事件
-            this.dispatchEvent(new CustomEvent('inf-google-login-success', {
-                detail: {
-                    user: userInfo,
-                    accessToken: accessToken,
-                    apiResponse: apiResponse,
-                    timestamp: new Date().toISOString()
-                },
-                bubbles: true,
-                composed: true
-            }));
+                // 觸發成功事件
+                this.dispatchEvent(new CustomEvent('inf-google-login-success', {
+                    detail: {
+                        user: userInfo,
+                        accessToken: accessToken,
+                        apiResponse: apiResponse,
+                        timestamp: new Date().toISOString()
+                    },
+                    bubbles: true,
+                    composed: true
+                }));
 
-            // 觸發 localStorage 更新事件，通知其他組件實例
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'google_auth_credential',
-                newValue: mockCredential,
-                oldValue: null,
-                storageArea: localStorage
-            }));
+                // 觸發 localStorage 更新事件，通知其他組件實例
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'google_auth_credential',
+                    newValue: mockCredential,
+                    oldValue: null,
+                    storageArea: localStorage
+                }));
             } else {
                 throw new Error('無法獲取用戶資訊');
             }
@@ -2451,13 +2444,13 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 組件從 DOM 移除時
     disconnectedCallback() {
-        
+
         // 清理所有活動的 timeout 和 interval
         this.clearAllTimers();
-        
+
         // 移除事件監聽器
         window.removeEventListener('storage', this.handleStorageChange.bind(this));
-        
+
         // 清理其他資源
         this.cleanup();
     }
@@ -3157,10 +3150,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 🔐 401 錯誤處理：憑證失效，自動登出
                 if (response.status === 401) {
                     console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
-                    
+
                     // 執行登出操作
                     this.signOut();
-                    
+
                     // 觸發憑證失效事件
                     this.dispatchEvent(new CustomEvent('credential-expired', {
                         detail: {
@@ -3171,10 +3164,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                         bubbles: true,
                         composed: true
                     }));
-                    
+
                     throw new Error(`憑證已失效，已自動登出 (${response.status}: ${response.statusText})`);
                 }
-                
+
                 throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
             }
 
@@ -3230,8 +3223,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     console.warn('解析 API 回應數據失敗:', error);
                     this.apiResponse = null;
                 }
-            } else {
-            }
+            } else {}
         }
         return this.apiResponse;
     }
@@ -3252,8 +3244,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 清理資源
-    cleanup() {
-    }
+    cleanup() {}
 
     // 公開方法：手動觸發登入
     signIn() {
@@ -3266,8 +3257,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             try {
                 window.google.accounts.id.disableAutoSelect();
                 // 清除 Google 的會話狀態
-                window.google.accounts.id.revoke(this.clientId, () => {
-                });
+                window.google.accounts.id.revoke(this.clientId, () => {});
             } catch (error) {
                 console.warn('Google 登出清理失敗:', error);
             }
@@ -3381,7 +3371,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         } catch (error) {
             console.error('❌ 更新預設使用者失敗:', error);
-            
+
             // 顯示錯誤提示（可選）
             this.showErrorNotification('更新預設使用者失敗: ' + error.message);
         }
@@ -3407,7 +3397,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             word-wrap: break-word;
             animation: slideIn 0.3s ease-out;
         `;
-        
+
         // 添加動畫樣式
         const style = document.createElement('style');
         style.textContent = `
@@ -3423,10 +3413,10 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         `;
         document.head.appendChild(style);
-        
+
         notification.textContent = message;
         document.body.appendChild(notification);
-        
+
         // 3秒後自動移除
         setTimeout(() => {
             if (notification.parentNode) {
@@ -3444,8 +3434,7 @@ if (!customElements.get('inf-google-login')) {
 }
 
 // 自動初始化函數
-function createGoogleLoginComponents(configs = [
-    {
+function createGoogleLoginComponents(configs = [{
         avatarContainerId: 'intro-content-simple',
         modalContainerId: 'intro-content-simple',
         avatarStyle: {
@@ -3491,17 +3480,17 @@ function createGoogleLoginComponents(configs = [
         avatarStyle: {
             desktop: {
                 position: 'absolute',
+                right: '20px',
+                top: '20px',
+                width: '32px',
+                height: '32px',
+            },
+            mobile: {
+                position: 'absolute',
                 right: '15px',
                 top: '15px',
                 width: '28px',
                 height: '28px',
-            },
-            mobile: {
-                position: 'absolute',
-                right: '10px',
-                top: '10px',
-                width: '20px',
-                height: '20px',
             }
         }
     },
@@ -3610,7 +3599,7 @@ function createGoogleLoginComponents(configs = [
     function isDesktop() {
         return window.innerWidth >= 480;
     }
-    
+
     // 獲取當前適用的樣式
     function getCurrentStyle(avatarStyle) {
         if (typeof avatarStyle === 'object' && avatarStyle.desktop && avatarStyle.mobile) {
@@ -3627,19 +3616,19 @@ function createGoogleLoginComponents(configs = [
             };
         }
     }
-    
+
     // 應用樣式到組件
     function applyStyleToComponent(component, avatarStyle) {
         const currentStyle = getCurrentStyle(avatarStyle);
-        
+
         // 將 avatarStyle 物件轉換為 CSS 字串和 CSS 變數
         const cssProperties = [];
         const cssVariables = [];
-        
+
         Object.entries(currentStyle).forEach(([property, value]) => {
             // 將 camelCase 轉換為 kebab-case
             const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-            
+
             // 特殊處理 width 和 height，設定為 CSS 變數
             if (property === 'width') {
                 cssVariables.push(`--inf-google-login-width: ${value};`);
@@ -3649,24 +3638,24 @@ function createGoogleLoginComponents(configs = [
                 cssProperties.push(`${cssProperty}: ${value};`);
             }
         });
-        
+
         const cssText = [...cssProperties, ...cssVariables].join('\n                    ');
-        
+
         component.style.cssText = `
             ${cssText}
         `;
     }
 
 
-    
+
     // 更新現有組件的樣式（不重新創建）
     function updateExistingComponents() {
         configs.forEach(config => {
-            const { 
-                avatarContainerId, 
+            const {
+                avatarContainerId,
                 avatarStyle
             } = config;
-            
+
             // 處理選擇器（支援 ID 和 CSS 選擇器）
             let containers;
             if (avatarContainerId.includes(' ')) {
@@ -3677,7 +3666,7 @@ function createGoogleLoginComponents(configs = [
                 const container = document.getElementById(avatarContainerId);
                 containers = container ? [container] : [];
             }
-            
+
             containers.forEach(container => {
                 const existingComponents = container.querySelectorAll('inf-google-login');
                 existingComponents.forEach(component => {
@@ -3686,16 +3675,16 @@ function createGoogleLoginComponents(configs = [
             });
         });
     }
-    
+
     function initComponents() {
         configs.forEach(config => {
-            const { 
-                avatarContainerId, 
-                modalContainerId, 
+            const {
+                avatarContainerId,
+                modalContainerId,
                 avatarStyle,
                 modalContainerStyle
             } = config;
-            
+
             // 處理選擇器（支援 ID 和 CSS 選擇器）
             let containers;
             if (avatarContainerId.includes(' ')) {
@@ -3709,44 +3698,44 @@ function createGoogleLoginComponents(configs = [
                 const container = document.getElementById(avatarContainerId);
                 containers = container ? [container] : [];
             }
-            
+
             containers.forEach(container => {
                 // 清理已存在的 Google 登入組件
                 const existingComponents = container.querySelectorAll('inf-google-login');
                 existingComponents.forEach(component => {
                     component.remove();
                 });
-                
+
                 const googleLoginComponent = document.createElement('inf-google-login');
                 googleLoginComponent.setAttribute('client-id', '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com');
                 googleLoginComponent.setAttribute('auto-select', 'true');
-                
+
                 // 設置模態框目標容器 ID
                 if (modalContainerId) {
                     googleLoginComponent.setAttribute('target-container-id', modalContainerId);
                 }
-                
+
                 // 設置模態框容器樣式
                 if (modalContainerStyle) {
                     googleLoginComponent.setModalContainerStyle(modalContainerStyle);
                 }
-                
+
                 // 應用響應式樣式
                 applyStyleToComponent(googleLoginComponent, avatarStyle);
-                
+
                 // 強制重新設定 CSS 樣式，確保樣式正確應用
                 const currentStyle = getCurrentStyle(avatarStyle);
                 Object.entries(currentStyle).forEach(([property, value]) => {
                     const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
                     googleLoginComponent.style.setProperty(cssProperty, value);
                 });
-                
+
                 // 確保容器有 position: relative 設定，這樣 absolute 定位的 avatar 才能正確定位
                 if (getComputedStyle(container).position === 'static') {
                     container.style.position = 'relative';
                 }
                 container.appendChild(googleLoginComponent);
-                
+
                 // 確保樣式正確應用
                 if (googleLoginComponent.reapplyStyles) {
                     setTimeout(() => {
@@ -3763,17 +3752,17 @@ function createGoogleLoginComponents(configs = [
     } else {
         initComponents();
     }
-    
+
     // 簡化的 DOM 變化監聽器
     const observer = new MutationObserver((mutations) => {
         let shouldInit = false;
-        
+
         mutations.forEach((mutation) => {
             // 檢查新增的節點
             mutation.addedNodes.forEach((node) => {
                 if (node.nodeType === Node.ELEMENT_NODE) {
                     // 檢查是否為 intro-content-simple 或 intro-content-advanced
-                    if (node.id === 'intro-content-simple' || 
+                    if (node.id === 'intro-content-simple' ||
                         node.id === 'intro-content-advanced' ||
                         node.querySelector('#intro-content-simple') ||
                         node.querySelector('#intro-content-advanced')) {
@@ -3781,22 +3770,22 @@ function createGoogleLoginComponents(configs = [
                     }
                 }
             });
-            
+
             // 檢查屬性變化
-            if (mutation.type === 'attributes' && 
-                (mutation.target.id === 'intro-content-simple' || 
-                 mutation.target.id === 'intro-content-advanced')) {
+            if (mutation.type === 'attributes' &&
+                (mutation.target.id === 'intro-content-simple' ||
+                    mutation.target.id === 'intro-content-advanced')) {
                 shouldInit = true;
             }
         });
-        
+
         if (shouldInit) {
             // 檢查是否正在顯示模態框，如果是則不重新初始化
             const modalContainers = document.querySelectorAll('.inf-google-login-modal-container');
             if (modalContainers.length === 0) {
                 console.log('檢測到 intro-content 變化，重新初始化 Google Login 組件');
                 initComponents();
-                
+
                 // 延遲一點時間，然後重新應用樣式到所有現有的組件
                 setTimeout(() => {
                     const allComponents = document.querySelectorAll('inf-google-login');
@@ -3811,7 +3800,7 @@ function createGoogleLoginComponents(configs = [
             }
         }
     });
-    
+
     // 開始監聽整個文檔的變化
     observer.observe(document.body, {
         childList: true,
@@ -3819,7 +3808,7 @@ function createGoogleLoginComponents(configs = [
         attributes: true,
         attributeFilter: ['style', 'class']
     });
-    
+
     // 全局重新應用樣式函數
     const globalReapplyStyles = () => {
         const allComponents = document.querySelectorAll('inf-google-login');
@@ -3829,7 +3818,7 @@ function createGoogleLoginComponents(configs = [
             }
         });
     };
-    
+
     // 監聽 startover 按鈕點擊事件，強制重新初始化
     document.addEventListener('click', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
@@ -3844,7 +3833,7 @@ function createGoogleLoginComponents(configs = [
             }, 100);
         }
     });
-    
+
     // 監聽 startover 按鈕的觸摸事件（移動設備）
     document.addEventListener('touchstart', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
@@ -3859,12 +3848,12 @@ function createGoogleLoginComponents(configs = [
             }, 100);
         }
     });
-    
+
     // 監聽可能的重新輸入按鈕
     document.addEventListener('click', (event) => {
         const target = event.target;
         const isResetButton = target && (
-            target.id === 'startover' || 
+            target.id === 'startover' ||
             target.closest('#startover') ||
             target.textContent.includes('重新輸入') ||
             target.textContent.includes('重新開始') ||
@@ -3872,7 +3861,7 @@ function createGoogleLoginComponents(configs = [
             target.className.includes('reset') ||
             target.className.includes('restart')
         );
-        
+
         if (isResetButton) {
             console.log('檢測到重置按鈕點擊，重新應用樣式');
             setTimeout(() => {
@@ -3880,16 +3869,16 @@ function createGoogleLoginComponents(configs = [
             }, 200);
         }
     });
-    
+
     // 監聽視窗大小變化，重新應用樣式
     let resizeTimeout;
     let lastScreenSize = isDesktop();
-    
+
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             const currentScreenSize = isDesktop();
-            
+
             // 只有當螢幕尺寸跨越 480px 邊界時才更新樣式
             if (currentScreenSize !== lastScreenSize) {
                 lastScreenSize = currentScreenSize;
