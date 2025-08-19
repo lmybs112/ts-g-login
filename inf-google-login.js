@@ -639,7 +639,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
         
         existingStyle.textContent = `
-            #SizeBox_cart:has(.inf-google-login-modal-container) {
+            #SizeBox_cart .inf-google-login-modal-container {
                 max-width: 90% !important;
                 margin: 0 auto !important;
                 padding-top: 20px !important;
@@ -666,7 +666,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         top: '10px',
                         width: '28px',
                         height: '28px',
-                        zIndex: 1000
                     },
                     mobile: {
                         position: 'absolute',
@@ -674,7 +673,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         top: '10px',
                         width: '28px',
                         height: '28px',
-                        zIndex: 1000
                     }
                 },
                 modalContainerStyle: {
@@ -700,7 +698,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         top: '10px',
                         width: '28px',
                         height: '28px',
-                        zIndex: 1000
                     },
                     mobile: {
                         position: 'absolute',
@@ -708,7 +705,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         top: '8px',
                         width: '24px',
                         height: '24px',
-                        zIndex: 1000
                     }
                 },
                 modalContainerStyle: {
@@ -784,7 +780,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 top: '10px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
             };
         }
     }
@@ -3459,7 +3454,6 @@ function createGoogleLoginComponents(configs = [
                 top: '20px',
                 width: '32px',
                 height: '32px',
-                zIndex: 1000
             },
             mobile: {
                 position: 'absolute',
@@ -3467,7 +3461,6 @@ function createGoogleLoginComponents(configs = [
                 top: '15px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
             }
         }
     },
@@ -3481,7 +3474,6 @@ function createGoogleLoginComponents(configs = [
                 top: '20px',
                 width: '32px',
                 height: '32px',
-                zIndex: 1000
             },
             mobile: {
                 position: 'absolute',
@@ -3489,7 +3481,26 @@ function createGoogleLoginComponents(configs = [
                 top: '15px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
+            }
+        }
+    },
+    {
+        avatarContainerId: '#container-container-recom-header',
+        modalContainerId: 'container-recom',
+        avatarStyle: {
+            desktop: {
+                position: 'absolute',
+                right: '15px',
+                top: '15px',
+                width: '28px',
+                height: '28px',
+            },
+            mobile: {
+                position: 'absolute',
+                right: '10px',
+                top: '10px',
+                width: '20px',
+                height: '20px',
             }
         }
     },
@@ -3503,7 +3514,6 @@ function createGoogleLoginComponents(configs = [
                 top: '10px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
             },
             mobile: {
                 position: 'absolute',
@@ -3511,7 +3521,6 @@ function createGoogleLoginComponents(configs = [
                 top: '8px',
                 width: '24px',
                 height: '24px',
-                zIndex: 1000
             }
         },
         modalContainerStyle: {
@@ -3555,7 +3564,6 @@ function createGoogleLoginComponents(configs = [
                 top: '10px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
             },
             mobile: {
                 position: 'absolute',
@@ -3563,7 +3571,6 @@ function createGoogleLoginComponents(configs = [
                 top: '10px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
             }
         },
         modalContainerStyle: {
@@ -3616,7 +3623,6 @@ function createGoogleLoginComponents(configs = [
                 top: '10px',
                 width: '28px',
                 height: '28px',
-                zIndex: 1000
             };
         }
     }
