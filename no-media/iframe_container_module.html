@@ -336,8 +336,13 @@
       #container-recom{
         background-color: white !important;
       }
-      #container-recom:has(.inf-google-login-modal-container) {
-        padding: 21px 18px;
+      #container-recom:has(.inf-google-login-modal-container),
+      #intro-content-simple:has(.inf-google-login-modal-container){
+        padding: 8px;
+
+        @media screen and (min-width: 480px) {
+          padding: 21px 18px;
+        }
       }
 
       .slide {
