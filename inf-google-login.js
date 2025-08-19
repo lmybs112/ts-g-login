@@ -639,7 +639,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
         
         existingStyle.textContent = `
-            #SizeBox_cart .inf-google-login-modal-container {
+            #SizeBox_cart:has(.inf-google-login-modal-container) {
                 max-width: 90% !important;
                 margin: 0 auto !important;
                 padding-top: 20px !important;
@@ -654,114 +654,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 overflow: hidden !important;
             }
         `;
-        
-        // 找到對應的配置
         // 找到對應的配置
         const configs = [
-            {
-                avatarContainerId: 'intro-content-simple',
-                modalContainerId: 'intro-content-simple',
-                avatarStyle: {
-                    desktop: {
-                        position: 'absolute',
-                        right: '20px',
-                        top: '20px',
-                        width: '32px',
-                        height: '32px',
-                        zIndex: 1000
-                    },
-                    mobile: {
-                        position: 'absolute',
-                        right: '15px',
-                        top: '15px',
-                        width: '28px',
-                        height: '28px',
-                        zIndex: 1000
-                    }
-                },
-                modalContainerStyle: {
-                    desktop: {
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        background: 'white',
-                        borderRadius: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        maxWidth: '440px',
-                        margin: '0 auto',
-                        paddingTop: '20px'
-                    },
-                    mobile: {
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        background: 'white',
-                        borderRadius: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        maxWidth: '100%',
-                        margin: '0 auto',
-                        paddingTop: '10px'
-                    }
-                }
-            },
-            {
-                avatarContainerId: 'intro-content-advanced',
-                modalContainerId: 'intro-content-advanced',
-                avatarStyle: {
-                    desktop: {
-                        position: 'absolute',
-                        right: '20px',
-                        top: '20px',
-                        width: '32px',
-                        height: '32px',
-                        zIndex: 1000
-                    },
-                    mobile: {
-                        position: 'absolute',
-                        right: '15px',
-                        top: '15px',
-                        width: '28px',
-                        height: '28px',
-                        zIndex: 1000
-                    }
-                },
-                modalContainerStyle: {
-                    desktop: {
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        background: 'white',
-                        borderRadius: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        maxWidth: '440px',
-                        margin: '0 auto',
-                        paddingTop: '20px'
-                    },
-                    mobile: {
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        background: 'white',
-                        borderRadius: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        maxWidth: '100%',
-                        margin: '0 auto',
-                        paddingTop: '10px'
-                    }
-                }
-            },
             {
                 avatarContainerId: 'SB_Prod_cart',
                 modalContainerId: 'SizeBox_cart',
@@ -3575,35 +3469,27 @@ function createGoogleLoginComponents(configs = [
                 height: '28px',
                 zIndex: 1000
             }
-        },
-        modalContainerStyle: {
+        }
+    },
+    {
+        avatarContainerId: 'intro-content-advanced',
+        modalContainerId: 'intro-content-advanced',
+        avatarStyle: {
             desktop: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'white',
-                borderRadius: '8px',
-                position: 'relative',
-                overflow: 'hidden',
-                maxWidth: '440px',
-                margin: '0 auto',
-                paddingTop: '20px'
+                position: 'absolute',
+                right: '20px',
+                top: '20px',
+                width: '32px',
+                height: '32px',
+                zIndex: 1000
             },
             mobile: {
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'white',
-                borderRadius: '8px',
-                position: 'relative',
-                overflow: 'hidden',
-                maxWidth: '100%',
-                margin: '0 auto',
-                paddingTop: '10px'
+                position: 'absolute',
+                right: '15px',
+                top: '15px',
+                width: '28px',
+                height: '28px',
+                zIndex: 1000
             }
         }
     },
