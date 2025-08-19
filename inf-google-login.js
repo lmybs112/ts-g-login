@@ -3433,6 +3433,120 @@ if (!customElements.get('inf-google-login')) {
     console.warn('Google Login Web Component 已經存在，跳過註冊');
 }
 
+// 預定義的配置模板
+const CONFIG_TEMPLATES = {
+    // Product 類型配置（商品推薦頁面）
+    product: [
+        {
+            avatarContainerId: 'intro-content-simple',
+            modalContainerId: 'intro-content-simple',
+            avatarStyle: {
+                desktop: {
+                    position: 'absolute',
+                    right: '20px',
+                    top: '20px',
+                    width: '32px',
+                    height: '32px',
+                },
+                mobile: {
+                    position: 'absolute',
+                    right: '15px',
+                    top: '15px',
+                    width: '28px',
+                    height: '28px',
+                }
+            }
+        },
+        {
+            avatarContainerId: 'intro-content-advanced',
+            modalContainerId: 'intro-content-advanced',
+            avatarStyle: {
+                desktop: {
+                    position: 'absolute',
+                    right: '20px',
+                    top: '20px',
+                    width: '32px',
+                    height: '32px',
+                },
+                mobile: {
+                    position: 'absolute',
+                    right: '15px',
+                    top: '15px',
+                    width: '28px',
+                    height: '28px',
+                }
+            }
+        },
+        {
+            avatarContainerId: '#container-container-recom-header',
+            modalContainerId: 'container-recom',
+            avatarStyle: {
+                desktop: {
+                    position: 'absolute',
+                    right: '20px',
+                    top: '20px',
+                    width: '32px',
+                    height: '32px',
+                },
+                mobile: {
+                    position: 'absolute',
+                    right: '15px',
+                    top: '15px',
+                    width: '28px',
+                    height: '28px',
+                }
+            }
+        }
+    ],
+    
+    // Size 類型配置（尺寸選擇頁面）
+    size: [
+        {
+            avatarContainerId: '#container_BF_mbinfo .c_header',
+            modalContainerId: 'container_BF_mbinfo',
+            modalContainerStyle: {
+                desktop: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                },
+                mobile: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                }
+            }
+        },
+        {
+            avatarContainerId: '#SB_Prod_cart',
+            modalContainerId: 'Sizebox_cart',
+            modalContainerStyle: {
+                desktop: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                },
+                mobile: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                }
+            }
+        }
+    ]
+};
+
+// 簡化的初始化函數
+function createGoogleLoginComponentsByType(type = 'product') {
+    if (CONFIG_TEMPLATES[type]) {
+        console.log(`使用 ${type} 類型配置模板`);
+        createGoogleLoginComponents(CONFIG_TEMPLATES[type]);
+    } else {
+        console.error(`未知的類型: ${type}，使用預設 product 配置`);
+        createGoogleLoginComponents(CONFIG_TEMPLATES.product);
+    }
+}
+
 // 自動初始化函數
 function createGoogleLoginComponents(configs = [{
         avatarContainerId: 'intro-content-simple',

@@ -671,69 +671,8 @@
               const script = document.createElement('script');
               script.src = '/inf-google-login.js';
               script.onload = function() {
-                  // 指定每個組件的頭像位置和模態框顯示位置（響應式設計）
-                  createGoogleLoginComponents([
-                      {
-                          avatarContainerId: '#intro-content-advanced',
-                          modalContainerId: 'intro-content-advanced',
-                          avatarStyle: {
-                              desktop: {
-                                  position: 'absolute',
-                                  right: '16px',
-                                  top: '16px',
-                                  width: '32px',
-                                  height: '32px',
-                              },
-                              mobile: {
-                                  position: 'absolute',
-                                  right: '12px',
-                                  top: '12px',
-                                  width: '24px',
-                                  height: '24px',
-                              }
-                          }
-                      },
-                      {
-                          avatarContainerId: '#intro-content-simple',
-                          modalContainerId: 'intro-content-simple',
-                          avatarStyle: {
-                              desktop: {
-                                  position: 'absolute',
-                                  right: '16px',
-                                  top: '16px',
-                                  width: '32px',
-                                  height: '32px',
-                              },
-                              mobile: {
-                                  position: 'absolute',
-                                  right: '12px',
-                                  top: '12px',
-                                  width: '24px',
-                                  height: '24px',
-                              }
-                          }
-                      },
-                      {
-                          avatarContainerId: '#container-container-recom-header',
-                          modalContainerId: 'container-recom',
-                          avatarStyle: {
-                              desktop: {
-                                  position: 'absolute',
-                                  right: '16px',
-                                  top: '16px',
-                                  width: '32px',
-                                  height: '32px',
-                              },
-                              mobile: {
-                                  position: 'absolute',
-                                  right: '12px',
-                                  top: '12px',
-                                  width: '24px',
-                                  height: '24px',
-                              }
-                          }
-                      }
-                  ]);
+                  // 指定每個組件的頭像位置和模態框顯示位置 type product
+                  createGoogleLoginComponentsByType('product');
               };
               document.head.appendChild(script);
           })();

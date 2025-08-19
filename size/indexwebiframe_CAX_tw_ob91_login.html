@@ -1000,40 +1000,8 @@
             const script = document.createElement('script');
             script.src = '/inf-google-login.js';
             script.onload = function () {
-                // 指定每個組件的頭像位置和模態框顯示位置
-                createGoogleLoginComponents([{
-                        avatarContainerId: '#container_BF_mbinfo .c_header',
-                        modalContainerId: 'container_BF_mbinfo',
-                        modalContainerStyle: {
-                            desktop: {
-                                maxWidth: '90%',
-                                margin: '0 auto',
-                                paddingTop: '20px'
-                            },
-                            mobile: {
-                                maxWidth: '90%',
-                                margin: '0 auto',
-                                paddingTop: '0'
-                            }
-                        }
-                    },
-                    {
-                        avatarContainerId: '#SB_Prod_cart',
-                        modalContainerId: 'Sizebox_cart',
-                        modalContainerStyle: {
-                            desktop: {
-                                maxWidth: '90%',
-                                margin: '0 auto',
-                                paddingTop: '20px'
-                            },
-                            mobile: {
-                                maxWidth: '90%',
-                                margin: '0 auto',
-                                paddingTop: '0'
-                            }
-                        }
-                    }
-                ]);
+                // 指定每個組件的頭像位置和模態框顯示位置 type size
+                createGoogleLoginComponentsByType('size');
             };
             document.head.appendChild(script);
         })();
