@@ -1883,26 +1883,29 @@ class InfGoogleLoginComponent extends HTMLElement {
                                         BodyData: {
                                             '${userKey}': {
                                                 body: {
-                                                    'HV': '${bodyInfo.HV || ''}',
-                                                    'WV': '${bodyInfo.WV || ''}',
-                                                    'CC': '${bodyInfo.CC || ''}',
-                                                    'DataItem': '0100',
-                                                    'Shoulder': '',
-                                                    'UpChest': '',
-                                                    'DnChest': '',
-                                                    'Waist': '',
-                                                    'Hip': '',
-                                                    'ClothID': '',
-                                                    'Sizes': '',
-                                                    'FitP': '0,0,0,0',
-                                                    'Gender': '${bodyInfo.Gender || ''}',
-                                                    'FMLpath': 'FMLSep',
-                                                    'BUS': '0',
-                                                    'GVID': '',
-                                                    'LGVID': '',
-                                                    'MRID': 'INF',
-                                                    'ga_id': 'x',
-                                                    'Pattern_Prefer': '0'
+          
+            "HV":"163",
+            "WV":"60",
+            "CC":"97.5_97.5",
+            "DataItem":"0100",
+            "Shoulder":"",
+            "UpChest":"",
+            "DnChest":"",
+            "Waist":"",
+            "Hip":"",
+            //"Brand":"JERSCY",
+            "ClothID":"",
+            "Sizes":"",
+            "FitP":"0,0,0,0",
+            "Gender":"M",
+            "FMLpath":"FMLSep",
+            "BUS":"0",
+            "GVID":"",
+            "LGVID":"",
+            "MRID":"INF",
+            "ga_id":"x",
+            "Pattern_Prefer":"0"
+            
                                                 }
                                             }
                                         },
