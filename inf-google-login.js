@@ -1908,7 +1908,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                             }
                                         },
                                         update_bodydata: true,
-                                        credential: credentialData || '',
+                                        credential: credentialData,
                                         sub: subValue,
                                         IDTYPE: 'Google'
                                     };
