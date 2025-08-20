@@ -1884,7 +1884,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                             '${userKey}': {
                                                 body: {
           
-            'HV':'173',
+            'HV':'163',
             'WV':'60',
             'CC':'97.5_97.5',
             'DataItem':'0100',
@@ -1979,6 +1979,19 @@ class InfGoogleLoginComponent extends HTMLElement {
                                                         bubbles: true,
                                                         composed: true
                                                     }));
+                                                    
+                                                    // 直接更新組件顯示
+                                                    console.log('🔄 更新組件顯示...');
+                                                    // 查找組件實例並更新
+                                                    const components = document.querySelectorAll('inf-google-login');
+                                                    components.forEach(component => {
+                                                        if (component.shadowRoot) {
+                                                            // 更新組件的 API 回應資料
+                                                            component.currentApiResponse = refreshData;
+                                                            // 重新更新 BodyData 顯示
+                                                            component.updateBodyDataDisplay(refreshData);
+                                                        }
+                                                    });
                                                 }
                                             })
                                             .catch(error => {
