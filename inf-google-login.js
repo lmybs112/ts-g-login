@@ -1859,6 +1859,21 @@ class InfGoogleLoginComponent extends HTMLElement {
                             <button 
                                 onclick="
                                     console.log('🔄 點擊更新按鈕，使用者:', '${userKey}');
+                                    
+                                    // 從 localStorage 獲取憑證資料
+                                    const storedCredential = localStorage.getItem('infFitsGoogleCredential');
+                                    let credentialData = null;
+                                    let subValue = '';
+                                    
+                                    if (storedCredential) {
+                                        try {
+                                            credentialData = JSON.parse(storedCredential);
+                                            subValue = credentialData.sub || '';
+                                        } catch (e) {
+                                            console.warn('解析 localStorage 憑證失敗:', e);
+                                        }
+                                    }
+                                    
                                     const payload = {
                                         BodyData: {
                                             '${userKey}': {
@@ -1887,10 +1902,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                                             }
                                         },
                                         update_bodydata: true,
-                                        credential: this.credential ? JSON.stringify(this.credential) : '',
-                                        sub: '${this.credential?.sub || ''}',
+                                        credential: credentialData ? JSON.stringify(credentialData) : '',
+                                        sub: subValue,
                                         IDTYPE: 'Google'
                                     };
+                                    
+                                    console.log('📤 發送 payload:', payload);
                                     
                                     fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
                                         method: 'POST',
