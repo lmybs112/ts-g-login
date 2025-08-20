@@ -1931,7 +1931,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     })
                                     .then(data => {
                                         console.log('✅ Response from API:', data);
-                                        // 成功上傳後更新 credential
+                                        // 成功上傳後重新獲取最新資料
                                         if (data.success) {
                                             // 觸發更新事件
                                             document.dispatchEvent(new CustomEvent('bodydata-updated', {
@@ -1943,6 +1943,47 @@ class InfGoogleLoginComponent extends HTMLElement {
                                                 bubbles: true,
                                                 composed: true
                                             }));
+                                            
+                                            // 重新調用 API 獲取最新資料
+                                            console.log('🔄 重新獲取最新資料...');
+                                            const refreshPayload = {
+                                                credential: credentialData,
+                                                sub: subValue,
+                                                IDTYPE: 'Google'
+                                            };
+                                            
+                                            fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify(refreshPayload)
+                                            })
+                                            .then(response => {
+                                                if (!response.ok) {
+                                                    throw new Error('HTTP error ' + response.status);
+                                                }
+                                                return response.json();
+                                            })
+                                            .then(refreshData => {
+                                                console.log('✅ 重新獲取資料成功:', refreshData);
+                                                // 更新畫面顯示
+                                                if (refreshData.BodyData) {
+                                                    // 觸發資料更新事件，讓組件重新渲染
+                                                    document.dispatchEvent(new CustomEvent('refresh-bodydata', {
+                                                        detail: { 
+                                                            apiResponse: refreshData,
+                                                            userKey: '${userKey}',
+                                                            timestamp: new Date().toISOString()
+                                                        },
+                                                        bubbles: true,
+                                                        composed: true
+                                                    }));
+                                                }
+                                            })
+                                            .catch(error => {
+                                                console.error('❌ 重新獲取資料失敗:', error);
+                                            });
                                         }
                                     })
                                     .catch(error => {
