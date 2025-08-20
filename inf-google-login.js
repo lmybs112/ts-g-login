@@ -1863,12 +1863,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     // 從 localStorage 獲取憑證資料
                                     const storedCredential = localStorage.getItem('google_auth_credential');
                                     const storedUserInfo = localStorage.getItem('google_user_info');
-                                    let credentialData = null;
+                                    let credentialData = '';
                                     let subValue = '';
                                     
                                     if (storedCredential) {
-                                        // 清理 JWT 字串，移除多餘的引號
-                                        credentialData = storedCredential.replace(/^"|"$/g, '');
+                                        credentialData = storedCredential;
                                     }
                                     
                                     if (storedUserInfo) {
