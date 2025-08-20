@@ -1861,16 +1861,25 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     console.log('🔄 點擊更新按鈕，使用者:', '${userKey}');
                                     
                                     // 從 localStorage 獲取憑證資料
-                                    const storedCredential = localStorage.getItem('infFitsGoogleCredential');
+                                    const storedCredential = localStorage.getItem('google_auth_credential');
+                                    const storedUserInfo = localStorage.getItem('google_user_info');
                                     let credentialData = null;
                                     let subValue = '';
                                     
                                     if (storedCredential) {
                                         try {
                                             credentialData = JSON.parse(storedCredential);
-                                            subValue = credentialData.sub || '';
                                         } catch (e) {
                                             console.warn('解析 localStorage 憑證失敗:', e);
+                                        }
+                                    }
+                                    
+                                    if (storedUserInfo) {
+                                        try {
+                                            const userInfo = JSON.parse(storedUserInfo);
+                                            subValue = userInfo.sub || '';
+                                        } catch (e) {
+                                            console.warn('解析 localStorage 用戶資訊失敗:', e);
                                         }
                                     }
                                     
