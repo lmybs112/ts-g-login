@@ -1847,77 +1847,173 @@ class InfGoogleLoginComponent extends HTMLElement {
                         transition: all 0.2s ease;
                         position: relative;
                     ">
-                        ${isDefaultUser ? `
-                        <button 
-                            onclick="console.log('🎯 點擊預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
-                                detail: { userKey: '${userKey}' },
-                                bubbles: true,
-                                composed: true 
-                            }))"
-                            style="
-                                position: absolute;
-                                top: 8px;
-                                right: 8px;
-                                background: linear-gradient(135deg, #10B981, #059669);
-                                color: white;
-                                padding: 6px 10px;
-                                border-radius: 12px;
-                                font-size: 11px;
-                                font-weight: 600;
-                                display: flex;
-                                align-items: center;
-                                gap: 4px;
-                                box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
-                                border: none;
-                                cursor: pointer;
-                                transition: all 0.2s ease;
-                                font-family: inherit;
-                                z-index: 1000;
-                                min-width: 40px;
-                                min-height: 24px;
-                            "
-                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
-                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'"
-                            title="點擊設為預設使用者"
-                        >
-                            預設
-                        </button>
-                        ` : `
-                        <button 
-                            onclick="console.log('🎯 點擊設為預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
-                                detail: { userKey: '${userKey}' },
-                                bubbles: true,
-                                composed: true 
-                            }))"
-                            style="
-                                position: absolute;
-                                top: 8px;
-                                right: 8px;
-                                background: linear-gradient(135deg, #6B7280, #4B5563);
-                                color: white;
-                                padding: 6px 10px;
-                                border-radius: 12px;
-                                font-size: 11px;
-                                font-weight: 600;
-                                display: flex;
-                                align-items: center;
-                                gap: 4px;
-                                box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
-                                border: none;
-                                cursor: pointer;
-                                transition: all 0.2s ease;
-                                font-family: inherit;
-                                z-index: 1000;
-                                min-width: 60px;
-                                min-height: 24px;
-                            "
-                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(107, 114, 128, 0.4)'"
-                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(107, 114, 128, 0.3)'"
-                            title="點擊設為預設使用者"
-                        >
-                            設為預設
-                        </button>
-                        `}
+                        <div style="
+                            position: absolute;
+                            top: 8px;
+                            right: 8px;
+                            display: flex;
+                            gap: 8px;
+                            z-index: 1000;
+                        ">
+                            <!-- 更新按鈕 -->
+                            <button 
+                                onclick="
+                                    console.log('🔄 點擊更新按鈕，使用者:', '${userKey}');
+                                    const payload = {
+                                        BodyData: {
+                                            '${userKey}': {
+                                                body: {
+                                                    'HV': '177',
+                                                    'WV': ${bodyInfo.WV || ''},
+                                                    'CC': ${bodyInfo.CC || ''},
+                                                    'DataItem': '0100',
+                                                    'Shoulder': '',
+                                                    'UpChest': '',
+                                                    'DnChest': '',
+                                                    'Waist': '',
+                                                    'Hip': '',
+                                                    'ClothID': '',
+                                                    'Sizes': '',
+                                                    'FitP': '0,0,0,0',
+                                                    'Gender': ${bodyInfo.Gender || ''},
+                                                    'FMLpath': 'FMLSep',
+                                                    'BUS': '0',
+                                                    'GVID': '',
+                                                    'LGVID': '',
+                                                    'MRID': 'INF',
+                                                    'ga_id': 'x',
+                                                    'Pattern_Prefer': '0'
+                                                }
+                                            }
+                                        },
+                                        update_bodydata: true,
+                                        credential: ${this.credential ? JSON.stringify(this.credential):''},
+                                        sub: ${this.credential?.sub || ''},
+                                        IDTYPE: 'Google'
+                                    };
+                                    
+                                    fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify(payload)
+                                    })
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            throw new Error('HTTP error ' + response.status);
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(data => {
+                                        console.log('✅ Response from API:', data);
+                                        // 成功上傳後更新 credential
+                                        if (data.success) {
+                                            // 觸發更新事件
+                                            document.dispatchEvent(new CustomEvent('bodydata-updated', {
+                                                detail: { 
+                                                    userKey: '${userKey}',
+                                                    data: data,
+                                                    timestamp: new Date().toISOString()
+                                                },
+                                                bubbles: true,
+                                                composed: true
+                                            }));
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('❌ Error calling API:', error);
+                                    });
+                                "
+                                style="
+                                    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+                                    color: white;
+                                    padding: 6px 10px;
+                                    border-radius: 12px;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 4px;
+                                    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+                                    border: none;
+                                    cursor: pointer;
+                                    transition: all 0.2s ease;
+                                    font-family: inherit;
+                                    min-width: 50px;
+                                    min-height: 24px;
+                                "
+                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(59, 130, 246, 0.4)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(59, 130, 246, 0.3)'"
+                                title="更新身體資料"
+                            >
+                                更新
+                            </button>
+                            
+                            ${isDefaultUser ? `
+                            <button 
+                                onclick="console.log('🎯 點擊預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
+                                    detail: { userKey: '${userKey}' },
+                                    bubbles: true,
+                                    composed: true 
+                                }))"
+                                style="
+                                    background: linear-gradient(135deg, #10B981, #059669);
+                                    color: white;
+                                    padding: 6px 10px;
+                                    border-radius: 12px;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 4px;
+                                    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+                                    border: none;
+                                    cursor: pointer;
+                                    transition: all 0.2s ease;
+                                    font-family: inherit;
+                                    min-width: 40px;
+                                    min-height: 24px;
+                                "
+                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'"
+                                title="點擊設為預設使用者"
+                            >
+                                預設
+                            </button>
+                            ` : `
+                            <button 
+                                onclick="console.log('🎯 點擊設為預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
+                                    detail: { userKey: '${userKey}' },
+                                    bubbles: true,
+                                    composed: true 
+                                }))"
+                                style="
+                                    background: linear-gradient(135deg, #6B7280, #4B5563);
+                                    color: white;
+                                    padding: 6px 10px;
+                                    border-radius: 12px;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 4px;
+                                    box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+                                    border: none;
+                                    cursor: pointer;
+                                    transition: all 0.2s ease;
+                                    font-family: inherit;
+                                    min-width: 60px;
+                                    min-height: 24px;
+                                "
+                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(107, 114, 128, 0.4)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(107, 114, 128, 0.3)'"
+                                title="點擊設為預設使用者"
+                            >
+                                設為預設
+                            </button>
+                            `}
+                        </div>
                         <div style="
                             display: flex;
                             align-items: center;
