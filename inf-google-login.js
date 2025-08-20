@@ -1863,9 +1863,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                                         BodyData: {
                                             '${userKey}': {
                                                 body: {
-                                                    'HV': '177',
-                                                    'WV': ${bodyInfo.WV || ''},
-                                                    'CC': ${bodyInfo.CC || ''},
+                                                    'HV': '${bodyInfo.HV || ''}',
+                                                    'WV': '${bodyInfo.WV || ''}',
+                                                    'CC': '${bodyInfo.CC || ''}',
                                                     'DataItem': '0100',
                                                     'Shoulder': '',
                                                     'UpChest': '',
@@ -1875,7 +1875,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                                     'ClothID': '',
                                                     'Sizes': '',
                                                     'FitP': '0,0,0,0',
-                                                    'Gender': ${bodyInfo.Gender || ''},
+                                                    'Gender': '${bodyInfo.Gender || ''}',
                                                     'FMLpath': 'FMLSep',
                                                     'BUS': '0',
                                                     'GVID': '',
@@ -1887,8 +1887,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                                             }
                                         },
                                         update_bodydata: true,
-                                        credential: ${this.credential ? JSON.stringify(this.credential):''},
-                                        sub: ${this.credential?.sub || ''},
+                                        credential: this.credential ? JSON.stringify(this.credential) : '',
+                                        sub: '${this.credential?.sub || ''}',
                                         IDTYPE: 'Google'
                                     };
                                     
