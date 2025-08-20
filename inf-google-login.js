@@ -1867,7 +1867,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     let subValue = '';
                                     
                                     if (storedCredential) {
-                                        credentialData = storedCredential;
+                                        // 清理 JWT 字串，移除多餘的引號
+                                        credentialData = storedCredential.replace(/^"|"$/g, '');
                                     }
                                     
                                     if (storedUserInfo) {
@@ -1907,7 +1908,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                             }
                                         },
                                         update_bodydata: true,
-                                        credential: credentialData ? JSON.stringify(credentialData) : '',
+                                        credential: credentialData || '',
                                         sub: subValue,
                                         IDTYPE: 'Google'
                                     };
