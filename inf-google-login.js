@@ -1867,11 +1867,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     let subValue = '';
                                     
                                     if (storedCredential) {
-                                        try {
-                                            credentialData = JSON.parse(storedCredential);
-                                        } catch (e) {
-                                            console.warn('解析 localStorage 憑證失敗:', e);
-                                        }
+                                        credentialData = storedCredential;
                                     }
                                     
                                     if (storedUserInfo) {
