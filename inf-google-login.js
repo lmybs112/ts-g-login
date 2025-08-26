@@ -257,6 +257,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.credential = credential;
             this.isAuthenticated = true;
 
+            console.log('🔍 saveCredential 調用:', {
+                oldCredential: oldCredential ? oldCredential.substring(0, 50) + '...' : null,
+                newCredential: credential.substring(0, 50) + '...',
+                isAuthenticated: this.isAuthenticated
+            });
+
             // 觸發 localStorage 更新事件
             this.dispatchEvent(new CustomEvent('localStorage-updated', {
                 detail: {
@@ -3756,6 +3762,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             return;
         }
 
+        console.log('🔍 Google One Tap 登入回調處理:', response.credential.substring(0, 50) + '...');
+
         try {
             // 解析 Google 憑證獲取用戶資訊
             const payload = this.parseCredential(response.credential);
@@ -3765,6 +3773,9 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 保存憑證
             this.saveCredential(response.credential);
+
+            // 確保登入狀態正確設置
+            console.log('🔍 設置登入狀態:', this.isAuthenticated);
 
             // 調用 infFITS API
             const apiResponse = await this.callInfFitsAPI(response.credential);
@@ -3776,9 +3787,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                     payload.picture = apiResponse.picture;
                     this.saveUserInfo(payload);
                 }
-                // 更新頭像顯示
-                this.updateAvatar();
             }
+
+            // 再次確保登入狀態正確
+            console.log('🔍 API 調用後登入狀態:', this.isAuthenticated);
+            
+            // 更新頭像顯示
+            this.updateAvatar();
 
             // 隱藏登入畫面
             this.hideLoginModal();
@@ -3793,14 +3808,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 bubbles: true,
                 composed: true
-            }));
-
-            // 觸發 localStorage 更新事件，通知其他組件實例
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'google_auth_credential',
-                newValue: response.credential,
-                oldValue: null,
-                storageArea: localStorage
             }));
 
         } catch (error) {
