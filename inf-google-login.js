@@ -164,13 +164,10 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查存儲的憑證
     async checkStoredCredential(shouldRefreshApi = false) {
-        console.log('🔍 checkStoredCredential 開始檢查...');
-        
         // 首先檢查是否有 JWT 憑證（Google One Tap）
         const jwtCredential = localStorage.getItem('google_auth_credential');
         
         if (jwtCredential) {
-            console.log('🔍 找到 JWT 憑證，使用 JWT 登入');
             this.credential = jwtCredential;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
@@ -189,7 +186,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         const accessToken = await this.getValidAccessToken();
         
         if (accessToken) {
-            console.log('🔍 找到 OAuth2 access token，使用 OAuth2 登入');
             // 創建 credential 格式
             this.credential = `oauth2_${accessToken}`;
             this.isAuthenticated = true;
@@ -203,7 +199,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.getApiResponse();
             }
         } else {
-            console.log('🔍 沒有找到任何有效的憑證');
             // 如果沒有有效的 token，清除所有狀態
             this.credential = null;
             this.isAuthenticated = false;
@@ -279,12 +274,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             localStorage.setItem('google_auth_credential', credential);
             this.credential = credential;
             this.isAuthenticated = true;
-
-            console.log('🔍 saveCredential 調用:', {
-                oldCredential: oldCredential ? oldCredential.substring(0, 50) + '...' : null,
-                newCredential: credential.substring(0, 50) + '...',
-                isAuthenticated: this.isAuthenticated
-            });
 
             // 觸發 localStorage 更新事件
             this.dispatchEvent(new CustomEvent('localStorage-updated', {
@@ -396,21 +385,13 @@ class InfGoogleLoginComponent extends HTMLElement {
             pictureUrl = userInfo.picture;
         }
 
-        console.log('🔍 updateAvatar 調試資訊:');
-        console.log('isAuthenticated:', this.isAuthenticated);
-        console.log('pictureUrl:', pictureUrl);
-        console.log('userInfo:', this.getUserInfo());
-        console.log('apiResponse:', this.getApiResponse());
-
         if (this.isAuthenticated && pictureUrl) {
             // 顯示用戶頭像
-            console.log('✅ 顯示用戶頭像:', pictureUrl);
             avatarImage.src = pictureUrl;
             avatarImage.style.display = 'block';
             defaultAvatar.style.display = 'none';
         } else {
             // 顯示預設頭像
-            console.log('❌ 顯示預設頭像');
             avatarImage.style.display = 'none';
             defaultAvatar.style.display = 'flex';
         }
@@ -500,7 +481,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.checkStoredCredential(true).then(() => {
             this.updateAvatar(); // 初始化頭像顯示
         }).catch(error => {
-            console.warn('檢查存儲憑證失敗:', error);
             this.updateAvatar(); // 即使失敗也要更新頭像顯示
         });
 
@@ -675,19 +655,11 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 檢查當前 API 資料狀態
         const currentApiResponse = this.getApiResponse();
 
-        console.log('🔍 頭像點擊調試資訊:');
-        console.log('isAuthenticated:', this.isAuthenticated);
-        console.log('credential:', this.credential);
-        console.log('userInfo:', this.getUserInfo());
-        console.log('apiResponse:', currentApiResponse);
-
         if (this.isAuthenticated) {
             // 已登入：顯示個人資訊畫面
-            console.log('✅ 用戶已登入，顯示個人資訊畫面');
             this.showProfileModal();
         } else {
             // 未登入：顯示登入畫面
-            console.log('❌ 用戶未登入，顯示登入畫面');
             this.showLoginModal();
         }
     }
@@ -3096,25 +3068,19 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 處理 localStorage 變更
     handleStorageChange(event) {
-        console.log('🔍 Storage 事件處理:', event.key, event.newValue);
-        
         if (event.key === 'google_auth_credential') {
             if (event.newValue) {
                 // 其他頁面登入了，或者當前頁面剛完成登入
                 // 避免重複設置相同的狀態
                 if (this.credential !== event.newValue) {
-                    console.log('🔄 更新憑證狀態:', event.newValue);
                     this.credential = event.newValue;
                     this.isAuthenticated = true;
                     this.getUserInfo();
                     this.getApiResponse(); // 也載入 API 回應數據
                     this.updateAvatar();
-                } else {
-                    console.log('⏭️ 跳過重複的憑證更新');
                 }
             } else {
                 // 其他頁面登出了
-                console.log('🚪 用戶登出');
                 this.credential = null;
                 this.isAuthenticated = false;
                 this.userInfo = null;
@@ -3785,8 +3751,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             return;
         }
 
-        console.log('🔍 Google One Tap 登入回調處理:', response.credential.substring(0, 50) + '...');
-
         try {
             // 解析 Google 憑證獲取用戶資訊
             const payload = this.parseCredential(response.credential);
@@ -3796,9 +3760,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 保存憑證
             this.saveCredential(response.credential);
-
-            // 確保登入狀態正確設置
-            console.log('🔍 設置登入狀態:', this.isAuthenticated);
 
             // 調用 infFITS API
             const apiResponse = await this.callInfFitsAPI(response.credential);
@@ -3811,9 +3772,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     this.saveUserInfo(payload);
                 }
             }
-
-            // 再次確保登入狀態正確
-            console.log('🔍 API 調用後登入狀態:', this.isAuthenticated);
             
             // 更新頭像顯示
             this.updateAvatar();
