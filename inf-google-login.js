@@ -163,10 +163,13 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 檢查存儲的憑證
-    checkStoredCredential(shouldRefreshApi = false) {
-        const storedCredential = localStorage.getItem('google_auth_credential');
-        if (storedCredential) {
-            this.credential = storedCredential;
+    async checkStoredCredential(shouldRefreshApi = false) {
+        // 檢查是否有有效的 access token
+        const accessToken = await this.getValidAccessToken();
+        
+        if (accessToken) {
+            // 創建 credential 格式
+            this.credential = `oauth2_${accessToken}`;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
 
@@ -178,9 +181,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.getApiResponse();
             }
         } else {
-            // 如果沒有憑證，確保狀態為未登入
+            // 如果沒有有效的 token，清除所有狀態
             this.credential = null;
             this.isAuthenticated = false;
+            this.clearTokens();
         }
     }
 
@@ -460,14 +464,18 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         // 確保在組件連接時檢查並同步登入狀態
-        this.checkStoredCredential(true); // 組件掛載到 DOM 時刷新 API 資料
-        this.updateAvatar(); // 初始化頭像顯示
+        this.checkStoredCredential(true).then(() => {
+            this.updateAvatar(); // 初始化頭像顯示
+        }).catch(error => {
+            console.warn('檢查存儲憑證失敗:', error);
+            this.updateAvatar(); // 即使失敗也要更新頭像顯示
+        });
 
         // 🔧 如果已有 API 資料，立即更新 BodyData
         const existingApiResponse = this.getApiResponse();
         if (existingApiResponse) {
             this.updateBodyDataDisplay(existingApiResponse);
-        } else {}
+        }
 
         this.loadGoogleIdentityServices();
     }
@@ -591,17 +599,38 @@ class InfGoogleLoginComponent extends HTMLElement {
             });
         }
 
-        // 監聽預設使用者切換事件
-        if (!this.defaultUserEventListenerAdded) {
+        // 監聽預設使用者切換事件（使用靜態標記防止重複添加）
+        if (!InfGoogleLoginComponent.defaultUserEventListenerAdded) {
             document.addEventListener('set-default-user', (event) => {
                 // console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
                 event.preventDefault();
                 event.stopPropagation();
                 const userKey = event.detail.userKey;
                 // console.log('🔄 準備設置預設使用者為:', userKey);
-                this.setDefaultUser(userKey);
+                
+                // 找到觸發事件的組件實例（安全的方式）
+                let component = null;
+                try {
+                    // 嘗試從事件目標找到組件
+                    if (event.target && typeof event.target.closest === 'function') {
+                        component = event.target.closest('inf-google-login');
+                    }
+                } catch (error) {
+                    console.warn('無法從事件目標找到組件:', error);
+                }
+                
+                // 如果找不到，則查找頁面上的第一個組件實例
+                if (!component) {
+                    component = document.querySelector('inf-google-login');
+                }
+                
+                if (component && typeof component.setDefaultUser === 'function') {
+                    component.setDefaultUser(userKey);
+                } else {
+                    console.warn('找不到可用的組件實例或 setDefaultUser 方法');
+                }
             });
-            this.defaultUserEventListenerAdded = true;
+            InfGoogleLoginComponent.defaultUserEventListenerAdded = true;
         }
     }
 
@@ -1714,31 +1743,12 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         if (!bodyDataSection || !bodyDataContent) {
             console.warn('❌ 找不到 BodyData 顯示元素');
-            // 調試：列出所有可能的元素
             return;
         }
 
         // 檢查 API 回應中是否有 BodyData
         if (apiResponse.BodyData && typeof apiResponse.BodyData === 'object') {
-
             // 整理 BodyData 資料，傳遞 BodyData_ptr 參數
-            // const fakeBodyData = {
-            //     "User1": {
-            //         "Gender": "M",
-            //         "HV": "180",
-            //         "WV": "70"
-            //     },
-            //     "User2": {
-            //         "Gender": "M",
-            //         "HV": "180",
-            //         "WV": "70"
-            //     },
-            //      "User3": {
-            //         "Gender": "M",
-            //         "HV": "180",
-            //         "WV": "70"
-            //     }
-            // }
             const bodyDataHtml = this.formatBodyData(apiResponse.BodyData, apiResponse.BodyData_ptr);
 
             if (bodyDataHtml) {
@@ -1758,6 +1768,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             return '';
         }
 
+
+
         // 確定預設使用者
         let defaultUserKey = bodyDataPtr;
         if (!defaultUserKey || !bodyData[defaultUserKey]) {
@@ -1770,13 +1782,24 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         let formattedHtml = '<div style="display: flex; flex-direction: column; gap: 16px;">';
         // 遍歷所有 User 資料
+        
+        // 對使用者進行排序，確保預設使用者（BodyData_ptr）排在第一位
+        const userKeys = Object.keys(bodyData);
+        const sortedUserKeys = userKeys.sort((a, b) => {
+            // 如果 a 是預設使用者，排在前面
+            if (a === defaultUserKey) return -1;
+            // 如果 b 是預設使用者，排在前面
+            if (b === defaultUserKey) return 1;
+            // 其他使用者保持原有順序
+            return 0;
+        });
 
-        Object.keys(bodyData).forEach(userKey => {
+        sortedUserKeys.forEach(userKey => {
             const userData = bodyData[userKey];
+            
             if (userData && typeof userData === 'object') {
                 // 檢查是否為預設使用者
                 const isDefaultUser = userKey === defaultUserKey;
-                // console.log(`🔍 處理使用者 ${userKey}，是否為預設使用者: ${isDefaultUser}`);
 
                 // 處理新的 BodyData 格式：支援 body 和 shoes 子物件
                 let bodyInfo = userData;
@@ -1785,25 +1808,22 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 檢查是否為新格式（包含 body 和 shoes）
                 if (userData.body && typeof userData.body === 'object') {
                     bodyInfo = userData.body;
-                    shoesInfo = userData.shoes
-                    // {
-                    //     "HV": "24.1",
-                    //     "WV": "9.1",
-                    //     "FOOT_CIRCUM": "23.0",
-                    //     "CALF_CIRCUM": "20"
-                    // };
+                    shoesInfo = userData.shoes;
                 }
 
-                // 計算 BMI（如果有身高和體重）
+                // 計算 BMI（始終顯示）
                 let bmiHtml = '';
+                let bmiValue = '尚未提供';
+                let bmiStatus = '';
+                let bmiColor = '#9CA3AF'; // 預設灰色
+                
                 if (bodyInfo.HV && bodyInfo.HV.trim() !== '' && bodyInfo.WV && bodyInfo.WV.trim() !== '') {
                     const height = parseFloat(bodyInfo.HV) / 100; // 轉換為公尺
                     const weight = parseFloat(bodyInfo.WV);
                     if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
                         const bmi = (weight / (height * height)).toFixed(1);
+                        bmiValue = bmi;
 
-                        let bmiStatus = '';
-                        let bmiColor = '';
                         if (bmi < 18.5) {
                             bmiStatus = '體重過輕';
                             bmiColor = '#3B82F6';
@@ -1817,25 +1837,25 @@ class InfGoogleLoginComponent extends HTMLElement {
                             bmiStatus = '肥胖';
                             bmiColor = '#EF4444';
                         }
-
-                        bmiHtml = `
-                        <div style="
-                            padding: 10px;
-                            background: linear-gradient(135deg, ${bmiColor}10, ${bmiColor}05);
-                            border-left: 3px solid ${bmiColor};
-                            border-radius: 6px;
-                        ">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="color: #4B5563; font-size: 13px; font-weight: 500;">BMI 指數</span>
-                                <div style="text-align: right;">
-                                    <div style="color: ${bmiColor}; font-size: 16px; font-weight: 600;">${bmi}</div>
-                                    <div style="color: ${bmiColor}; font-size: 11px; margin-top: 2px;">${bmiStatus}</div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
                     }
                 }
+
+                bmiHtml = `
+                <div style="
+                    padding: 10px;
+                    background: linear-gradient(135deg, ${bmiColor}10, ${bmiColor}05);
+                    border-left: 3px solid ${bmiColor};
+                    border-radius: 6px;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #4B5563; font-size: 13px; font-weight: 500;">BMI 指數</span>
+                        <div style="text-align: right;">
+                            <div style="color: ${bmiColor}; font-size: 16px; font-weight: 600;">${bmiValue}</div>
+                            <div style="color: ${bmiColor}; font-size: 11px; margin-top: 2px;">${bmiStatus || '請提供身高體重'}</div>
+                        </div>
+                    </div>
+                </div>
+                `;
 
                 formattedHtml += `
                     <div style="
@@ -1855,111 +1875,28 @@ class InfGoogleLoginComponent extends HTMLElement {
                             gap: 8px;
                             z-index: 1000;
                         ">
-                            <!-- 更新按鈕 -->
+                            <!-- 刪除按鈕 -->
                             <button 
                                 onclick="
-                                    console.log('🔄 點擊更新按鈕，使用者:', '${userKey}');
+                                    console.log('🗑️ 點擊刪除按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}');
                                     
-                                    // 從 localStorage 獲取憑證資料
-                                    const storedCredential = localStorage.getItem('google_auth_credential');
-                                    const storedUserInfo = localStorage.getItem('google_user_info');
-                                    let credentialData = '';
-                                    let subValue = '';
-                                    
-                                    if (storedCredential) {
-                                        credentialData = storedCredential;
+                                    // 顯示確認對話框
+                                    if (confirm('⚠️ 確定要刪除使用者 ${userKey.replace(/'/g, "\\'")} 嗎？\\n\\n此操作無法復原，所有身體資料將被永久刪除。')) {
+                                        deleteUser('${userKey.replace(/'/g, "\\'")}');
                                     }
-                                    
-                                    if (storedUserInfo) {
-                                        try {
-                                            const userInfo = JSON.parse(storedUserInfo);
-                                            subValue = userInfo.sub || '';
-                                        } catch (e) {
-                                            console.warn('解析 localStorage 用戶資訊失敗:', e);
-                                        }
-                                    }
-                                    
-                                    const payload = {
-                                        BodyData: {
-                                            '${userKey}': {
-                                                body: {
-          
-            'HV':'163',
-            'WV':'60',
-            'CC':'97.5_97.5',
-            'DataItem':'0100',
-            'Shoulder':'',
-            'UpChest':'',
-            'DnChest':'',
-            'Waist':'',
-            'Hip':'',
-            'ClothID':'',
-            'Sizes':'',
-            'FitP':'0,0,0,0',
-            'Gender':'M',
-            'FMLpath':'FMLSep',
-            'BUS':'0',
-            'GVID':'',
-            'LGVID':'',
-            'MRID':'INF',
-            'ga_id':'x',
-            'Pattern_Prefer':'0'
-            
-                                                }
-                                            }
-                                        },
-                                        update_bodydata: true,
-                                        credential: credentialData,
-                                        sub: subValue,
-                                        IDTYPE: 'Google'
-                                    };
-                                    
-                                    console.log('📤 發送 payload:', payload);
-                                    
-                                    fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify(payload)
-                                    })
-                                    .then(response => {
-                                        if (!response.ok) {
-                                            throw new Error('HTTP error ' + response.status);
-                                        }
-                                        return response.json();
-                                    })
-                                    .then(data => {
-                                        console.log('✅ Response from API:', data);
-                                        // 成功上傳後更新 credential
-                                        if (data.success) {
-                                            // 觸發更新事件
-                                            document.dispatchEvent(new CustomEvent('bodydata-updated', {
-                                                detail: { 
-                                                    userKey: '${userKey}',
-                                                    data: data,
-                                                    timestamp: new Date().toISOString()
-                                                },
-                                                bubbles: true,
-                                                composed: true
-                                            }));
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error('❌ Error calling API:', error);
-                                    });
                                 "
                                 style="
-                                    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+                                    background: linear-gradient(135deg, #EF4444, #DC2626);
                                     color: white;
                                     padding: 6px 10px;
                                     border-radius: 12px;
                                     font-size: 11px;
                                     font-weight: 600;
                                     display: flex;
+                                    justify-content: center;
                                     align-items: center;
                                     gap: 4px;
-                                    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+                                    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
                                     border: none;
                                     cursor: pointer;
                                     transition: all 0.2s ease;
@@ -1967,17 +1904,17 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     min-width: 50px;
                                     min-height: 24px;
                                 "
-                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(59, 130, 246, 0.4)'"
-                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(59, 130, 246, 0.3)'"
-                                title="更新身體資料"
+                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(239, 68, 68, 0.4)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(239, 68, 68, 0.3)'"
+                                title="刪除使用者"
                             >
-                                更新
+                                刪除
                             </button>
                             
                             ${isDefaultUser ? `
                             <button 
-                                onclick="console.log('🎯 點擊預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
-                                    detail: { userKey: '${userKey}' },
+                                onclick="console.log('🎯 點擊預設按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
+                                    detail: { userKey: '${userKey.replace(/'/g, "\\'")}' },
                                     bubbles: true,
                                     composed: true 
                                 }))"
@@ -2007,8 +1944,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                             </button>
                             ` : `
                             <button 
-                                onclick="console.log('🎯 點擊設為預設按鈕，使用者:', '${userKey}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
-                                    detail: { userKey: '${userKey}' },
+                                onclick="console.log('🎯 點擊設為預設按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
+                                    detail: { userKey: '${userKey.replace(/'/g, "\\'")}' },
                                     bubbles: true,
                                     composed: true 
                                 }))"
@@ -2093,6 +2030,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     </div>
                 `;
 
+
+
                 // 身高資料 - 始終顯示
                 const heightValue = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? `${bodyInfo.HV} cm` : '尚未提供';
                 const heightColor = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
@@ -2104,14 +2043,40 @@ class InfGoogleLoginComponent extends HTMLElement {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                    ">
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="HV"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'HV', '${userKey}', 'body', '${bodyInfo.HV || ''}', '身高', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 2L12 22M8 6L12 2L16 6M8 18L12 22L16 18" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">身高</span>
                         </div>
-                        <span style="color: ${heightColor}; font-size: 14px; font-weight: 600;">${heightValue}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${heightColor}; font-size: 14px; font-weight: 600;" class="field-value">${heightValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 `;
 
@@ -2127,14 +2092,40 @@ class InfGoogleLoginComponent extends HTMLElement {
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                    ">
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="WV"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'WV', '${userKey}', 'body', '${bodyInfo.WV || ''}', '體重', 'kg')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1Z" fill="#F59E0B"/>
-                            </svg>
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">體重</span>
                         </div>
-                        <span style="color: ${weightColor}; font-size: 14px; font-weight: 600;">${weightValue}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${weightColor}; font-size: 14px; font-weight: 600;" class="field-value">${weightValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 `;
 
@@ -2143,11 +2134,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     (bodyInfo.Gender === 'M' ? '男性' : bodyInfo.Gender === 'F' ? '女性' : bodyInfo.Gender) :
                     '尚未提供';
                 const genderColor = bodyInfo.Gender ? '#1E293B' : '#9CA3AF';
-                const genderIcon = bodyInfo.Gender === 'M' ?
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#3B82F6"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#3B82F6"/></svg>' :
-                    bodyInfo.Gender === 'F' ?
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M10.25 13C12.8734 13 15 10.8734 15 8.25C15 5.62665 12.8734 3.5 10.25 3.5C7.62665 3.5 5.5 5.62665 5.5 8.25C5.5 10.8734 7.62665 13 10.25 13Z" fill="#EC4899"/><path d="M10.25 15.5C6.52208 15.5 3.5 18.5221 3.5 22.25H17C17 18.5221 13.9779 15.5 10.25 15.5Z" fill="#EC4899"/></svg>' :
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="#9CA3AF"/><path d="M12 14C7.03125 14 3 18.0312 3 23H21C21 18.0312 16.9688 14 12 14Z" fill="#9CA3AF"/></svg>';
 
                 formattedHtml += `
                     <div style="
@@ -2158,12 +2144,40 @@ class InfGoogleLoginComponent extends HTMLElement {
                         align-items: center;
                         justify-content: space-between;
                         grid-column: 1 / -1;
-                    ">
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="Gender"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'Gender', '${userKey}', 'body', '${bodyInfo.Gender || ''}', '性別', '')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            ${genderIcon}
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">性別</span>
                         </div>
-                        <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;">${genderValue}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;" class="field-value">${genderValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 `;
 
@@ -2180,20 +2194,289 @@ class InfGoogleLoginComponent extends HTMLElement {
                         align-items: center;
                         justify-content: space-between;
                         grid-column: 1 / -1;
-                    ">
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="CC"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'CC', '${userKey}', 'body', '${bodyInfo.CC || ''}', '胸圍', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="10" stroke="#8B5CF6" stroke-width="2" fill="none"/>
-                                <circle cx="12" cy="12" r="3" fill="#8B5CF6"/>
-                            </svg>
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">胸圍</span>
                         </div>
-                        <span style="color: ${ccValueColor}; font-size: 14px; font-weight: 600;">${ccValue}</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${ccValueColor}; font-size: 14px; font-weight: 600;" class="field-value">${ccValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                 `;
 
-                // BMI 資料（如果有身高和體重）
-                if (bmiHtml) {
+                // 肩寬資料 - 始終顯示
+                const shoulderValue = bodyInfo.Shoulder && bodyInfo.Shoulder.trim() !== '' ? `${bodyInfo.Shoulder} cm` : '尚未提供';
+                const shoulderColor = bodyInfo.Shoulder && bodyInfo.Shoulder.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="Shoulder"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'Shoulder', '${userKey}', 'body', '${bodyInfo.Shoulder || ''}', '肩寬', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">肩寬</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${shoulderColor}; font-size: 14px; font-weight: 600;" class="field-value">${shoulderValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 上胸圍資料 - 始終顯示
+                const upChestValue = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? `${bodyInfo.UpChest} cm` : '尚未提供';
+                const upChestColor = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="UpChest"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'UpChest', '${userKey}', 'body', '${bodyInfo.UpChest || ''}', '上胸圍', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">上胸圍</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${upChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${upChestValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 下胸圍資料 - 始終顯示
+                const dnChestValue = bodyInfo.DnChest && bodyInfo.DnChest.trim() !== '' ? `${bodyInfo.DnChest} cm` : '尚未提供';
+                const dnChestColor = bodyInfo.DnChest && bodyInfo.DnChest.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="DnChest"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'DnChest', '${userKey}', 'body', '${bodyInfo.DnChest || ''}', '下胸圍', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">下胸圍</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${dnChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${dnChestValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 腰圍資料 - 始終顯示
+                const waistValue = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? `${bodyInfo.Waist} cm` : '尚未提供';
+                const waistColor = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="Waist"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'Waist', '${userKey}', 'body', '${bodyInfo.Waist || ''}', '腰圍', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">腰圍</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${waistColor}; font-size: 14px; font-weight: 600;" class="field-value">${waistValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // 臀圍資料 - 始終顯示
+                const hipValue = bodyInfo.Hip && bodyInfo.Hip.trim() !== '' ? `${bodyInfo.Hip} cm` : '尚未提供';
+                const hipColor = bodyInfo.Hip && bodyInfo.Hip.trim() !== '' ? '#1E293B' : '#9CA3AF';
+
+                formattedHtml += `
+                    <div style="
+                        background: #F1F5F9;
+                        border-radius: 8px;
+                        padding: 12px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        position: relative;
+                        transition: all 0.2s ease;
+                        cursor: pointer;
+                    " 
+                    class="editable-field"
+                    data-field="Hip"
+                    data-user="${userKey}"
+                    data-type="body"
+                    onclick="editField(this, 'Hip', '${userKey}', 'body', '${bodyInfo.Hip || ''}', '臀圍', 'cm')"
+                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    >
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #475569; font-size: 13px; font-weight: 500;">臀圍</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: ${hipColor}; font-size: 14px; font-weight: 600;" class="field-value">${hipValue}</span>
+                            <div class="edit-icon" style="
+                                opacity: 1;
+                                transition: all 0.2s ease;
+                                cursor: pointer;
+                                padding: 4px;
+                                border-radius: 4px;
+                                background: rgba(107, 114, 128, 0.1);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // BMI 資料（始終顯示）
                     formattedHtml += `
                         <div style="
                             grid-column: 1 / -1;
@@ -2201,7 +2484,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             ${bmiHtml}
                         </div>
                     `;
-                }
 
                 // 鞋子資料（整合到身體資料網格中）
                 if (shoesInfo && typeof shoesInfo === 'object') {
@@ -2235,9 +2517,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             justify-content: space-between;
                         ">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 2L12 22M8 6L12 2L16 6M8 18L12 22L16 18" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
                                 <span style="color: #475569; font-size: 13px; font-weight: 500;">裸足長</span>
                             </div>
                             <span style="color: ${footLengthColor}; font-size: 14px; font-weight: 600;">${footLengthValue}</span>
@@ -2258,9 +2537,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             justify-content: space-between;
                         ">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1Z" fill="#F59E0B"/>
-                                </svg>
                                 <span style="color: #475569; font-size: 13px; font-weight: 500;">裸足寬</span>
                             </div>
                             <span style="color: ${footWidthColor}; font-size: 14px; font-weight: 600;">${footWidthValue}</span>
@@ -2282,10 +2558,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             grid-column: 1 / -1;
                         ">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                    <circle cx="12" cy="12" r="10" stroke="#8B5CF6" stroke-width="2" fill="none"/>
-                                    <circle cx="12" cy="12" r="3" fill="#8B5CF6"/>
-                                </svg>
                                 <span style="color: #475569; font-size: 13px; font-weight: 500;">腳圍</span>
                             </div>
                             <span style="color: ${footCircumColor}; font-size: 14px; font-weight: 600;">${footCircumValue}</span>
@@ -2307,10 +2579,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             grid-column: 1 / -1;
                         ">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#8B5CF6"/>
-                                    <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6z" fill="#8B5CF6"/>
-                                </svg>
                                 <span style="color: #475569; font-size: 13px; font-weight: 500;">小腿圍</span>
                             </div>
                             <span style="color: ${calfCircumColor}; font-size: 14px; font-weight: 600;">${calfCircumValue}</span>
@@ -2569,14 +2837,15 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 直接觸發 Google 登入（最後手段）
     triggerDirectGoogleSignIn() {
         try {
-            // 構建 OAuth2 授權 URL
+            // 構建 OAuth2 授權 URL，請求 refresh token
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
                 `client_id=${encodeURIComponent(this.clientId)}` +
                 `&redirect_uri=${encodeURIComponent(window.location.origin)}` +
-                `&response_type=token` +
+                `&response_type=code` + // 使用 code 而不是 token，這樣可以獲取 refresh token
                 `&scope=${encodeURIComponent('openid email profile')}` +
                 `&state=${encodeURIComponent('google_signin')}` +
-                `&prompt=select_account`;
+                `&prompt=select_account` +
+                `&access_type=offline`; // 請求 refresh token
 
             // 在新視窗中打開授權頁面
             const authWindow = window.open(authUrl, 'google_auth',
@@ -2587,12 +2856,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     if (authWindow.closed) {
                         clearInterval(checkAuthResult);
-                        // 檢查 URL 中是否有 access_token
-                        const urlParams = new URLSearchParams(window.location.hash.substring(1));
-                        const accessToken = urlParams.get('access_token');
-                        if (accessToken) {
-                            // 處理授權成功
-                            this.handleAuthSuccess(accessToken);
+                        // 檢查 URL 中是否有 authorization code
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const code = urlParams.get('code');
+                        if (code) {
+                            // 使用 authorization code 交換 access token 和 refresh token
+                            this.exchangeCodeForTokens(code);
                         }
                     }
                 } catch (error) {
@@ -2608,9 +2877,44 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
-    // 處理 OAuth2 授權成功
-    async handleAuthSuccess(accessToken) {
+    // 使用 authorization code 交換 tokens
+    async exchangeCodeForTokens(code) {
         try {
+            const response = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: this.clientId,
+                    client_secret: 'YOUR_GOOGLE_CLIENT_SECRET', // 需要替換為實際的 client secret
+                    code: code,
+                    grant_type: 'authorization_code',
+                    redirect_uri: window.location.origin,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Token 交換失敗: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // 處理授權成功，包含 refresh token
+            await this.handleAuthSuccess(data.access_token, data.refresh_token);
+            
+        } catch (error) {
+            console.error('Token 交換失敗:', error);
+            alert('登入失敗，請重試。');
+        }
+    }
+
+    // 處理 OAuth2 授權成功
+    async handleAuthSuccess(accessToken, refreshToken = null) {
+        try {
+            // 保存 tokens
+            this.saveTokens(accessToken, refreshToken);
+
             // 使用 access token 獲取用戶資訊
             const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
                 headers: {
@@ -2669,6 +2973,93 @@ class InfGoogleLoginComponent extends HTMLElement {
             console.error('處理 OAuth2 授權失敗:', error);
             alert('登入成功但無法獲取用戶資訊，請重試。');
         }
+    }
+
+    // 保存 tokens
+    saveTokens(accessToken, refreshToken = null) {
+        if (accessToken) {
+            localStorage.setItem('google_access_token', accessToken);
+            
+            // 如果有 refresh token，也保存它
+            if (refreshToken) {
+                localStorage.setItem('google_refresh_token', refreshToken);
+            }
+            
+            // 保存 token 過期時間（預設一小時後）
+            const expiresAt = Date.now() + (60 * 60 * 1000); // 一小時
+            localStorage.setItem('google_token_expires_at', expiresAt.toString());
+        }
+    }
+
+    // 獲取有效的 access token
+    async getValidAccessToken() {
+        const accessToken = localStorage.getItem('google_access_token');
+        const refreshToken = localStorage.getItem('google_refresh_token');
+        const expiresAt = localStorage.getItem('google_token_expires_at');
+
+        // 如果沒有 access token，返回 null
+        if (!accessToken) {
+            return null;
+        }
+
+        // 檢查 token 是否即將過期（提前 5 分鐘刷新）
+        const now = Date.now();
+        const expiresAtTime = parseInt(expiresAt || '0');
+        const shouldRefresh = now >= (expiresAtTime - (5 * 60 * 1000)); // 提前 5 分鐘
+
+        if (shouldRefresh && refreshToken) {
+            try {
+                console.log('🔄 Token 即將過期，正在刷新...');
+                const newAccessToken = await this.refreshAccessToken(refreshToken);
+                return newAccessToken;
+            } catch (error) {
+                console.error('❌ 刷新 token 失敗:', error);
+                // 如果刷新失敗，清除所有 tokens
+                this.clearTokens();
+                return null;
+            }
+        }
+
+        return accessToken;
+    }
+
+    // 刷新 access token
+    async refreshAccessToken(refreshToken) {
+        try {
+            const response = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: 'YOUR_GOOGLE_CLIENT_ID', // 需要替換為實際的 client ID
+                    client_secret: 'YOUR_GOOGLE_CLIENT_SECRET', // 需要替換為實際的 client secret
+                    refresh_token: refreshToken,
+                    grant_type: 'refresh_token',
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`刷新 token 失敗: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // 保存新的 access token
+            this.saveTokens(data.access_token, refreshToken);
+            
+            return data.access_token;
+        } catch (error) {
+            console.error('刷新 access token 失敗:', error);
+            throw error;
+        }
+    }
+
+    // 清除所有 tokens
+    clearTokens() {
+        localStorage.removeItem('google_access_token');
+        localStorage.removeItem('google_refresh_token');
+        localStorage.removeItem('google_token_expires_at');
     }
 
     // 處理 localStorage 變更
@@ -3408,6 +3799,13 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 調用 infFITS API
     async callInfFitsAPI(credential) {
         try {
+            // 如果是 OAuth2 credential，先確保 token 有效
+            if (credential && credential.startsWith('oauth2_')) {
+                const accessToken = await this.getValidAccessToken();
+                if (accessToken) {
+                    credential = `oauth2_${accessToken}`;
+                }
+            }
 
             const payload = {
                 credential: credential,
@@ -3423,11 +3821,27 @@ class InfGoogleLoginComponent extends HTMLElement {
             });
 
             if (!response.ok) {
-                // 🔐 401 錯誤處理：憑證失效，自動登出
+                // 🔐 401 錯誤處理：嘗試刷新 token
                 if (response.status === 401) {
-                    console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
-
-                    // 執行登出操作
+                    console.warn('🔐 API 回應 401 - 嘗試刷新 token...');
+                    
+                    const refreshToken = localStorage.getItem('google_refresh_token');
+                    if (refreshToken) {
+                        try {
+                            // 嘗試刷新 token
+                            const newAccessToken = await this.refreshAccessToken(refreshToken);
+                            if (newAccessToken) {
+                                // 使用新的 token 重新調用 API
+                                const newCredential = `oauth2_${newAccessToken}`;
+                                return await this.callInfFitsAPI(newCredential);
+                            }
+                        } catch (refreshError) {
+                            console.error('❌ 刷新 token 失敗:', refreshError);
+                        }
+                    }
+                    
+                    // 如果刷新失敗，執行登出操作
+                    console.warn('🔐 Token 刷新失敗，執行自動登出');
                     this.signOut();
 
                     // 觸發憑證失效事件
@@ -3448,7 +3862,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
             const data = await response.json();
-
             // 保存 API 回應數據
             this.saveApiResponse(data);
 
@@ -3488,6 +3901,26 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
+    // 靜默保存 API 回應數據（不觸發 storage 事件）
+    saveApiResponseSilently(data) {
+        try {
+            localStorage.setItem('inffits_api_response', JSON.stringify(data));
+            this.apiResponse = data;
+
+            // 只觸發 localStorage 更新事件，不觸發 storage 事件
+            this.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    key: 'inffits_api_response',
+                    value: data
+                },
+                bubbles: true,
+                composed: true
+            }));
+        } catch (error) {
+            console.warn('靜默保存 API 回應數據失敗:', error);
+        }
+    }
+
     // 獲取 API 回應數據
     getApiResponse() {
         if (!this.apiResponse) {
@@ -3499,7 +3932,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     console.warn('解析 API 回應數據失敗:', error);
                     this.apiResponse = null;
                 }
-            } else {}
+            }
         }
         return this.apiResponse;
     }
@@ -3539,7 +3972,18 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         }
 
+        // 清除所有 tokens 和憑證
+        this.clearTokens();
         this.clearCredential();
+
+        // 重置狀態
+        this.credential = null;
+        this.isAuthenticated = false;
+        this.userInfo = null;
+        this.apiResponse = null;
+
+        // 更新頭像顯示
+        this.updateAvatar();
 
         // 觸發登出事件
         this.dispatchEvent(new CustomEvent('google-logout', {
@@ -3620,8 +4064,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             const data = await response.json();
             console.log('✅ 預設使用者更新成功:', data);
 
-            // 保存新的 API 回應
-            this.saveApiResponse(data);
+            // 保存新的 API 回應（不觸發額外的 storage 事件）
+            this.saveApiResponseSilently(data);
 
             // 更新顯示
             this.updateBodyDataDisplay(data);
@@ -3635,14 +4079,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 bubbles: true,
                 composed: true
-            }));
-
-            // 觸發 localStorage 更新事件
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: 'inffits_api_response',
-                newValue: JSON.stringify(data),
-                oldValue: localStorage.getItem('inffits_api_response'),
-                storageArea: localStorage
             }));
 
         } catch (error) {
@@ -3699,6 +4135,212 @@ class InfGoogleLoginComponent extends HTMLElement {
                 notification.parentNode.removeChild(notification);
             }
         }, 3000);
+    }
+}
+
+// 更新編輯圖標的 onclick 屬性
+function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit) {
+    if (!fieldContainer) {
+        console.log('❌ fieldContainer 為空，無法更新 onclick');
+        return;
+    }
+    
+    // 根據欄位類型構建新的 onclick 屬性
+    let newOnclick = '';
+    
+    if (fieldName === 'HV') {
+        newOnclick = `editField(this, 'HV', '${userKey}', 'body', '${newValue}', '身高', 'cm')`;
+    } else if (fieldName === 'WV') {
+        newOnclick = `editField(this, 'WV', '${userKey}', 'body', '${newValue}', '體重', 'kg')`;
+    } else if (fieldName === 'Gender') {
+        newOnclick = `editField(this, 'Gender', '${userKey}', 'body', '${newValue}', '性別', '')`;
+    } else if (fieldName === 'CC') {
+        newOnclick = `editField(this, 'CC', '${userKey}', 'body', '${newValue}', '胸圍', 'cm')`;
+    }
+    
+    if (newOnclick) {
+        // 更新欄位容器的 onclick 屬性
+        fieldContainer.setAttribute('onclick', newOnclick);
+        console.log(`✅ 更新 ${fieldLabel} 欄位的 onclick 屬性：${newOnclick}`);
+        
+        // 同時更新編輯圖標的 onclick 屬性（如果有的話）
+        const editIcon = fieldContainer.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.setAttribute('onclick', newOnclick);
+            console.log(`✅ 更新編輯圖標的 onclick 屬性`);
+        }
+    }
+}
+
+// 更新 BMI 顯示
+function updateBMI(userKey) {
+    // 獲取當前 API 回應
+    const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
+    
+    // 獲取指定用戶的身體資料
+    const userBodyData = currentApiResponse.BodyData[userKey];
+    if (!userBodyData || !userBodyData.body) {
+        console.log(`❌ 用戶 ${userKey} 沒有身體資料`);
+        return;
+    }
+    
+    const bodyInfo = userBodyData.body;
+    
+    // 設定預設值
+    let bmiValue = '尚未提供';
+    let bmiStatus = '請提供身高體重';
+    let bmiColor = '#9CA3AF'; // 預設灰色
+    
+    // 檢查是否有身高和體重
+    if (bodyInfo.HV && bodyInfo.WV) {
+        const height = parseFloat(bodyInfo.HV);
+        const weight = parseFloat(bodyInfo.WV);
+        
+        if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
+            // 計算 BMI
+            const bmi = (weight / (height * height) * 10000).toFixed(1); // 身高轉換為米
+            bmiValue = bmi;
+            
+            // 確定 BMI 狀態和顏色
+            if (bmi < 18.5) {
+                bmiStatus = '體重過輕';
+                bmiColor = '#3B82F6';
+            } else if (bmi < 24) {
+                bmiStatus = '正常範圍';
+                bmiColor = '#10B981';
+            } else if (bmi < 27) {
+                bmiStatus = '體重過重';
+                bmiColor = '#F59E0B';
+            } else {
+                bmiStatus = '肥胖';
+                bmiColor = '#EF4444';
+            }
+            
+            console.log(`🔍 計算結果：身高=${height}cm, 體重=${weight}kg, BMI=${bmiValue}`);
+        } else {
+            console.log(`❌ 身高或體重數據無效：身高=${height}, 體重=${weight}`);
+        }
+    } else {
+        console.log(`❌ 用戶 ${userKey} 缺少身高或體重數據，顯示預設值`);
+    }
+    
+    // 查找 BMI 顯示元素並更新（無論是否有數據都執行）
+            console.log(`🔍 查找用戶 ${userKey} 的 BMI 顯示`);
+            
+            // 嘗試多種查找方式
+            let bmiValueElements = [];
+            
+            // 方式1：通過 style 屬性查找（在用戶容器內）
+            bmiValueElements = document.querySelectorAll(`[data-user="${userKey}"] div[style*="BMI 指數"]`);
+            console.log(`🔍 方式1 - 通過 style 屬性查找（用戶容器內）：找到 ${bmiValueElements.length} 個元素`);
+            
+            // 方式2：通過文本內容查找（在用戶容器內）
+            if (bmiValueElements.length === 0) {
+                const allDivs = document.querySelectorAll(`[data-user="${userKey}"] div`);
+                bmiValueElements = Array.from(allDivs).filter(div => 
+                    div.textContent && div.textContent.includes('BMI 指數')
+                );
+                console.log(`🔍 方式2 - 通過文本內容查找（用戶容器內）：找到 ${bmiValueElements.length} 個元素`);
+            }
+            
+            // 方式3：通過父容器查找（在用戶容器內）
+            if (bmiValueElements.length === 0) {
+                const userContainer = document.querySelector(`[data-user="${userKey}"]`);
+                if (userContainer) {
+                    const bmiContainer = userContainer.querySelector('div[style*="linear-gradient"]');
+                    if (bmiContainer) {
+                        bmiValueElements = [bmiContainer];
+                        console.log(`🔍 方式3 - 通過父容器查找（用戶容器內）：找到 ${bmiValueElements.length} 個元素`);
+                    }
+                }
+            }
+            
+            // 方式4：通過外層容器查找（BMI 可能在用戶容器外）
+            if (bmiValueElements.length === 0) {
+                console.log(`🔍 方式4 - 通過外層容器查找`);
+                
+                // 查找包含當前用戶的所有父容器
+                const userContainer = document.querySelector(`[data-user="${userKey}"]`);
+                if (userContainer) {
+                    // 向上查找包含 BMI 的容器
+                    let parent = userContainer.parentElement;
+                    while (parent && parent !== document.body) {
+                        console.log(`🔍 檢查父容器:`, parent);
+                        
+                        // 在父容器中查找 BMI 元素
+                        const bmiInParent = parent.querySelectorAll('div[style*="BMI 指數"]');
+                        if (bmiInParent.length > 0) {
+                            bmiValueElements = Array.from(bmiInParent);
+                            console.log(`🔍 在父容器中找到 ${bmiValueElements.length} 個 BMI 元素`);
+                            break;
+                        }
+                        
+                        // 通過文本內容查找
+                        const bmiByText = Array.from(parent.querySelectorAll('div')).filter(div => 
+                            div.textContent && div.textContent.includes('BMI 指數')
+                        );
+                        if (bmiByText.length > 0) {
+                            bmiValueElements = bmiByText;
+                            console.log(`🔍 在父容器中通過文本找到 ${bmiValueElements.length} 個 BMI 元素`);
+                            break;
+                        }
+                        
+                        parent = parent.parentElement;
+                    }
+                }
+            }
+            
+            if (bmiValueElements.length > 0) {
+                console.log(`✅ 找到 ${bmiValueElements.length} 個 BMI 顯示元素`);
+                
+                bmiValueElements.forEach((bmiElement, index) => {
+                    console.log(`🔍 處理第 ${index + 1} 個 BMI 元素:`, bmiElement);
+                    
+                    // 查找 BMI 值和狀態元素
+                    let bmiValueElement = bmiElement.querySelector('div[style*="font-size: 16px"]');
+                    let bmiStatusElement = bmiElement.querySelector('div[style*="font-size: 11px"]');
+                    
+                    // 如果沒找到，嘗試其他方式
+                    if (!bmiValueElement) {
+                        bmiValueElement = bmiElement.querySelector('div[style*="font-size: 16px; font-weight: 600"]');
+                    }
+                    if (!bmiStatusElement) {
+                        bmiStatusElement = bmiElement.querySelector('div[style*="font-size: 11px; margin-top: 2px"]');
+                    }
+                    
+                    console.log(`🔍 BMI 值元素:`, bmiValueElement);
+                    console.log(`🔍 BMI 狀態元素:`, bmiStatusElement);
+                    
+                    if (bmiValueElement) {
+                        bmiValueElement.textContent = bmiValue;
+                        bmiValueElement.style.color = bmiColor;
+                        console.log(`✅ 更新 BMI 值為 ${bmiValue}`);
+                    } else {
+                        console.log(`❌ 未找到 BMI 值元素`);
+                    }
+                    
+                    if (bmiStatusElement) {
+                        bmiStatusElement.textContent = bmiStatus;
+                        bmiStatusElement.style.color = bmiColor;
+                        console.log(`✅ 更新 BMI 狀態為 ${bmiStatus}`);
+                    } else {
+                        console.log(`❌ 未找到 BMI 狀態元素`);
+                    }
+                    
+                    // 更新父容器的背景色
+                    const parentContainer = bmiElement.closest('div[style*="linear-gradient"]');
+                    if (parentContainer) {
+                        parentContainer.style.background = `linear-gradient(135deg, ${bmiColor}10, ${bmiColor}05)`;
+                        console.log(`✅ 更新 BMI 容器背景色`);
+                    } else {
+                        console.log(`❌ 未找到 BMI 容器`);
+                    }
+                });
+                
+                console.log(`✅ BMI 更新完成：${bmiValue} - ${bmiStatus}`);
+            } else {
+                console.log(`❌ 未找到用戶 ${userKey} 的 BMI 顯示元素`);
+                console.log(`🔍 可用的用戶容器:`, document.querySelectorAll('[data-user]'));
     }
 }
 
@@ -4245,11 +4887,11 @@ function createGoogleLoginComponents(configs = [{
         const isResetButton = target && (
             target.id === 'startover' ||
             target.closest('#startover') ||
-            target.textContent.includes('重新輸入') ||
-            target.textContent.includes('重新開始') ||
-            target.textContent.includes('重新') ||
-            target.className.includes('reset') ||
-            target.className.includes('restart')
+            (target.textContent && target.textContent.includes('重新輸入')) ||
+            (target.textContent && target.textContent.includes('重新開始')) ||
+            (target.textContent && target.textContent.includes('重新')) ||
+            (target.className && typeof target.className === 'string' && target.className.includes('reset')) ||
+            (target.className && typeof target.className === 'string' && target.className.includes('restart'))
         );
 
         if (isResetButton) {
@@ -4282,3 +4924,680 @@ function createGoogleLoginComponents(configs = [{
 }
 
 // 不自動執行，等待外層指定目標 ID
+
+// 編輯欄位功能
+function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLabel, unit) {
+    // 獲取欄位容器
+    const fieldContainer = editIcon.closest('.editable-field');
+    const valueElement = fieldContainer.querySelector('.field-value');
+    
+    // 檢查是否已經在編輯中
+    const existingInput = fieldContainer.querySelector('input, select');
+    if (existingInput) {
+        console.log('欄位正在編輯中，忽略重複點擊');
+        return;
+    }
+    
+    let inputElement;
+    
+    // 根據欄位類型創建不同的輸入元素
+    if (fieldName === 'Gender') {
+        // 性別欄位使用下拉選單
+        inputElement = document.createElement('select');
+        inputElement.style.cssText = `
+            width: 100px;
+            padding: 6px 8px;
+            border: 2px solid #3B82F6;
+            border-radius: 6px;
+            font-size: 14px;
+        font-weight: 600;
+        color: #1E293B;
+            background: white;
+            outline: none;
+        transition: all 0.2s ease;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            cursor: pointer;
+        `;
+        
+        // 添加選項
+        const options = [
+            { value: '', label: '請選擇' },
+            { value: 'M', label: '男性' },
+            { value: 'F', label: '女性' }
+        ];
+        
+        options.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.label;
+            if (option.value === currentValue) {
+                optionElement.selected = true;
+            }
+            inputElement.appendChild(optionElement);
+        });
+        
+    } else {
+        // 其他欄位使用輸入框
+        inputElement = document.createElement('input');
+        inputElement.type = 'number';
+        inputElement.value = currentValue;
+        inputElement.style.cssText = `
+            width: 80px;
+            padding: 6px 8px;
+            border: 2px solid #3B82F6;
+            border-radius: 6px;
+        font-size: 14px;
+            font-weight: 600;
+            color: #1E293B;
+            background: white;
+            text-align: center;
+            outline: none;
+        transition: all 0.2s ease;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        `;
+        
+        // 設置輸入框的 min 和 max 值
+        if (fieldName === 'HV') {
+            inputElement.min = '100';
+            inputElement.max = '250';
+            inputElement.step = '0.1';
+            // 添加數字輸入限制
+            inputElement.pattern = '[0-9]*[.]?[0-9]+';
+            inputElement.inputMode = 'decimal';
+        } else if (fieldName === 'WV') {
+            inputElement.min = '20';
+            inputElement.max = '200';
+            inputElement.step = '0.1';
+            // 添加數字輸入限制
+            inputElement.pattern = '[0-9]*[.]?[0-9]+';
+            inputElement.inputMode = 'decimal';
+        } else if (fieldName === 'CC') {
+            inputElement.type = 'text';
+            inputElement.placeholder = '例如: 97.5_97.5';
+        }
+    }
+    
+    // 隱藏原始值並顯示輸入元素
+    valueElement.style.display = 'none';
+    valueElement.parentNode.insertBefore(inputElement, valueElement);
+    
+    // 更新編輯圖標狀態（顯示為編輯中）
+    if (editIcon) {
+        editIcon.style.setProperty('background', 'rgba(16, 185, 129, 0.2)', 'important');
+        editIcon.style.cursor = 'not-allowed';
+        editIcon.title = '正在編輯中...';
+    }
+    
+    // 聚焦輸入元素
+    inputElement.focus();
+    if (inputElement.tagName === 'INPUT') {
+        inputElement.select();
+    }
+    
+    // 處理輸入元素的 blur 事件（失去焦點時保存）
+    let blurTimeout;
+    let isBlurHandled = false;
+    
+    inputElement.onblur = () => {
+        // 如果已經被點擊外部處理，則不執行
+        if (isBlurHandled) {
+            return;
+        }
+        
+        // 清除之前的 timeout
+        if (blurTimeout) {
+            clearTimeout(blurTimeout);
+        }
+        
+        // 延遲執行，避免與點擊事件衝突
+        blurTimeout = setTimeout(() => {
+            saveFieldValue(inputElement, fieldName, userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+        }, 200);
+    };
+    
+    // 處理 Enter 鍵和數字輸入限制
+    inputElement.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            if (blurTimeout) {
+                clearTimeout(blurTimeout);
+            }
+            inputElement.blur();
+        } else if (e.key === 'Escape') {
+            // 按 ESC 取消編輯
+            if (blurTimeout) {
+                clearTimeout(blurTimeout);
+            }
+            cancelEdit(inputElement, valueElement);
+        }
+        
+        // 身高和體重欄位只允許數字、小數點、退格鍵、刪除鍵、方向鍵等
+        if (fieldName === 'HV' || fieldName === 'WV') {
+            const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Enter', 'Escape'];
+            const isNumber = /[0-9]/.test(e.key);
+            const isDecimal = e.key === '.';
+            const isAllowedKey = allowedKeys.includes(e.key);
+            
+            // 如果輸入的不是數字、小數點或允許的按鍵，則阻止輸入
+            if (!isNumber && !isDecimal && !isAllowedKey) {
+                e.preventDefault();
+                return;
+            }
+            
+            // 防止多個小數點
+            if (isDecimal && inputElement.value.includes('.')) {
+                e.preventDefault();
+                return;
+            }
+        }
+    };
+    
+    // 點擊外部保存編輯
+    const clickOutsideHandler = (e) => {
+        if (!fieldContainer.contains(e.target)) {
+            if (blurTimeout) {
+                clearTimeout(blurTimeout);
+            }
+            // 標記 blur 事件已被處理，避免重複保存
+            isBlurHandled = true;
+            // 直接保存，不觸發 blur 事件
+            saveFieldValue(inputElement, fieldName, userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    // 延遲添加點擊外部事件，避免立即觸發
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 100);
+    
+    // 添加 input 事件監聽器，進一步過濾輸入內容
+    if (fieldName === 'HV' || fieldName === 'WV') {
+        inputElement.addEventListener('input', (e) => {
+            let value = e.target.value;
+            
+            // 只保留數字和小數點
+            value = value.replace(/[^0-9.]/g, '');
+            
+            // 防止多個小數點
+            const decimalCount = (value.match(/\./g) || []).length;
+            if (decimalCount > 1) {
+                value = value.replace(/\.+$/, ''); // 移除末尾的多餘小數點
+            }
+            
+            // 限制小數位數為1位
+            if (value.includes('.')) {
+                const parts = value.split('.');
+                if (parts[1].length > 1) {
+                    value = parts[0] + '.' + parts[1].substring(0, 1);
+                }
+            }
+            
+            // 更新輸入框的值
+            e.target.value = value;
+        });
+    }
+    
+    // 防止點擊輸入框本身觸發 blur 事件
+    inputElement.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+    });
+    
+    inputElement.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+// 保存欄位值
+async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, unit, valueElement, fieldContainer) {
+    const newValue = input.value.trim();
+    let originalValue = valueElement.textContent.replace(` ${unit}`, '').replace('尚未提供', '');
+    
+    // 性別欄位的特殊處理：將顯示值轉換為存儲值進行比較
+    if (fieldName === 'Gender') {
+        if (originalValue === '男性') {
+            originalValue = 'M';
+        } else if (originalValue === '女性') {
+            originalValue = 'F';
+        }
+    }
+    
+    console.log(`🔍 值比較：新值="${newValue}", 原始值="${originalValue}"`);
+    
+    // 如果值沒有改變，直接取消編輯
+    if (newValue === originalValue || (newValue === '' && originalValue === '')) {
+        console.log('🔍 值未改變，直接取消編輯');
+        cancelEdit(input, valueElement);
+        return;
+    }
+    
+    // 驗證輸入值
+    if (!validateFieldValue(fieldName, newValue)) {
+        showNotification(`❌ ${fieldLabel}格式不正確，請重新輸入`, 'error');
+        input.focus();
+        return;
+    }
+    
+    try {
+        // 顯示保存中狀態
+        input.style.borderColor = '#10B981';
+        input.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)';
+        
+        // 準備更新 payload
+        const payload = await prepareUpdatePayload(fieldName, userKey, dataType, newValue);
+
+    // 發送 API 請求
+        const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ 欄位更新成功:', data);
+        
+        // 更新顯示值
+        let displayValue, displayColor;
+        
+        if (fieldName === 'Gender') {
+            if (newValue === 'M') {
+                displayValue = '男性';
+                displayColor = '#1E293B';
+            } else if (newValue === 'F') {
+                displayValue = '女性';
+                displayColor = '#1E293B';
+            } else {
+                displayValue = '尚未提供';
+                displayColor = '#9CA3AF';
+            }
+        } else {
+            displayValue = newValue ? `${newValue} ${unit}` : '尚未提供';
+            displayColor = newValue ? '#1E293B' : '#9CA3AF';
+        }
+        
+        valueElement.textContent = displayValue;
+        valueElement.style.color = displayColor;
+        
+        // 保存新的 API 回應到 localStorage
+        localStorage.setItem('inffits_api_response', JSON.stringify(data));
+        
+        // 顯示成功訊息
+        showNotification(`✅ ${fieldLabel}更新成功！`, 'success');
+        
+        // 觸發更新事件
+        document.dispatchEvent(new CustomEvent('bodydata-updated', {
+            detail: { 
+                userKey: userKey,
+                fieldName: fieldName,
+                newValue: newValue,
+                data: data,
+                timestamp: new Date().toISOString()
+            },
+            bubbles: true,
+            composed: true
+        }));
+
+        // 如果更新的是身高、體重或性別，則更新 BMI
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
+            console.log('🔍 更新 BMI 顯示');
+            // 延遲執行 BMI 更新，確保 DOM 完全更新
+        setTimeout(() => {
+                updateBMI(userKey);
+            }, 100);
+        }
+        
+        // 更新編輯圖標的 onclick 屬性，使其使用新的值
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
+            console.log('🔍 更新編輯圖標的 onclick 屬性');
+            updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit);
+        }
+
+        // 先恢復編輯圖標狀態和欄位容器狀態
+        console.log('🔍 檢查 fieldContainer:', fieldContainer);
+        if (fieldContainer) {
+            // 恢復欄位容器狀態
+            fieldContainer.style.setProperty('background', '#F1F5F9', 'important');
+            fieldContainer.style.setProperty('cursor', 'pointer', 'important');
+            fieldContainer.removeAttribute('title');
+            
+            const editIcon = fieldContainer.querySelector('.edit-icon');
+            console.log('🔍 找到的 editIcon:', editIcon);
+            if (editIcon) {
+                console.log('🔍 編輯圖標當前樣式:', editIcon.style.cssText);
+                console.log('🔍 編輯圖標當前背景色:', editIcon.style.background);
+                console.log('🔍 直接恢復編輯圖標狀態，背景色從', editIcon.style.background, '變為 rgba(59, 130, 246, 0.1)');
+                editIcon.style.setProperty('background', 'rgba(59, 130, 246, 0.1)', 'important');
+                editIcon.style.cursor = 'pointer';
+                editIcon.title = '點擊編輯';
+                // 清除 hover 事件，防止覆蓋背景色
+                editIcon.onmouseenter = null;
+                editIcon.onmouseleave = null;
+                console.log('🔍 設置後的背景色:', editIcon.style.background);
+            } else {
+                console.log('❌ 沒有找到 editIcon');
+            }
+        } else {
+            console.log('❌ fieldContainer 為空');
+        }
+        
+        // 恢復顯示
+        console.log('🔍 準備調用 cancelEdit，參數檢查:');
+        console.log('  - input:', input);
+        console.log('  - valueElement:', valueElement);
+        console.log('  - valueElement.parentNode:', valueElement.parentNode);
+        console.log('  - valueElement.closest(".editable-field"):', valueElement.closest('.editable-field'));
+        console.log('  - fieldContainer:', fieldContainer);
+        cancelEdit(input, valueElement);
+        
+    } catch (error) {
+        console.error('❌ 欄位更新失敗:', error);
+        showNotification(`❌ ${fieldLabel}更新失敗，請稍後再試`, 'error');
+        
+        // 先恢復編輯圖標狀態和欄位容器狀態
+        if (fieldContainer) {
+            // 恢復欄位容器狀態
+            fieldContainer.style.setProperty('background', '#F1F5F9', 'important');
+            fieldContainer.style.setProperty('cursor', 'pointer', 'important');
+            fieldContainer.removeAttribute('title');
+            
+            const editIcon = fieldContainer.querySelector('.edit-icon');
+            if (editIcon) {
+                console.log('🔍 錯誤處理中直接恢復編輯圖標狀態');
+                editIcon.style.setProperty('background', 'rgba(59, 130, 246, 0.1)', 'important');
+                editIcon.style.cursor = 'pointer';
+                editIcon.title = '點擊編輯';
+                // 清除 hover 事件，防止覆蓋背景色
+                editIcon.onmouseenter = null;
+                editIcon.onmouseleave = null;
+            }
+        }
+        
+        // 錯誤處理中也需要更新 onclick 屬性，使用原始值
+        console.log('🔍 錯誤處理中更新 onclick 屬性');
+        updateEditFieldOnclick(fieldContainer, fieldName, userKey, originalValue, fieldLabel, unit);
+        
+        // 恢復顯示
+        console.log('🔍 錯誤處理中調用 cancelEdit，參數檢查:');
+        console.log('  - input:', input);
+        console.log('  - valueElement:', valueElement);
+        console.log('  - valueElement.parentNode:', valueElement.parentNode);
+        cancelEdit(input, valueElement);
+    }
+}
+
+// 驗證欄位值
+function validateFieldValue(fieldName, value) {
+    if (!value) return true; // 空值允許
+    
+    if (fieldName === 'HV') {
+        const height = parseFloat(value);
+        return !isNaN(height) && height >= 100 && height <= 250;
+    } else if (fieldName === 'WV') {
+        const weight = parseFloat(value);
+        return !isNaN(weight) && weight >= 20 && weight <= 200;
+    } else if (fieldName === 'CC') {
+        // 胸圍格式：數字_數字 或 純數字
+        return /^(\d+(\.\d+)?)(_\d+(\.\d+)?)?$/.test(value);
+    }
+    
+    return true;
+}
+
+// 準備更新 payload
+async function prepareUpdatePayload(fieldName, userKey, dataType, newValue) {
+    // 獲取當前 API 回應
+    const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
+    
+    // 構建新的 BodyData
+    const newBodyData = { ...currentApiResponse.BodyData };
+    
+    if (dataType === 'body') {
+        if (!newBodyData[userKey]) {
+            newBodyData[userKey] = {};
+        }
+        if (!newBodyData[userKey].body) {
+            newBodyData[userKey].body = {};
+        }
+        newBodyData[userKey].body[fieldName] = newValue;
+    }
+    
+    // 獲取憑證
+    const credential = localStorage.getItem('google_auth_credential');
+    if (!credential) {
+        throw new Error('沒有可用的憑證');
+    }
+    
+    return {
+        BodyData: newBodyData,
+        update_bodydata: true,
+        credential: credential,
+        sub: (() => {
+            try {
+                const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
+                return userInfo.sub || '';
+            } catch (e) {
+                return '';
+            }
+        })(),
+        IDTYPE: 'Google'
+    };
+}
+
+// 取消編輯
+function cancelEdit(inputElement, valueElement) {
+    // 移除輸入元素
+    if (inputElement.parentNode) {
+        inputElement.parentNode.removeChild(inputElement);
+    }
+    
+    // 恢復顯示原始值
+    valueElement.style.display = 'inline';
+    
+    // 恢復編輯圖標狀態和欄位容器狀態
+    const fieldContainer = valueElement.closest('.editable-field');
+    console.log('🔍 cancelEdit: fieldContainer found:', !!fieldContainer);
+    if (fieldContainer) {
+        // 恢復欄位容器狀態
+        fieldContainer.style.setProperty('background', '#F1F5F9', 'important');
+        fieldContainer.style.setProperty('cursor', 'pointer', 'important');
+        fieldContainer.removeAttribute('title');
+        
+        const editIcon = fieldContainer.querySelector('.edit-icon');
+        console.log('🔍 cancelEdit: editIcon found:', !!editIcon);
+        if (editIcon) {
+            console.log('🔍 cancelEdit: 恢復編輯圖標狀態，背景色從', editIcon.style.background, '變為 rgba(59, 130, 246, 0.1)');
+            editIcon.style.setProperty('background', 'rgba(59, 130, 246, 0.1)', 'important');
+            editIcon.style.cursor = 'pointer';
+            editIcon.title = '點擊編輯';
+            // 清除 hover 事件，防止覆蓋背景色
+            editIcon.onmouseenter = null;
+            editIcon.onmouseleave = null;
+        }
+    }
+}
+
+// 顯示通知訊息
+function showNotification(message, type = 'info') {
+    // 移除現有的通知
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.textContent = message;
+    
+    const bgColor = type === 'success' ? '#10B981' : type === 'error' ? '#EF4444' : '#3B82F6';
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10001;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+
+    document.body.appendChild(notification);
+
+    // 顯示動畫
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+
+    // 自動隱藏
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// 刪除使用者功能
+async function deleteUser(userKey) {
+    try {
+        console.log(`🗑️ 開始刪除使用者: ${userKey}`);
+        
+        // 獲取當前 API 回應
+        const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
+        
+        // 檢查使用者是否存在
+        if (!currentApiResponse.BodyData || !currentApiResponse.BodyData[userKey]) {
+            console.error(`❌ 使用者 ${userKey} 不存在`);
+            showNotification(`❌ 使用者 ${userKey} 不存在`, 'error');
+            return;
+        }
+        
+        // 檢查使用者數量（用於日誌記錄）
+        const userKeys = Object.keys(currentApiResponse.BodyData);
+        console.log(`🔍 當前使用者數量: ${userKeys.length}`);
+        
+        // 獲取憑證資料
+        const storedCredential = localStorage.getItem('google_auth_credential');
+        const storedUserInfo = localStorage.getItem('google_user_info');
+        
+        if (!storedCredential) {
+            console.error(`❌ 沒有可用的憑證`);
+            showNotification(`❌ 沒有可用的憑證，請重新登入`, 'error');
+            return;
+        }
+        
+        let subValue = '';
+        if (storedUserInfo) {
+            try {
+                const userInfo = JSON.parse(storedUserInfo);
+                subValue = userInfo.sub || '';
+            } catch (e) {
+                console.warn('解析 localStorage 用戶資訊失敗:', e);
+            }
+        }
+        
+        // 創建新的 BodyData，移除指定使用者
+        const newBodyData = { ...currentApiResponse.BodyData };
+        delete newBodyData[userKey];
+        
+        // 如果刪除的是預設使用者，需要重新設定預設使用者
+        let newBodyDataPtr = currentApiResponse.BodyData_ptr;
+        if (newBodyDataPtr === userKey) {
+            // 選擇第一個可用的使用者作為新的預設使用者
+            const remainingUsers = Object.keys(newBodyData);
+            if (remainingUsers.length > 0) {
+                newBodyDataPtr = remainingUsers[0];
+                console.log(`🔄 重新設定預設使用者為: ${newBodyDataPtr}`);
+            } else {
+                // 如果沒有剩餘使用者，設定為空字串
+                newBodyDataPtr = '';
+                console.log(`🔄 沒有剩餘使用者，預設使用者設為空`);
+            }
+        }
+        
+        // 準備 API 請求資料
+        const payload = {
+            BodyData: newBodyData,
+            BodyData_ptr: newBodyDataPtr,
+            update_bodydata: true,
+            credential: storedCredential,
+            sub: subValue,
+            IDTYPE: 'Google'
+        };
+        
+        console.log(`📤 發送刪除使用者請求:`, payload);
+        
+        // 調用 API 刪除使用者
+        const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log(`✅ 刪除使用者 API 回應:`, data);
+        
+        if (data.success) {
+            // 更新本地儲存的 API 回應
+            const updatedApiResponse = {
+                ...currentApiResponse,
+                BodyData: newBodyData,
+                BodyData_ptr: newBodyDataPtr
+            };
+            localStorage.setItem('inffits_api_response', JSON.stringify(updatedApiResponse));
+            
+            // 顯示成功訊息
+            const remainingCount = Object.keys(newBodyData).length;
+            if (remainingCount === 0) {
+                showNotification(`✅ 使用者 ${userKey} 已成功刪除，所有使用者已清空`, 'success');
+            } else {
+                showNotification(`✅ 使用者 ${userKey} 已成功刪除，剩餘 ${remainingCount} 個使用者`, 'success');
+            }
+            
+            // 觸發刪除事件
+            document.dispatchEvent(new CustomEvent('user-deleted', {
+                detail: { 
+                    deletedUserKey: userKey,
+                    newDefaultUser: newBodyDataPtr,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                },
+                bubbles: true,
+                composed: true
+            }));
+            
+            // 重新載入頁面以更新顯示
+            setTimeout(() => {
+                console.log(`🔄 重新載入頁面以更新顯示`);
+                window.location.reload();
+            }, 1500);
+            
+        } else {
+            throw new Error(data.message || '刪除使用者失敗');
+        }
+        
+    } catch (error) {
+        console.error(`❌ 刪除使用者失敗:`, error);
+        showNotification(`❌ 刪除使用者失敗: ${error.message}`, 'error');
+    }
+}
