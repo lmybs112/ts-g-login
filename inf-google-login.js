@@ -164,10 +164,32 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查存儲的憑證
     async checkStoredCredential(shouldRefreshApi = false) {
-        // 檢查是否有有效的 access token
+        console.log('🔍 checkStoredCredential 開始檢查...');
+        
+        // 首先檢查是否有 JWT 憑證（Google One Tap）
+        const jwtCredential = localStorage.getItem('google_auth_credential');
+        
+        if (jwtCredential) {
+            console.log('🔍 找到 JWT 憑證，使用 JWT 登入');
+            this.credential = jwtCredential;
+            this.isAuthenticated = true;
+            this.getUserInfo(); // 載入用戶資訊
+
+            if (shouldRefreshApi) {
+                // 只在頁面刷新時重新取得最新的個人資料
+                this.refreshApiData();
+            } else {
+                // 其他情況使用本地快取的 API 資料
+                this.getApiResponse();
+            }
+            return;
+        }
+        
+        // 如果沒有 JWT 憑證，檢查是否有有效的 access token（OAuth2）
         const accessToken = await this.getValidAccessToken();
         
         if (accessToken) {
+            console.log('🔍 找到 OAuth2 access token，使用 OAuth2 登入');
             // 創建 credential 格式
             this.credential = `oauth2_${accessToken}`;
             this.isAuthenticated = true;
@@ -181,6 +203,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.getApiResponse();
             }
         } else {
+            console.log('🔍 沒有找到任何有效的憑證');
             // 如果沒有有效的 token，清除所有狀態
             this.credential = null;
             this.isAuthenticated = false;
