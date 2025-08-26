@@ -3067,16 +3067,25 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 處理 localStorage 變更
     handleStorageChange(event) {
+        console.log('🔍 Storage 事件處理:', event.key, event.newValue);
+        
         if (event.key === 'google_auth_credential') {
             if (event.newValue) {
-                // 其他頁面登入了
-                this.credential = event.newValue;
-                this.isAuthenticated = true;
-                this.getUserInfo();
-                this.getApiResponse(); // 也載入 API 回應數據
-                this.updateAvatar();
+                // 其他頁面登入了，或者當前頁面剛完成登入
+                // 避免重複設置相同的狀態
+                if (this.credential !== event.newValue) {
+                    console.log('🔄 更新憑證狀態:', event.newValue);
+                    this.credential = event.newValue;
+                    this.isAuthenticated = true;
+                    this.getUserInfo();
+                    this.getApiResponse(); // 也載入 API 回應數據
+                    this.updateAvatar();
+                } else {
+                    console.log('⏭️ 跳過重複的憑證更新');
+                }
             } else {
                 // 其他頁面登出了
+                console.log('🚪 用戶登出');
                 this.credential = null;
                 this.isAuthenticated = false;
                 this.userInfo = null;
