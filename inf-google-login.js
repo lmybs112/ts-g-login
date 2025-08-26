@@ -645,6 +645,16 @@ class InfGoogleLoginComponent extends HTMLElement {
             });
             InfGoogleLoginComponent.defaultUserEventListenerAdded = true;
         }
+
+        // 監聽 FML_Done 訊息事件
+        if (!InfGoogleLoginComponent.fmlDoneEventListenerAdded) {
+            window.addEventListener('message', (event) => {
+                if (event.data && event.data.header === 'bid') {
+                    this.handleFMLDoneMessage(event.data);
+                }
+            });
+            InfGoogleLoginComponent.fmlDoneEventListenerAdded = true;
+        }
     }
 
     // 處理頭像點擊
@@ -1793,12 +1803,16 @@ class InfGoogleLoginComponent extends HTMLElement {
         let formattedHtml = '<div style="display: flex; flex-direction: column; gap: 16px;">';
         // 遍歷所有 User 資料
         
-        // 對使用者進行排序，確保預設使用者（BodyData_ptr）排在第一位
+        // 對使用者進行排序，確保 storeNew 排在第一位，預設使用者（BodyData_ptr）排在第二位
         const userKeys = Object.keys(bodyData);
         const sortedUserKeys = userKeys.sort((a, b) => {
-            // 如果 a 是預設使用者，排在前面
+            // 如果 a 是 storeNew，排在第一位
+            if (a === 'storeNew') return -1;
+            // 如果 b 是 storeNew，排在第一位
+            if (b === 'storeNew') return 1;
+            // 如果 a 是預設使用者，排在第二位
             if (a === defaultUserKey) return -1;
-            // 如果 b 是預設使用者，排在前面
+            // 如果 b 是預設使用者，排在第二位
             if (b === defaultUserKey) return 1;
             // 其他使用者保持原有順序
             return 0;
@@ -1817,7 +1831,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
                 // 檢查是否為新格式（包含 body 和 shoes）
                 if (userData.body && typeof userData.body === 'object') {
-                    bodyInfo = userData.body;
+                    bodyInfo = userData|| userData.body;
                     shoesInfo = userData.shoes;
                 }
 
@@ -2013,7 +2027,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     color: #1E293B;
                                     font-size: 15px;
                                     line-height: 1.2;
-                                ">${userKey.replace('User', '使用者 ')}</div>
+                                ">${userKey === 'storeNew' ? '新使用者' : (userKey.startsWith('storeNew_') ? '最新一筆' : userKey.replace('User', '使用者 '))}</div>
                                 <div style="
                                     color: #64748B;
                                     font-size: 12px;
@@ -2062,8 +2076,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'HV', '${userKey}', 'body', '${bodyInfo.HV || ''}', '身高', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">身高</span>
@@ -2071,7 +2085,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${heightColor}; font-size: 14px; font-weight: 600;" class="field-value">${heightValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2111,8 +2125,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'WV', '${userKey}', 'body', '${bodyInfo.WV || ''}', '體重', 'kg')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">體重</span>
@@ -2120,7 +2134,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${weightColor}; font-size: 14px; font-weight: 600;" class="field-value">${weightValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2163,8 +2177,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'Gender', '${userKey}', 'body', '${bodyInfo.Gender || ''}', '性別', '')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">性別</span>
@@ -2172,7 +2186,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;" class="field-value">${genderValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2213,8 +2227,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'CC', '${userKey}', 'body', '${bodyInfo.CC || ''}', '胸圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">胸圍</span>
@@ -2222,7 +2236,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${ccValueColor}; font-size: 14px; font-weight: 600;" class="field-value">${ccValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2262,8 +2276,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'Shoulder', '${userKey}', 'body', '${bodyInfo.Shoulder || ''}', '肩寬', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">肩寬</span>
@@ -2271,7 +2285,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${shoulderColor}; font-size: 14px; font-weight: 600;" class="field-value">${shoulderValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2311,8 +2325,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'UpChest', '${userKey}', 'body', '${bodyInfo.UpChest || ''}', '上胸圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">上胸圍</span>
@@ -2320,7 +2334,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${upChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${upChestValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2360,8 +2374,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'DnChest', '${userKey}', 'body', '${bodyInfo.DnChest || ''}', '下胸圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">下胸圍</span>
@@ -2369,7 +2383,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${dnChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${dnChestValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2409,8 +2423,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'Waist', '${userKey}', 'body', '${bodyInfo.Waist || ''}', '腰圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">腰圍</span>
@@ -2418,7 +2432,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${waistColor}; font-size: 14px; font-weight: 600;" class="field-value">${waistValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -2458,8 +2472,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-user="${userKey}"
                     data-type="body"
                     onclick="editField(this, 'Hip', '${userKey}', 'body', '${bodyInfo.Hip || ''}', '臀圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">臀圍</span>
@@ -2467,7 +2481,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${hipColor}; font-size: 14px; font-weight: 600;" class="field-value">${hipValue}</span>
                             <div class="edit-icon" style="
-                                opacity: 1;
+                                opacity: 0;
                                 transition: all 0.2s ease;
                                 cursor: pointer;
                                 padding: 4px;
@@ -3998,6 +4012,142 @@ class InfGoogleLoginComponent extends HTMLElement {
             oldValue: this.credential,
             storageArea: localStorage
         }));
+    }
+
+    // 處理 FML_Done 訊息
+    async handleFMLDoneMessage(messageData) {
+        try {
+            // 檢查是否有有效的憑證
+            const credential = localStorage.getItem('google_auth_credential');
+            if (!credential) {
+                console.warn('❌ 沒有可用的憑證來處理 FML_Done 訊息');
+                return;
+            }
+
+            // 獲取當前 API 回應
+            const currentApiResponse = this.getApiResponse();
+            if (!currentApiResponse || !currentApiResponse.BodyData) {
+                console.warn('❌ 沒有可用的 BodyData 來處理 FML_Done 訊息');
+                return;
+            }
+
+            // 準備新的使用者資料
+            const newUserData = {
+                ...messageData.value,
+                // 確保必要的欄位存在
+                BUS: messageData.value.BUS || '0',
+                MRID: messageData.value.MRID || 'INF',
+                DataItem: messageData.value.DataItem || '0100',
+                LGVID: messageData.value.LGVID || '',
+                ClothID: messageData.value.ClothID || '',
+                DnChest: messageData.value.DnChest || '',
+                Gender: messageData.value.Gender || 'M',
+                GVID: messageData.value.GVID || '',
+                body: messageData.value.body || { CC: '' },
+                Pattern_Prefer: messageData.value.Pattern_Prefer || '0',
+                Hip: messageData.value.Hip || '',
+                HV: messageData.value.HV || '',
+                Sizes: messageData.value.Sizes || '',
+                FMLpath: messageData.value.FMLpath || 'FMLSep',
+                Shoulder: messageData.value.Shoulder || '',
+                UpChest: messageData.value.UpChest || '',
+                Waist: messageData.value.Waist || '',
+                WV: messageData.value.WV || '',
+                ga_id: messageData.value.ga_id || 'x',
+                FitP: messageData.value.FitP || '0,0,0,0'
+            };
+
+            // 檢查是否已存在「新使用者」
+            const existingUserKeys = Object.keys(currentApiResponse.BodyData);
+            const newUserKey = 'storeNew';
+            const isNewUserExists = existingUserKeys.includes(newUserKey);
+
+            // 創建新的 BodyData，將「新使用者」放在第一筆
+            const newBodyData = {};
+            
+            // 首先添加「新使用者」
+            newBodyData[newUserKey] = newUserData;
+            
+            // 然後添加其他使用者（排除已存在的 storeNew）
+            existingUserKeys.forEach(key => {
+                if (key !== newUserKey) {
+                    newBodyData[key] = currentApiResponse.BodyData[key];
+                }
+            });
+
+            // 決定 BodyData_ptr
+            let bodyDataPtr = currentApiResponse.BodyData_ptr;
+            
+            // 如果 BodyData_ptr 是空的，將「新使用者」設為預設
+            if (!bodyDataPtr || bodyDataPtr === '') {
+                bodyDataPtr = newUserKey;
+            }
+
+            // 準備 API 請求資料
+            const payload = {
+                BodyData: newBodyData,
+                BodyData_ptr: bodyDataPtr,
+                update_bodydata: true,
+                credential: credential,
+                IDTYPE: "Google"
+            };
+
+            // 調用 API 更新 BodyData
+            const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // 401 錯誤處理：憑證失效，自動登出
+                    console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
+                    this.signOut();
+                    this.dispatchEvent(new CustomEvent('credential-expired', {
+                        detail: {
+                            message: '憑證已失效，已自動登出',
+                            timestamp: new Date().toISOString()
+                        },
+                        bubbles: true,
+                        composed: true
+                    }));
+                    throw new Error(`憑證已失效，已自動登出`);
+                }
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const actionText = isNewUserExists ? '更新' : '新增';
+            console.log(`✅ FML_Done 訊息處理成功，${actionText}使用者:`, newUserKey, data);
+
+            // 保存新的 API 回應（不觸發額外的 storage 事件）
+            this.saveApiResponseSilently(data);
+
+            // 更新顯示
+            this.updateBodyDataDisplay(data);
+
+            // 觸發事件通知其他組件
+            this.dispatchEvent(new CustomEvent('fml-done-processed', {
+                detail: {
+                    newUserKey: newUserKey,
+                    messageData: messageData,
+                    apiResponse: data,
+                    isNewUser: !isNewUserExists,
+                    timestamp: new Date().toISOString()
+                },
+                bubbles: true,
+                composed: true
+            }));
+
+        } catch (error) {
+            console.error('❌ 處理 FML_Done 訊息失敗:', error);
+
+            // 顯示錯誤提示（可選）
+            this.showErrorNotification('處理 FML_Done 訊息失敗: ' + error.message);
+        }
     }
 
     // 設置預設使用者
