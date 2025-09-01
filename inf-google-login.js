@@ -180,24 +180,20 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 保存 interval ID 以便清理
         this.activeIntervals.add(refreshInterval);
         
-        console.log('🔄 Token 自動刷新機制已設置（每 50 分鐘檢查一次）');
     }
 
     // 檢查並刷新 token
     async checkAndRefreshToken() {
         try {
-            console.log('🔄 檢查 token 狀態...');
             
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
-                console.log('ℹ️ 沒有找到憑證，跳過 token 檢查');
                 return;
             }
             
             // 優先檢查是否有 refresh token
             const refreshToken = localStorage.getItem('google_refresh_token');
             if (refreshToken) {
-                console.log('🔄 發現 refresh token，檢查 access token 狀態...');
                 
                 // 檢查 access token 是否即將過期
                 const expiresAt = localStorage.getItem('google_token_expires_at');
@@ -206,27 +202,19 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const expiresAtTime = parseInt(expiresAt);
                     const timeUntilExpiry = expiresAtTime - now;
                     
-                    console.log('⏰ OAuth2 Token 過期檢查:', {
-                        expires: new Date(expiresAtTime).toLocaleString(),
-                        timeUntilExpiry: Math.round(timeUntilExpiry / 1000 / 60) + ' 分鐘'
-                    });
-                    
                     // 如果 token 將在 10 分鐘內過期，提前刷新
                     if (timeUntilExpiry < 10 * 60 * 1000) {
-                        console.log('⚠️ OAuth2 Token 將在 10 分鐘內過期，使用 refresh token 刷新...');
                         try {
                             const newAccessToken = await this.refreshAccessToken(refreshToken);
                             if (newAccessToken) {
-                                console.log('✅ 使用 refresh token 成功刷新 access token');
                                 const newCredential = `oauth2_${newAccessToken}`;
                                 this.saveCredential(newCredential);
                                 return;
                             }
                         } catch (error) {
-                            console.log('⚠️ 使用 refresh token 刷新失敗:', error);
+                            // 靜默處理錯誤
                         }
                     } else {
-                        console.log('✅ OAuth2 Token 仍然有效');
                         return;
                     }
                 }
@@ -240,62 +228,31 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const now = Date.now();
                     const timeUntilExpiry = (tokenInfo.created_at + tokenInfo.expires_in) - now;
                     
-                    console.log('⏰ JWT Token 過期檢查:', {
-                        created: new Date(tokenInfo.created_at).toLocaleString(),
-                        expires: new Date(tokenInfo.created_at + tokenInfo.expires_in).toLocaleString(),
-                        timeUntilExpiry: Math.round(timeUntilExpiry / 1000 / 60) + ' 分鐘'
-                    });
-                    
                     // 如果 token 將在 10 分鐘內過期，提前刷新
                     if (timeUntilExpiry < 10 * 60 * 1000) {
-                        console.log('⚠️ JWT Token 將在 10 分鐘內過期，嘗試刷新...');
                         await this.refreshGoogleToken();
                         return;
                     }
                 } catch (error) {
-                    console.log('⚠️ 解析 token 資訊失敗:', error);
+                    // 靜默處理錯誤
                 }
             }
             
-            // 嘗試調用一個簡單的 API 來測試 token 是否有效
-            const testResponse = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    credential: credential,
-                    sub: JSON.parse(localStorage.getItem('google_user_info') || '{}').sub || '',
-                    IDTYPE: 'Google',
-                    test_token: true // 標記為測試請求
-                })
-            });
-            
-            if (testResponse.ok) {
-                console.log('✅ Token 仍然有效');
-            } else if (testResponse.status === 401) {
-                console.log('⚠️ Token 已過期，嘗試自動刷新...');
-                await this.refreshGoogleToken();
-            }
-            
         } catch (error) {
-            console.log('⚠️ Token 檢查失敗，可能需要重新登入:', error);
+            // 靜默處理錯誤
         }
     }
 
     // 刷新 Google token
     async refreshGoogleToken() {
         try {
-            console.log('🔄 開始刷新 Google token...');
             
             // 首先嘗試使用 refresh token 刷新 access token
             const refreshToken = localStorage.getItem('google_refresh_token');
             if (refreshToken) {
-                console.log('🔄 使用 refresh token 刷新 access token...');
                 try {
                     const newAccessToken = await this.refreshAccessToken(refreshToken);
                     if (newAccessToken) {
-                        console.log('✅ 使用 refresh token 成功刷新 access token');
                         
                         // 更新憑證
                         const newCredential = `oauth2_${newAccessToken}`;
@@ -314,37 +271,30 @@ class InfGoogleLoginComponent extends HTMLElement {
                         return;
                     }
                 } catch (error) {
-                    console.log('⚠️ 使用 refresh token 刷新失敗，嘗試其他方法:', error);
                 }
             }
             
             // 如果沒有 refresh token 或刷新失敗，嘗試使用 Google Identity Services
             if (window.google && window.google.accounts && window.google.accounts.id) {
-                console.log('🔄 嘗試使用 Google Identity Services 重新認證...');
                 // 觸發無聲的重新認證
                 window.google.accounts.id.prompt((notification) => {
                     if (notification.isDisplayed()) {
-                        console.log('✅ Google 重新認證對話框已顯示');
                     } else {
-                        console.log('⚠️ 無法顯示重新認證對話框，需要用戶手動重新登入');
                         this.handleTokenExpiration();
                     }
                 });
             } else {
                 // 如果 Google Identity Services 不可用，直接處理過期
-                console.log('⚠️ 無法使用 refresh token 或 Google Identity Services，需要用戶重新登入');
                 this.handleTokenExpiration();
             }
             
         } catch (error) {
-            console.error('❌ 刷新 token 失敗:', error);
             this.handleTokenExpiration();
         }
     }
 
     // 處理 token 過期
     handleTokenExpiration() {
-        console.log('🔐 Token 已過期，清除認證資料');
         
         // 清除認證資料
         localStorage.removeItem('google_auth_credential');
@@ -379,7 +329,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 其他情況使用本地快取的 API 資料
                 const cachedApiResponse = this.getApiResponse();
                 // 頁面載入時不觸發數據同步，只有首次登入時才觸發
-                console.log('📄 頁面載入：使用快取的 API 資料，不觸發數據同步');
             }
             return;
         }
@@ -400,7 +349,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 其他情況使用本地快取的 API 資料
                 const cachedApiResponse = this.getApiResponse();
                 // 頁面載入時不觸發數據同步，只有首次登入時才觸發
-                console.log('📄 OAuth2 頁面載入：使用快取的 API 資料，不觸發數據同步');
             }
         } else {
             // 如果沒有有效的 token，清除所有狀態
@@ -413,7 +361,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 API 資料以確保個人資料為最新
     async refreshApiData() {
         if (!this.credential) {
-            console.warn('無憑證，無法刷新 API 資料');
             return;
         }
 
@@ -453,7 +400,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }));
             }
         } catch (error) {
-            console.warn('⚠️ 刷新個人資料失敗，使用本地快取資料:', error);
 
             // 🔐 如果是憑證失效錯誤（401），不載入本地快取，因為用戶已被登出
             if (error.message && error.message.includes('憑證已失效')) {
@@ -492,7 +438,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 const accessToken = credential.replace('oauth2_', '');
                 localStorage.setItem('google_access_token', accessToken);
                 localStorage.setItem('google_token_expires_at', (Date.now() + 3600000).toString());
-                console.log('🔐 已保存 OAuth2 access token');
             }
 
             // 觸發 localStorage 更新事件
@@ -571,7 +516,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     this.userInfo = JSON.parse(stored);
                 } catch (error) {
-                    console.warn('解析用戶資訊失敗:', error);
                     this.userInfo = null;
                 }
             }
@@ -646,7 +590,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 locale: payload.locale
             };
         } catch (error) {
-            console.error('解析 Google 憑證失敗:', error);
             return null;
         }
     }
@@ -741,7 +684,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         fontLink.onload = () => {};
 
         fontLink.onerror = () => {
-            console.warn('Google Fonts 載入失敗，將使用系統預設字體');
         };
     }
 
@@ -756,7 +698,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.handleAvatarClick();
             });
         } else {
-            console.error('找不到頭像容器元素');
         }
 
         // 設置登入畫面關閉按鈕
@@ -843,11 +784,9 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 監聽預設使用者切換事件（使用靜態標記防止重複添加）
         if (!InfGoogleLoginComponent.defaultUserEventListenerAdded) {
             document.addEventListener('set-default-user', (event) => {
-                // console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
                 event.preventDefault();
                 event.stopPropagation();
                 const userKey = event.detail.userKey;
-                // console.log('🔄 準備設置預設使用者為:', userKey);
                 
                 // 找到觸發事件的組件實例（安全的方式）
                 let component = null;
@@ -857,7 +796,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         component = event.target.closest('inf-google-login');
                     }
                 } catch (error) {
-                    console.warn('無法從事件目標找到組件:', error);
                 }
                 
                 // 如果找不到，則查找頁面上的第一個組件實例
@@ -868,7 +806,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (component && typeof component.setDefaultUser === 'function') {
                     component.setDefaultUser(userKey);
                 } else {
-                    console.warn('找不到可用的組件實例或 setDefaultUser 方法');
                 }
             });
             InfGoogleLoginComponent.defaultUserEventListenerAdded = true;
@@ -1064,7 +1001,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (targetContainer) {
                 return targetContainer;
             } else {
-                console.warn(`指定的目標容器 ID "${this.targetContainerId}" 不存在`);
             }
         }
 
@@ -1223,7 +1159,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 其他情況使用本地快取的 API 資料
                 const cachedApiResponse = this.getApiResponse();
                 // 頁面載入時不觸發數據同步，只有首次登入時才觸發
-                console.log('📄 頁面載入：使用快取的 API 資料，不觸發數據同步');
             }
             return;
         }
@@ -1244,7 +1179,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 其他情況使用本地快取的 API 資料
                 const cachedApiResponse = this.getApiResponse();
                 // 頁面載入時不觸發數據同步，只有首次登入時才觸發
-                console.log('📄 OAuth2 頁面載入：使用快取的 API 資料，不觸發數據同步');
             }
         } else {
             // 如果沒有有效的 token，清除所有狀態
@@ -1257,7 +1191,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 API 資料以確保個人資料為最新
     async refreshApiData() {
         if (!this.credential) {
-            console.warn('無憑證，無法刷新 API 資料');
             return;
         }
 
@@ -1297,7 +1230,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }));
             }
         } catch (error) {
-            console.warn('⚠️ 刷新個人資料失敗，使用本地快取資料:', error);
 
             // 🔐 如果是憑證失效錯誤（401），不載入本地快取，因為用戶已被登出
             if (error.message && error.message.includes('憑證已失效')) {
@@ -1393,7 +1325,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     this.userInfo = JSON.parse(stored);
                 } catch (error) {
-                    console.warn('解析用戶資訊失敗:', error);
                     this.userInfo = null;
                 }
             }
@@ -1468,7 +1399,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 locale: payload.locale
             };
         } catch (error) {
-            console.error('解析 Google 憑證失敗:', error);
             return null;
         }
     }
@@ -1563,7 +1493,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         fontLink.onload = () => {};
 
         fontLink.onerror = () => {
-            console.warn('Google Fonts 載入失敗，將使用系統預設字體');
         };
     }
 
@@ -1578,7 +1507,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.handleAvatarClick();
             });
         } else {
-            console.error('找不到頭像容器元素');
         }
 
         // 設置登入畫面關閉按鈕
@@ -1665,11 +1593,9 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 監聽預設使用者切換事件（使用靜態標記防止重複添加）
         if (!InfGoogleLoginComponent.defaultUserEventListenerAdded) {
             document.addEventListener('set-default-user', (event) => {
-                // console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
                 event.preventDefault();
                 event.stopPropagation();
                 const userKey = event.detail.userKey;
-                // console.log('🔄 準備設置預設使用者為:', userKey);
                 
                 // 找到觸發事件的組件實例（安全的方式）
                 let component = null;
@@ -1679,7 +1605,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         component = event.target.closest('inf-google-login');
                     }
                 } catch (error) {
-                    console.warn('無法從事件目標找到組件:', error);
                 }
                 
                 // 如果找不到，則查找頁面上的第一個組件實例
@@ -1690,7 +1615,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (component && typeof component.setDefaultUser === 'function') {
                     component.setDefaultUser(userKey);
                 } else {
-                    console.warn('找不到可用的組件實例或 setDefaultUser 方法');
                 }
             });
             InfGoogleLoginComponent.defaultUserEventListenerAdded = true;
@@ -1886,7 +1810,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (targetContainer) {
                 return targetContainer;
             } else {
-                console.warn(`指定的目標容器 ID "${this.targetContainerId}" 不存在`);
             }
         }
 
@@ -1916,7 +1839,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 查找當前顯示的目標容器
         const targetContainer = this.getCurrentContentContainer();
         if (!targetContainer) {
-            console.error('找不到當前顯示的內容容器');
             return;
         }
 
@@ -1942,7 +1864,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 查找當前顯示的目標容器
         const targetContainer = this.getCurrentContentContainer();
         if (!targetContainer) {
-            console.error('找不到當前顯示的內容容器');
 
             // 🔧 備用方案：顯示 shadow DOM 中的個人資訊模態框
             this.showShadowDOMProfileModal();
@@ -1966,7 +1887,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 顯示模態框
             profileModal.classList.add('show');
         } else {
-            console.error('找不到 shadow DOM 個人資訊模態框');
         }
     }
 
@@ -3029,7 +2949,6 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         if (!bodyDataSection || !bodyDataContent) {
-            console.warn('❌ 找不到 BodyData 顯示元素');
             return;
         }
 
@@ -3165,7 +3084,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             <!-- 刪除按鈕 -->
                             <button 
                                 onclick="
-                                    console.log('🗑️ 點擊刪除按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}');
                                     deleteUser('${userKey.replace(/'/g, "\\'")}');
                                 "
                                 style="
@@ -3198,7 +3116,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             
                             ${isDefaultUser ? `
                             <button 
-                                onclick="console.log('🎯 點擊預設按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
                                     detail: { userKey: '${userKey.replace(/'/g, "\\'")}' },
                                     bubbles: true,
                                     composed: true 
@@ -3230,7 +3147,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             </button>
                             ` : `
                             <button 
-                                onclick="console.log('🎯 點擊設為預設按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}'); document.dispatchEvent(new CustomEvent('set-default-user', { 
                                     detail: { userKey: '${userKey.replace(/'/g, "\\'")}' },
                                     bubbles: true,
                                     composed: true 
@@ -4016,7 +3932,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 IDTYPE: "Google"
             };
 
-            console.log('🔄 正在調用刪除帳號 API:', payload);
 
             // 調用刪除帳號 API
             const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google", {
@@ -4035,7 +3950,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
             const data = await response.json();
-            console.log('✅ 帳號刪除成功:', data);
 
             // 隱藏個人資訊畫面
             this.hideProfileModal();
@@ -4065,7 +3979,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.showSuccessNotification('帳號已成功刪除');
 
         } catch (error) {
-            console.error('❌ 刪除帳號失敗:', error);
             
             // 移除載入通知
             if (loadingNotification && loadingNotification.parentNode) {
@@ -4109,9 +4022,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }
             });
 
-            console.log('✅ 所有本地資料已清除');
         } catch (error) {
-            console.error('清除本地資料失敗:', error);
         }
     }
 
@@ -4143,11 +4054,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                     } else if (notification.isSkippedMoment()) {} else if (notification.isDismissedMoment()) {}
                 });
             } catch (error) {
-                console.warn('標準 prompt 方法失敗，使用備用方法:', error);
                 this.fallbackGoogleSignIn();
             }
         } else {
-            console.error('Google 服務尚未載入');
         }
     }
 
@@ -4164,7 +4073,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             return googleCookies.length > 0;
         } catch (error) {
-            console.warn('檢查 Google 會話失敗:', error);
             return false;
         }
     }
@@ -4184,11 +4092,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.waitForGoogleServices().then(() => {
                 this.triggerGoogleSignIn();
             }).catch((error) => {
-                console.error('Google 服務載入失敗:', error);
                 this.fallbackGoogleSignIn();
             });
         } catch (error) {
-            console.error('重新初始化失敗:', error);
             this.fallbackGoogleSignIn();
         }
     }
@@ -4284,7 +4190,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.triggerDirectGoogleSignIn();
             }
         } catch (error) {
-            console.error('直接登入方法失敗:', error);
             this.triggerDirectGoogleSignIn();
         }
     }
@@ -4324,7 +4229,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                             }
                         });
                     } catch (error) {
-                        console.warn('備用 prompt 失敗，嘗試直接調用:', error);
                         this.triggerDirectGoogleSignIn();
                     }
                 }, 200);
@@ -4333,7 +4237,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.activeTimeouts.add(initTimeout);
             }
         } catch (error) {
-            console.error('備用登入方法也失敗:', error);
             this.handleLoginFailure(error);
         }
     }
@@ -4375,9 +4278,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }, 1000);
 
         } catch (error) {
-            console.error('直接 Google 登入失敗:', error);
             // 顯示錯誤訊息給用戶
-            alert('Google 登入暫時無法使用，請稍後再試。');
         }
     }
 
@@ -4408,8 +4309,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             await this.handleAuthSuccess(data.access_token, data.refresh_token);
             
         } catch (error) {
-            console.error('Token 交換失敗:', error);
-            alert('登入失敗，請重試。');
         }
     }
 
@@ -4472,8 +4371,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 throw new Error('無法獲取用戶資訊');
             }
         } catch (error) {
-            console.error('處理 OAuth2 授權失敗:', error);
-            alert('登入成功但無法獲取用戶資訊，請重試。');
         }
     }
 
@@ -4511,11 +4408,9 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         if (shouldRefresh && refreshToken) {
             try {
-                console.log('🔄 Token 即將過期，正在刷新...');
                 const newAccessToken = await this.refreshAccessToken(refreshToken);
                 return newAccessToken;
             } catch (error) {
-                console.error('❌ 刷新 token 失敗:', error);
                 // 如果刷新失敗，清除所有 tokens
                 this.clearTokens();
                 return null;
@@ -4528,7 +4423,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 access token
     async refreshAccessToken(refreshToken) {
         try {
-            console.log('🔄 開始刷新 access token...');
             
             const response = await fetch('https://oauth2.googleapis.com/token', {
                 method: 'POST',
@@ -4545,19 +4439,16 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ 刷新 token API 回應錯誤:', response.status, errorText);
                 throw new Error(`刷新 token 失敗: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
-            console.log('✅ 成功獲取新的 access token');
             
             // 保存新的 access token
             this.saveTokens(data.access_token, refreshToken);
             
             return data.access_token;
         } catch (error) {
-            console.error('❌ 刷新 access token 失敗:', error);
             throw error;
         }
     }
@@ -4597,7 +4488,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     this.userInfo = JSON.parse(event.newValue);
                 } catch (error) {
-                    console.warn('解析用戶資訊失敗:', error);
                     this.userInfo = null;
                 }
             } else {
@@ -4610,7 +4500,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     this.apiResponse = JSON.parse(event.newValue);
                 } catch (error) {
-                    console.warn('解析 API 回應數據失敗:', error);
                     this.apiResponse = null;
                 }
             } else {
@@ -5194,7 +5083,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             };
 
             script.onerror = () => {
-                console.error('無法載入 Google Identity Services');
                 this.isGoogleLoaded = false;
                 this.updateAvatar(); // 更新頭像狀態（隱藏頭像）
                 this.handleLoginFailure('無法載入 Google Identity Services');
@@ -5203,7 +5091,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             document.head.appendChild(script);
 
         } catch (error) {
-            console.error('載入 Google 服務時發生錯誤:', error);
             this.isGoogleLoaded = false;
             this.updateAvatar(); // 更新頭像狀態（隱藏頭像）
             this.handleLoginFailure('載入 Google 服務時發生錯誤: ' + error.message);
@@ -5220,7 +5107,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     onGoogleLoaded() {
 
         if (!this.clientId) {
-            console.error('缺少 client-id 屬性，請設置您的 Google OAuth2 客戶端 ID');
             return;
         }
 
@@ -5250,7 +5136,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
 
         } catch (error) {
-            console.error('初始化 Google 登入失敗:', error);
         }
     }
 
@@ -5339,7 +5224,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (!response.ok) {
                 // 🔐 401 錯誤處理：嘗試刷新 token
                 if (response.status === 401) {
-                    console.warn('🔐 API 回應 401 - 嘗試刷新 token...');
                     
                     const refreshToken = localStorage.getItem('google_refresh_token');
                     if (refreshToken) {
@@ -5352,12 +5236,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 return await this.callInfFitsAPI(newCredential);
                             }
                         } catch (refreshError) {
-                            console.error('❌ 刷新 token 失敗:', refreshError);
                         }
                     }
                     
                     // 如果刷新失敗，執行登出操作
-                    console.warn('🔐 Token 刷新失敗，執行自動登出');
                     this.signOut();
 
                     // 觸發憑證失效事件
@@ -5384,7 +5266,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             return data;
 
         } catch (error) {
-            console.error("❌ 調用 infFITS API 失敗:", error);
             throw error;
         }
     }
@@ -5418,7 +5299,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.handleLoginDataSync(data);
             }
         } catch (error) {
-            console.warn('保存 API 回應數據失敗:', error);
         }
     }
 
@@ -5438,7 +5318,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 composed: true
             }));
         } catch (error) {
-            console.warn('靜默保存 API 回應數據失敗:', error);
         }
     }
 
@@ -5450,7 +5329,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     this.apiResponse = JSON.parse(stored);
                 } catch (error) {
-                    console.warn('解析 API 回應數據失敗:', error);
                     this.apiResponse = null;
                 }
             }
@@ -5460,26 +5338,19 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 登入資料新增與讀取邏輯處理
     async handleLoginDataSync(apiResponse) {
-        console.log('🚀 handleLoginDataSync 被調用');
-        console.log('  - isAuthenticated:', this.isAuthenticated);
-        console.log('  - apiResponse 存在:', !!apiResponse);
-        console.log('  - syncInProgress:', this.syncInProgress);
         
         try {
             // 確保使用者已經認證且有有效的 API 回應
             if (!this.isAuthenticated || !apiResponse) {
-                console.log('ℹ️ 使用者未認證或無有效 API 回應，跳過資料同步');
                 return;
             }
 
             // 防止重複執行同步邏輯
             if (this.syncInProgress) {
-                console.log('ℹ️ 資料同步正在進行中，跳過重複執行');
                 return;
             }
 
             this.syncInProgress = true;
-            console.log('🔄 開始處理登入資料同步邏輯');
             
             try {
                 // 檢查本地是否有資料
@@ -5488,32 +5359,25 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 檢查雲端是否有資料
                 const hasCloudData = this.checkCloudBodyData(apiResponse);
                 
-                console.log(`📊 資料狀態：本地=${hasLocalData ? '有' : '無'}，雲端=${hasCloudData ? '有' : '無'}`);
                 
                 if (hasLocalData && !hasCloudData) {
                     // 情況：已登入 本地已使用 雲端無資料
                     // 只有在首次登入時才上傳，頁面載入時不自動上傳
-                    console.log('ℹ️ 本地有資料但雲端無資料，首次登入時會自動上傳');
                     // 不自動上傳，等下次真正登入時再處理
                 } else if (hasLocalData && hasCloudData) {
                     // 情況：已登入 本地已使用 雲端有資料 → 詢問使用者是否用本地覆蓋雲端
-                    console.log('⚡ 本地和雲端都有資料，詢問使用者選擇');
                     await this.showDataConflictDialog();
                 } else if (!hasLocalData && hasCloudData) {
                     // 情況：已登入 本地未使用 雲端有資料 → 將雲端資料下載到本地
-                    console.log('🔽 本地無資料但雲端有資料，下載雲端資料到本地');
                     await this.downloadCloudDataToLocal(apiResponse);
                 } else {
                     // 情況：已登入 本地未使用 雲端未使用 → 無需處理
-                    console.log('ℹ️ 本地和雲端都無資料，無需處理');
                 }
             } finally {
                 // 重置同步狀態
-                console.log('🔄 重置同步狀態');
                 this.syncInProgress = false;
             }
         } catch (error) {
-            console.log('ℹ️ 處理登入資料同步時發生錯誤，靜默跳過:', error);
             this.syncInProgress = false;
         }
     }
@@ -5523,12 +5387,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
             const genderLast = localStorage.getItem('Gender_Last');
         
-        console.log('🔍 檢查本地資料:');
-        console.log('  - BodyID_size_Last:', bodyIdSizeLast);
-        console.log('  - Gender_Last:', genderLast);
             
             if (!bodyIdSizeLast || !genderLast) {
-            console.log('❌ 本地缺少必要資料');
             return false;
             }
             
@@ -5536,10 +5396,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 const sizeData = JSON.parse(bodyIdSizeLast);
             // 檢查是否有完整的身高體重資料
             const hasCompleteData = sizeData.HV && sizeData.WV && genderLast;
-            console.log(`📊 本地資料完整性檢查: ${hasCompleteData ? '完整' : '不完整'}`);
             return hasCompleteData;
         } catch (error) {
-            console.log('❌ 解析本地資料失敗:', error);
             return false;
         }
     }
@@ -5563,7 +5421,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             const userData = bodyData[targetKey];
             const bodyInfo = userData;
             if (userData && (bodyInfo.HV || bodyInfo.WV || bodyInfo.Gender)) {
-                console.log(`✅ 找到對應性別 ${targetKey} 的雲端資料`);
                 return true;
             }
         }
@@ -5574,33 +5431,27 @@ class InfGoogleLoginComponent extends HTMLElement {
             const userData = bodyData[userKey];
             const bodyInfo = userData;
             if (userData && (bodyInfo.HV || bodyInfo.WV || bodyInfo.Gender)) {
-                console.log(`✅ 找到其他雲端資料: ${userKey}`);
                 return true;
             }
         }
         
-        console.log('❌ 沒有找到任何雲端身體資料');
         return false;
     }
 
     // 上傳本地資料到雲端
     async uploadLocalDataToCloud() {
         try {
-            console.log('🔼 開始上傳本地資料到雲端');
             
             const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
             const genderLast = localStorage.getItem('Gender_Last');
             
-            console.log('🔍 本地資料檢查:', { bodyIdSizeLast, genderLast });
             
             if (!bodyIdSizeLast || !genderLast) {
-                console.log('❌ 缺少本地資料，無法上傳');
                 showNotification('❌ 缺少本地資料，無法上傳', 'error');
                 return;
             }
             
             const sizeData = JSON.parse(bodyIdSizeLast);
-            console.log('🔍 解析的本地資料:', sizeData);
             
             // 準備上傳的資料
             const uploadData = {
@@ -5609,15 +5460,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                 Gender: genderLast
             };
             
-            console.log('📤 準備上傳的資料:', uploadData);
             
             // 調用上傳 API
-            console.log('🚀 開始調用 callUploadDataAPI...');
             await this.callUploadDataAPI(uploadData);
-            console.log('✅ callUploadDataAPI 調用完成');
             
         } catch (error) {
-            console.error('❌ 上傳本地資料失敗:', error);
             showNotification('❌ 上傳資料失敗，請稍後再試', 'error');
         }
     }
@@ -5625,13 +5472,11 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 下載雲端資料到本地
     async downloadCloudDataToLocal(apiResponse) {
         try {
-            console.log('🔽 開始下載雲端資料到本地');
             
             const bodyData = apiResponse?.BodyData || {};
             const userKeys = Object.keys(bodyData);
             
             if (userKeys.length === 0) {
-                console.log('❌ 雲端無使用者資料');
                     return;
                 }
                 
@@ -5643,23 +5488,18 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (bodyData.bodyF) {
                 targetKey = 'bodyF';
                 userData = bodyData.bodyF;
-                console.log('🎯 找到雲端女性資料 bodyF');
             } else if (bodyData.bodyM) {
                 targetKey = 'bodyM';
                 userData = bodyData.bodyM;
-                console.log('🎯 找到雲端男性資料 bodyM');
             } else {
                 // 如果沒有 bodyF/bodyM，使用預設使用者或第一個使用者
                 targetKey = apiResponse.BodyData_ptr || userKeys[0];
                 userData = bodyData[targetKey];
-                console.log(`🎯 使用預設雲端資料: ${targetKey}`);
             }
             
             if (userData) {
                 // 所有資料都直接使用，不需要 .body 屬性
                 const bodyInfo = userData;
-                console.log('🔍 準備下載的身體資料:', bodyInfo);
-                console.log('🔍 資料來源:', targetKey);
                 
                 let hasData = false;
                 
@@ -5667,7 +5507,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (targetKey === 'bodyF' || targetKey === 'bodyM') {
                     // bodyF/bodyM 整包資料都保存到 BodyID_size_Last
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyInfo));
-                    console.log('✅ 完整身體資料已保存到 BodyID_size_Last:', bodyInfo);
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
                     // 其他資料源只保存 HV, WV
@@ -5677,7 +5516,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     };
                     
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(localSizeData));
-                    console.log('✅ 身高體重資料已保存到 BodyID_size_Last:', localSizeData);
                     hasData = true;
                 }
                 
@@ -5693,7 +5531,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 if (genderToSave) {
                     localStorage.setItem('Gender_Last', genderToSave);
-                    console.log('✅ 性別資料已保存到 Gender_Last:', genderToSave);
                     hasData = true;
                 }
                 
@@ -5707,14 +5544,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     
                     showNotification('✅ 雲端資料已同步到本地', 'success');
                 } else {
-                    console.log('⚠️ 雲端資料中沒有可用的身高體重或性別資訊');
                 }
             } else {
-                console.log('❌ 無法取得雲端使用者資料');
             }
             
         } catch (error) {
-            console.error('❌ 下載雲端資料失敗:', error);
             showNotification('❌ 下載資料失敗，請稍後再試', 'error');
         }
     }
@@ -5726,9 +5560,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             const localData = this.getLocalDataInfo();
             const cloudData = this.getCloudDataInfo();
             
-            console.log('🔍 比較本地和雲端資料:');
-            console.log('  本地:', localData);
-            console.log('  雲端:', cloudData);
             
             // 檢查資料是否相同
             const isSameData = (
@@ -5738,27 +5569,21 @@ class InfGoogleLoginComponent extends HTMLElement {
             );
             
             if (isSameData) {
-                console.log('✅ 本地和雲端資料相同，無需顯示選擇對話框');
                 return;
             }
             
-            console.log('⚡ 本地和雲端資料不同，顯示選擇對話框');
             const result = await this.showDataVersionDialog();
 
             if (result === 'local') {
                 // 使用者選擇使用本地資料
-                console.log('👤 使用者選擇使用本地資料，上傳到雲端');
                 await this.uploadLocalDataToCloud();
             } else if (result === 'cloud') {
                 // 使用者選擇使用雲端資料
-                console.log('👤 使用者選擇使用雲端資料，下載到本地');
                 const currentApiResponse = this.getApiResponse();
                 await this.downloadCloudDataToLocal(currentApiResponse);
             } else {
-                console.log('👤 使用者取消選擇');
             }
         } catch (error) {
-            console.error('❌ 顯示資料衝突對話框失敗:', error);
         }
     }
 
@@ -5768,7 +5593,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 檢查是否已經有對話框正在顯示
             const existingOverlay = document.getElementById('data-version-overlay');
             if (existingOverlay) {
-                console.log('ℹ️ 資料版本對話框已存在，跳過重複顯示');
                 resolve('cancel');
                 return;
             }
@@ -6101,15 +5925,11 @@ class InfGoogleLoginComponent extends HTMLElement {
     getCloudDataInfo() {
         try {
             const apiResponse = this.getApiResponse();
-            console.log('🔍 完整 API 回應:', apiResponse);
             
             const bodyData = apiResponse?.BodyData || {};
-            console.log('🔍 BodyData:', bodyData);
-            console.log('🔍 BodyData 的所有 keys:', Object.keys(bodyData));
             
             // 根據本地性別決定要比較哪個雲端資料
             const localGender = localStorage.getItem('Gender_Last');
-            console.log('🔍 本地性別:', localGender);
             
             let targetKey = null;
             if (localGender === 'M') {
@@ -6117,33 +5937,26 @@ class InfGoogleLoginComponent extends HTMLElement {
             } else if (localGender === 'F') {
                 targetKey = 'bodyF';
             }
-            console.log('🔍 目標 key:', targetKey);
             
             // 如果沒有對應的性別資料，嘗試使用預設或第一個可用的
             let userData = null;
             if (targetKey && bodyData[targetKey]) {
                 userData = bodyData[targetKey];
-                console.log(`✅ 找到對應的雲端資料: ${targetKey}`, userData);
             } else {
-                console.log(`❌ 沒有找到 ${targetKey} 資料`);
                 
                 // 回退到原邏輯：使用預設使用者或第一個可用的
                 const userKeys = Object.keys(bodyData);
-                console.log('🔍 所有可用的 userKeys:', userKeys);
                 
                 if (userKeys.length > 0) {
                     const defaultUserKey = apiResponse.BodyData_ptr || userKeys[0];
                     userData = bodyData[defaultUserKey];
-                    console.log(`🔍 使用預設/第一個雲端資料: ${defaultUserKey}`, userData);
                 } else {
-                    console.log('❌ 沒有任何使用者資料');
                 }
             }
             
             if (userData) {
                 // 所有資料都直接使用，沒有 .body 屬性
                 const bodyInfo = userData;
-                console.log('🔍 身體資料:', bodyInfo);
                 
                 // 如果是從 bodyM/bodyF 取得資料，直接根據 targetKey 判斷性別
                 let genderDisplay = '未設定';
@@ -6160,14 +5973,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     weight: bodyInfo.WV ? `${bodyInfo.WV} kg` : '未設定',
                     gender: genderDisplay
                 };
-                console.log('✅ 雲端資料結果:', result);
                 return result;
             }
             
-            console.log('❌ 沒有找到對應的雲端資料');
             return { height: '未設定', weight: '未設定', gender: '未設定' };
         } catch (error) {
-            console.error('❌ 獲取雲端資料時發生錯誤:', error);
             return { height: '未設定', weight: '未設定', gender: '未設定' };
         }
     }
@@ -6175,12 +5985,10 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 調用 update_bodydata API 的函數（供外部調用）
     async updateBodyDataAPI(bodyData) {
         try {
-            console.log('🔄 開始調用 update_bodydata API:', bodyData);
             
             // 獲取憑證
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
-                console.error('❌ 沒有可用的憑證來更新身體資料');
                     return;
                 }
                 
@@ -6188,7 +5996,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
             const sub = userInfo.sub;
             if (!sub) {
-                console.error('❌ 沒有可用的用戶 sub');
                 return;
             }
 
@@ -6210,7 +6017,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 bodyDataPtr = 'bodyF';
             }
             
-            console.log('🎯 根據 URL 參數設置:', { genderFromUrl, bodyDataPtr, formattedBodyData });
             
             // 構建 API 請求
             const payload = {
@@ -6222,7 +6028,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 IDTYPE: 'Google'
             };
 
-            console.log('📤 發送 API 請求:', payload);
 
             const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
                 method: 'POST',
@@ -6234,7 +6039,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('✅ update_bodydata API 調用成功:', result);
                 
                 // 更新本地儲存的 API 回應
                 localStorage.setItem('inffits_api_response', JSON.stringify(result));
@@ -6244,12 +6048,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 女性：整包 bodyData 保存到 BodyID_size_Last
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'F');
-                    console.log('✅ 已同步更新本地女性資料:', bodyData);
                 } else if (genderFromUrl === 'M') {
                     // 男性：整包 bodyData 保存到 BodyID_size_Last
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
-                    console.log('✅ 已同步更新本地男性資料:', bodyData);
                 }
                 
                 // 觸發更新事件
@@ -6268,22 +6070,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }));
                 
             } else {
-                console.error('❌ update_bodydata API 調用失敗:', response.status, response.statusText);
             }
         } catch (error) {
-            console.error('❌ update_bodydata API 調用錯誤:', error);
         }
     }
 
     // 調用 update_bodydata API 的函數（供外部調用）
     async updateBodyDataAPI(bodyData) {
         try {
-            console.log('🔄 開始調用 update_bodydata API:', bodyData);
             
             // 獲取憑證
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
-                console.error('❌ 沒有可用的憑證來更新身體資料');
                     return;
                 }
                 
@@ -6291,7 +6089,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
             const sub = userInfo.sub;
             if (!sub) {
-                console.error('❌ 沒有可用的用戶 sub');
                 return;
             }
 
@@ -6313,7 +6110,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 bodyDataPtr = 'bodyF';
             }
             
-            console.log('🎯 根據 URL 參數設置:', { genderFromUrl, bodyDataPtr, formattedBodyData });
             
             // 構建 API 請求
             const payload = {
@@ -6325,7 +6121,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 IDTYPE: 'Google'
             };
 
-            console.log('📤 發送 API 請求:', payload);
 
             const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
                 method: 'POST',
@@ -6337,7 +6132,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('✅ update_bodydata API 調用成功:', result);
                 
                 // 更新本地儲存的 API 回應
                 localStorage.setItem('inffits_api_response', JSON.stringify(result));
@@ -6347,12 +6141,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 女性：整包 bodyData 保存到 BodyID_size_Last
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'F');
-                    console.log('✅ 已同步更新本地女性資料:', bodyData);
                 } else if (genderFromUrl === 'M') {
                     // 男性：整包 bodyData 保存到 BodyID_size_Last
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
-                    console.log('✅ 已同步更新本地男性資料:', bodyData);
                 }
                 
                 // 觸發更新事件
@@ -6371,26 +6163,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }));
                 
             } else {
-                console.error('❌ update_bodydata API 調用失敗:', response.status, response.statusText);
             }
         } catch (error) {
-            console.error('❌ update_bodydata API 調用錯誤:', error);
         }
     }
 
     // 呼叫上傳資料 API
     async callUploadDataAPI(uploadData) {
         try {
-            console.log('🔐 開始 callUploadDataAPI，輸入資料:', uploadData);
             
             // 獲取憑證資料
             const storedCredential = localStorage.getItem('google_auth_credential');
             const storedUserInfo = localStorage.getItem('google_user_info');
-            
-            console.log('🔍 憑證檢查:', { 
-                hasCredential: !!storedCredential, 
-                hasUserInfo: !!storedUserInfo 
-            });
             
             if (!storedCredential) {
                 throw new Error('沒有可用的憑證');
@@ -6402,7 +6186,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const userInfo = JSON.parse(storedUserInfo);
                     subValue = userInfo.sub || '';
                 } catch (e) {
-                    console.warn('解析 localStorage 用戶資訊失敗:', e);
                 }
             }
             
@@ -6431,10 +6214,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 IDTYPE: 'Google'
             };
             
-            console.log('📤 發送上傳資料請求:', payload);
             
             // 發送 API 請求
-            console.log('🌐 開始發送 fetch 請求...');
             const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
                 method: 'POST',
                 headers: {
@@ -6443,16 +6224,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                 body: JSON.stringify(payload)
             });
             
-            console.log('📡 收到 API 回應:', { status: response.status, ok: response.ok });
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ API 回應錯誤:', errorText);
                 throw new Error(`HTTP error ${response.status}: ${errorText}`);
             }
             
             const data = await response.json();
-            console.log('✅ 上傳資料 API 回應:', data);
             
             // 更新本地儲存的 API 回應
             this.saveApiResponseSilently(data);
@@ -6460,7 +6238,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             showNotification('✅ 本地資料已成功上傳到雲端', 'success');
             
         } catch (error) {
-            console.error('❌ 呼叫上傳資料 API 失敗:', error);
             throw error;
         }
     }
@@ -6470,14 +6247,12 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 從 BodyID_size_Last 恢復 BodyData
     async restoreBodyDataFromSizeLast(sizeData) {
         try {
-            console.log(`🔄 開始從 BodyID_size_Last 恢復 BodyData:`, sizeData);
             
             // 獲取憑證資料
             const storedCredential = localStorage.getItem('google_auth_credential');
             const storedUserInfo = localStorage.getItem('google_user_info');
             
             if (!storedCredential) {
-                console.log('ℹ️ 沒有可用的憑證，靜默跳過');
                 return;
             }
             
@@ -6487,13 +6262,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const userInfo = JSON.parse(storedUserInfo);
                     subValue = userInfo.sub || '';
                 } catch (e) {
-                    console.warn('解析 localStorage 用戶資訊失敗:', e);
                 }
             }
             
             // 獲取性別資料
             const genderLast = localStorage.getItem('Gender_Last');
-            console.log(`👤 從 localStorage 獲取性別: ${genderLast}`);
             
             // 獲取現有的 BodyData
             const currentApiResponse = this.getApiResponse();
@@ -6509,16 +6282,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }
                 // 直接展開 sizeData 的所有屬性，避免嵌套 body
                 newBodyData.bodyM = { ...newBodyData.bodyM, ...sizeData };
-                console.log(`👨 將資料添加到 bodyM:`, newBodyData.bodyM);
             } else if (genderLast === 'F') {
                 if (!newBodyData.bodyF) {
                     newBodyData.bodyF = {};
                 }
                 // 直接展開 sizeData 的所有屬性，避免嵌套 body
                 newBodyData.bodyF = { ...newBodyData.bodyF, ...sizeData };
-                console.log(`👩 將資料添加到 bodyF:`, newBodyData.bodyF);
             } else {
-                console.log(`ℹ️ 未知性別 ${genderLast}，靜默跳過`);
                 return;
             }
             
@@ -6531,7 +6301,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 IDTYPE: 'Google'
             };
             
-            console.log('📤 發送恢復 BodyData 請求:', payload);
             
             // 調用 API 更新 BodyData
             const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
@@ -6547,7 +6316,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
             
             const data = await response.json();
-            console.log('✅ 恢復 BodyData API 回應:', data);
             
             // 檢查 API 是否成功（根據 message 欄位或 success 欄位）
             const isSuccess = data.success === true || data.message === "Existing user updated";
@@ -6577,18 +6345,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }));
             } else {
                 // API 失敗時，靜默處理，不顯示錯誤訊息
-                console.log('ℹ️ 恢復 BodyData API 回應失敗，靜默跳過');
             }
             
         } catch (error) {
             // 發生錯誤時，靜默處理，不顯示錯誤訊息
-            console.log('ℹ️ 從 BodyID_size_Last 恢復 BodyData 時發生錯誤，靜默跳過');
         }
     }
 
     // 處理登入失敗
     handleLoginFailure(error) {
-        console.error('Google 登入失敗:', error);
 
         // 觸發失敗事件
         this.dispatchEvent(new CustomEvent('inf-google-login-failure', {
@@ -6617,7 +6382,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 清除 Google 的會話狀態
                 window.google.accounts.id.revoke(this.clientId, () => {});
             } catch (error) {
-                console.warn('Google 登出清理失敗:', error);
             }
         }
 
@@ -6655,20 +6419,17 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 獲取當前 API 回應
             const currentApiResponse = this.getApiResponse();
             if (!currentApiResponse || !currentApiResponse.BodyData) {
-                console.warn('❌ 沒有可用的 BodyData 來更新預設使用者');
                 return;
             }
 
             // 檢查使用者是否存在
             if (!currentApiResponse.BodyData[userKey]) {
-                console.warn(`❌ 使用者 ${userKey} 不存在於 BodyData 中`);
                 return;
             }
 
             // 獲取當前憑證
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
-                console.warn('❌ 沒有可用的憑證來更新預設使用者');
                 return;
             }
 
@@ -6681,7 +6442,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 IDTYPE: "Google"
             };
 
-            console.log('🔄 正在更新預設使用者為:', userKey);
 
             // 調用 API 更新預設使用者
             const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model", {
@@ -6695,7 +6455,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (!response.ok) {
                 if (response.status === 401) {
                     // 401 錯誤處理：憑證失效，自動登出
-                    console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
                     this.signOut();
                     this.dispatchEvent(new CustomEvent('credential-expired', {
                         detail: {
@@ -6711,7 +6470,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
             const data = await response.json();
-            console.log('✅ 預設使用者更新成功:', data);
 
             // 保存新的 API 回應（不觸發額外的 storage 事件）
             this.saveApiResponseSilently(data);
@@ -6731,7 +6489,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             }));
 
         } catch (error) {
-            console.error('❌ 更新預設使用者失敗:', error);
 
             // 顯示錯誤提示（可選）
             this.showErrorNotification('更新預設使用者失敗: ' + error.message);
@@ -6880,7 +6637,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 // 更新編輯圖標的 onclick 屬性
 function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit) {
     if (!fieldContainer) {
-        console.log('❌ fieldContainer 為空，無法更新 onclick');
         return;
     }
     
@@ -6900,13 +6656,11 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
     if (newOnclick) {
         // 更新欄位容器的 onclick 屬性
         fieldContainer.setAttribute('onclick', newOnclick);
-        console.log(`✅ 更新 ${fieldLabel} 欄位的 onclick 屬性：${newOnclick}`);
         
         // 同時更新編輯圖標的 onclick 屬性（如果有的話）
         const editIcon = fieldContainer.querySelector('.edit-icon');
         if (editIcon) {
             editIcon.setAttribute('onclick', newOnclick);
-            console.log(`✅ 更新編輯圖標的 onclick 屬性`);
         }
     }
 }
@@ -6914,7 +6668,6 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
 // 同步更新本地 localStorage 資料
 function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
     try {
-        console.log(`🔄 updateLocalStorageFromAPI 被調用: userKey=${userKey}, fieldName=${fieldName}, newValue=${newValue}`);
         
         // 獲取當前 API 回應
         const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
@@ -6928,7 +6681,6 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             // 對於 bodyF/bodyM，整包資料保存到 BodyID_size_Last
             if (userKey === 'bodyF' || userKey === 'bodyM') {
                 localStorage.setItem('BodyID_size_Last', JSON.stringify(userData));
-                console.log(`✅ 已更新 BodyID_size_Last (${userKey}):`, userData);
                 
                 // 更新性別資料
                 if (userKey === 'bodyF') {
@@ -6944,13 +6696,11 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                         WV: bodyInfo.WV
                     };
                     localStorage.setItem('BodyID_size_Last', JSON.stringify(localSizeData));
-                    console.log('✅ 已更新 BodyID_size_Last:', localSizeData);
                 }
                 
                 // 更新性別資料
                 if (bodyInfo.Gender) {
                     localStorage.setItem('Gender_Last', bodyInfo.Gender);
-                    console.log('✅ 已更新 Gender_Last:', bodyInfo.Gender);
                 }
             }
             
@@ -6963,22 +6713,18 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             }));
         }
     } catch (error) {
-        console.error('❌ 同步更新本地資料失敗:', error);
     }
 }
 
 // 更新 BMI 顯示
 function updateBMI(userKey) {
-    console.log(`🔍 updateBMI 被調用，userKey: ${userKey}`);
     
     // 獲取當前 API 回應
     const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
-    console.log('🔍 當前 API 回應:', currentApiResponse);
     
     // 獲取指定用戶的身體資料
     const userBodyData = currentApiResponse.BodyData[userKey];
     if (!userBodyData) {
-        console.log(`❌ 用戶 ${userKey} 沒有身體資料`);
         return;
     }
     
@@ -6986,12 +6732,10 @@ function updateBMI(userKey) {
     const bodyInfo = userBodyData;
     
     if (!bodyInfo) {
-        console.log(`❌ 用戶 ${userKey} 沒有身體資料`);
         return;
     }
     
     if (!bodyInfo) {
-        console.log(`❌ 用戶 ${userKey} 沒有有效的身體資料`);
         return;
     }
     
@@ -7011,7 +6755,6 @@ function updateBMI(userKey) {
             const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
             bmiValue = bmi;
             
-            console.log(`🔍 BMI計算：身高=${height}cm (${heightInMeters}m), 體重=${weight}kg, BMI=${bmi}`);
             
             // 確定 BMI 狀態和顏色
             if (bmi < 18.5) {
@@ -7028,23 +6771,18 @@ function updateBMI(userKey) {
                 bmiColor = '#EF4444';
             }
             
-            console.log(`🔍 計算結果：身高=${height}cm, 體重=${weight}kg, BMI=${bmiValue}`);
         } else {
-            console.log(`❌ 身高或體重數據無效：身高=${height}, 體重=${weight}`);
         }
     } else {
-        console.log(`❌ 用戶 ${userKey} 缺少身高或體重數據，顯示預設值`);
     }
     
     // 查找 BMI 顯示元素並更新（無論是否有數據都執行）
-            console.log(`🔍 查找用戶 ${userKey} 的 BMI 顯示`);
             
             // 嘗試多種查找方式
             let bmiValueElements = [];
             
             // 方式1：通過 style 屬性查找（在用戶容器內）
             bmiValueElements = document.querySelectorAll(`[data-user="${userKey}"] div[style*="BMI 指數"]`);
-            console.log(`🔍 方式1 - 通過 style 屬性查找（用戶容器內）：找到 ${bmiValueElements.length} 個元素`);
             
             // 方式2：通過文本內容查找（在用戶容器內）
             if (bmiValueElements.length === 0) {
@@ -7052,7 +6790,6 @@ function updateBMI(userKey) {
                 bmiValueElements = Array.from(allDivs).filter(div => 
                     div.textContent && div.textContent.includes('BMI 指數')
                 );
-                console.log(`🔍 方式2 - 通過文本內容查找（用戶容器內）：找到 ${bmiValueElements.length} 個元素`);
             }
             
             // 方式3：通過父容器查找（在用戶容器內）
@@ -7062,14 +6799,12 @@ function updateBMI(userKey) {
                     const bmiContainer = userContainer.querySelector('div[style*="linear-gradient"]');
                     if (bmiContainer) {
                         bmiValueElements = [bmiContainer];
-                        console.log(`🔍 方式3 - 通過父容器查找（用戶容器內）：找到 ${bmiValueElements.length} 個元素`);
                     }
                 }
             }
             
             // 方式4：通過外層容器查找（BMI 可能在用戶容器外）
             if (bmiValueElements.length === 0) {
-                console.log(`🔍 方式4 - 通過外層容器查找`);
                 
                 // 查找包含當前用戶的所有父容器
                 const userContainer = document.querySelector(`[data-user="${userKey}"]`);
@@ -7077,13 +6812,11 @@ function updateBMI(userKey) {
                     // 向上查找包含 BMI 的容器
                     let parent = userContainer.parentElement;
                     while (parent && parent !== document.body) {
-                        console.log(`🔍 檢查父容器:`, parent);
                         
                         // 在父容器中查找 BMI 元素
                         const bmiInParent = parent.querySelectorAll('div[style*="BMI 指數"]');
                         if (bmiInParent.length > 0) {
                             bmiValueElements = Array.from(bmiInParent);
-                            console.log(`🔍 在父容器中找到 ${bmiValueElements.length} 個 BMI 元素`);
                             break;
                         }
                         
@@ -7093,7 +6826,6 @@ function updateBMI(userKey) {
                         );
                         if (bmiByText.length > 0) {
                             bmiValueElements = bmiByText;
-                            console.log(`🔍 在父容器中通過文本找到 ${bmiValueElements.length} 個 BMI 元素`);
                             break;
                         }
                         
@@ -7103,10 +6835,8 @@ function updateBMI(userKey) {
             }
             
             if (bmiValueElements.length > 0) {
-                console.log(`✅ 找到 ${bmiValueElements.length} 個 BMI 顯示元素`);
                 
                 bmiValueElements.forEach((bmiElement, index) => {
-                    console.log(`🔍 處理第 ${index + 1} 個 BMI 元素:`, bmiElement);
                     
                     // 查找 BMI 值和狀態元素
                     let bmiValueElement = bmiElement.querySelector('div[style*="font-size: 16px"]');
@@ -7120,39 +6850,28 @@ function updateBMI(userKey) {
                         bmiStatusElement = bmiElement.querySelector('div[style*="font-size: 11px; margin-top: 2px"]');
                     }
                     
-                    console.log(`🔍 BMI 值元素:`, bmiValueElement);
-                    console.log(`🔍 BMI 狀態元素:`, bmiStatusElement);
                     
                     if (bmiValueElement) {
                         bmiValueElement.textContent = bmiValue;
                         bmiValueElement.style.color = bmiColor;
-                        console.log(`✅ 更新 BMI 值為 ${bmiValue}`);
                     } else {
-                        console.log(`❌ 未找到 BMI 值元素`);
                     }
                     
                     if (bmiStatusElement) {
                         bmiStatusElement.textContent = bmiStatus;
                         bmiStatusElement.style.color = bmiColor;
-                        console.log(`✅ 更新 BMI 狀態為 ${bmiStatus}`);
                     } else {
-                        console.log(`❌ 未找到 BMI 狀態元素`);
                     }
                     
                     // 更新父容器的背景色
                     const parentContainer = bmiElement.closest('div[style*="linear-gradient"]');
                     if (parentContainer) {
                         parentContainer.style.background = `linear-gradient(135deg, ${bmiColor}10, ${bmiColor}05)`;
-                        console.log(`✅ 更新 BMI 容器背景色`);
                     } else {
-                        console.log(`❌ 未找到 BMI 容器`);
                     }
                 });
                 
-                console.log(`✅ BMI 更新完成：${bmiValue} - ${bmiStatus}`);
             } else {
-                console.log(`❌ 未找到用戶 ${userKey} 的 BMI 顯示元素`);
-                console.log(`🔍 可用的用戶容器:`, document.querySelectorAll('[data-user]'));
     }
 }
 
@@ -7160,7 +6879,6 @@ function updateBMI(userKey) {
 if (!customElements.get('inf-google-login')) {
     customElements.define('inf-google-login', InfGoogleLoginComponent);
 } else {
-    console.warn('Google Login Web Component 已經存在，跳過註冊');
 }
 
 // 預定義的配置模板
@@ -7269,10 +6987,8 @@ const CONFIG_TEMPLATES = {
 // 簡化的初始化函數
 function createGoogleLoginComponentsByType(type = 'product') {
     if (CONFIG_TEMPLATES[type]) {
-        console.log(`使用 ${type} 類型配置模板`);
         createGoogleLoginComponents(CONFIG_TEMPLATES[type]);
     } else {
-        console.error(`未知的類型: ${type}，使用預設 product 配置`);
         createGoogleLoginComponents(CONFIG_TEMPLATES.product);
     }
 }
@@ -7627,7 +7343,6 @@ function createGoogleLoginComponents(configs = [{
             // 檢查是否正在顯示模態框，如果是則不重新初始化
             const modalContainers = document.querySelectorAll('.inf-google-login-modal-container');
             if (modalContainers.length === 0) {
-                console.log('檢測到 intro-content 變化，重新初始化 Google Login 組件');
                 initComponents();
 
                 // 延遲一點時間，然後重新應用樣式到所有現有的組件
@@ -7640,7 +7355,6 @@ function createGoogleLoginComponents(configs = [{
                     });
                 }, 200);
             } else {
-                console.log('檢測到模態框正在顯示，跳過重新初始化');
             }
         }
     });
@@ -7666,7 +7380,6 @@ function createGoogleLoginComponents(configs = [{
     // 監聽 startover 按鈕點擊事件，強制重新初始化
     document.addEventListener('click', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
-            console.log('檢測到 startover 按鈕點擊，強制重新初始化');
             // 延遲一點時間確保重置完成
             setTimeout(() => {
                 initComponents();
@@ -7681,7 +7394,6 @@ function createGoogleLoginComponents(configs = [{
     // 監聽 startover 按鈕的觸摸事件（移動設備）
     document.addEventListener('touchstart', (event) => {
         if (event.target && (event.target.id === 'startover' || event.target.closest('#startover'))) {
-            console.log('檢測到 startover 按鈕觸摸，強制重新初始化');
             // 延遲一點時間確保重置完成
             setTimeout(() => {
                 initComponents();
@@ -7707,7 +7419,6 @@ function createGoogleLoginComponents(configs = [{
         );
 
         if (isResetButton) {
-            console.log('檢測到重置按鈕點擊，重新應用樣式');
             setTimeout(() => {
                 globalReapplyStyles();
             }, 200);
@@ -7746,7 +7457,6 @@ function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLa
     // 檢查是否已經在編輯中
     const existingInput = fieldContainer.querySelector('input, select');
     if (existingInput) {
-        console.log('欄位正在編輯中，忽略重複點擊');
         return;
     }
     
@@ -7973,11 +7683,9 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
     }
     
-    console.log(`🔍 值比較：新值="${newValue}", 原始值="${originalValue}"`);
     
     // 如果值沒有改變，直接取消編輯
     if (newValue === originalValue || (newValue === '' && originalValue === '')) {
-        console.log('🔍 值未改變，直接取消編輯');
         cancelEdit(input, valueElement);
         return;
     }
@@ -8015,7 +7723,6 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
         
         const data = await response.json();
-        console.log('✅ 欄位更新成功:', data);
         
         // 更新顯示值
         let displayValue, displayColor;
@@ -8060,7 +7767,6 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
 
         // 如果更新的是身高、體重或性別，則更新 BMI 和本地資料
         if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
-            console.log('🔍 更新 BMI 顯示和本地資料同步');
             
             // 延遲執行 BMI 更新，確保 DOM 完全更新
         setTimeout(() => {
@@ -8073,12 +7779,10 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         
         // 更新編輯圖標的 onclick 屬性，使其使用新的值
         if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
-            console.log('🔍 更新編輯圖標的 onclick 屬性');
             updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit);
         }
 
         // 先恢復編輯圖標狀態和欄位容器狀態
-        console.log('🔍 檢查 fieldContainer:', fieldContainer);
         if (fieldContainer) {
             // 恢復欄位容器狀態
             fieldContainer.style.setProperty('background', '#F1F5F9', 'important');
@@ -8086,40 +7790,25 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
             fieldContainer.removeAttribute('title');
             
             const editIcon = fieldContainer.querySelector('.edit-icon');
-            console.log('🔍 找到的 editIcon:', editIcon);
             if (editIcon) {
-                console.log('🔍 編輯圖標當前樣式:', editIcon.style.cssText);
-                console.log('🔍 編輯圖標當前背景色:', editIcon.style.background);
-                console.log('🔍 直接恢復編輯圖標狀態，背景色從', editIcon.style.background, '變為 rgba(59, 130, 246, 0.1)');
                 editIcon.style.setProperty('background', 'rgba(59, 130, 246, 0.1)', 'important');
                 editIcon.style.cursor = 'pointer';
                 editIcon.title = '點擊編輯';
                 // 清除 hover 事件，防止覆蓋背景色
                 editIcon.onmouseenter = null;
                 editIcon.onmouseleave = null;
-                console.log('🔍 設置後的背景色:', editIcon.style.background);
             } else {
-                console.log('❌ 沒有找到 editIcon');
             }
         } else {
-            console.log('❌ fieldContainer 為空');
         }
         
         // 恢復顯示
-        console.log('🔍 準備調用 cancelEdit，參數檢查:');
-        console.log('  - input:', input);
-        console.log('  - valueElement:', valueElement);
-        console.log('  - valueElement.parentNode:', valueElement.parentNode);
-        console.log('  - valueElement.closest(".editable-field"):', valueElement.closest('.editable-field'));
-        console.log('  - fieldContainer:', fieldContainer);
         cancelEdit(input, valueElement);
         
     } catch (error) {
-        console.error('❌ 欄位更新失敗:', error);
         
         // 檢查是否為憑證問題
         if (error.message.includes('401') || error.message.includes('憑證') || error.message.includes('認證')) {
-            console.log('🔐 檢測到憑證問題，自動登出用戶');
             showNotification('🔐 憑證已過期，已自動登出', 'warning');
             
             // 清除所有認證相關的 localStorage
@@ -8153,7 +7842,6 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
             
             const editIcon = fieldContainer.querySelector('.edit-icon');
             if (editIcon) {
-                console.log('🔍 錯誤處理中直接恢復編輯圖標狀態');
                 editIcon.style.setProperty('background', 'rgba(59, 130, 246, 0.1)', 'important');
                 editIcon.style.cursor = 'pointer';
                 editIcon.title = '點擊編輯';
@@ -8164,14 +7852,9 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
         
         // 錯誤處理中也需要更新 onclick 屬性，使用原始值
-        console.log('🔍 錯誤處理中更新 onclick 屬性');
         updateEditFieldOnclick(fieldContainer, fieldName, userKey, originalValue, fieldLabel, unit);
         
         // 恢復顯示
-        console.log('🔍 錯誤處理中調用 cancelEdit，參數檢查:');
-        console.log('  - input:', input);
-        console.log('  - valueElement:', valueElement);
-        console.log('  - valueElement.parentNode:', valueElement.parentNode);
         cancelEdit(input, valueElement);
     }
 }
@@ -8245,7 +7928,6 @@ function cancelEdit(inputElement, valueElement) {
     
     // 恢復編輯圖標狀態和欄位容器狀態
     const fieldContainer = valueElement.closest('.editable-field');
-    console.log('🔍 cancelEdit: fieldContainer found:', !!fieldContainer);
     if (fieldContainer) {
         // 恢復欄位容器狀態
         fieldContainer.style.setProperty('background', '#F1F5F9', 'important');
@@ -8253,9 +7935,7 @@ function cancelEdit(inputElement, valueElement) {
         fieldContainer.removeAttribute('title');
         
         const editIcon = fieldContainer.querySelector('.edit-icon');
-        console.log('🔍 cancelEdit: editIcon found:', !!editIcon);
         if (editIcon) {
-            console.log('🔍 cancelEdit: 恢復編輯圖標狀態，背景色從', editIcon.style.background, '變為 rgba(59, 130, 246, 0.1)');
             editIcon.style.setProperty('background', 'rgba(59, 130, 246, 0.1)', 'important');
             editIcon.style.cursor = 'pointer';
             editIcon.title = '點擊編輯';
@@ -8397,14 +8077,12 @@ function showCustomConfirm(title, message, onConfirm, onCancel) {
 // 檢查並刪除本地資料（如果與雲端資料相同）
 function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
     try {
-        console.log('🔍 檢查是否需要同步刪除本地資料');
         
         // 獲取本地資料
         const localBodyData = localStorage.getItem('BodyID_size_Last');
         const localGender = localStorage.getItem('Gender_Last');
         
         if (!localBodyData || !localGender) {
-            console.log('ℹ️ 本地無資料，無需刪除');
             return false;
         }
         
@@ -8412,7 +8090,6 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
         try {
             localData = JSON.parse(localBodyData);
         } catch (error) {
-            console.log('❌ 本地資料格式錯誤，無需刪除');
             return false;
         }
         
@@ -8422,7 +8099,6 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
                              (cloudUserData.Gender === localGender);
         
         if (!genderMatches) {
-            console.log('ℹ️ 性別不匹配，無需刪除本地資料');
             return false;
         }
         
@@ -8430,15 +8106,8 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
         const heightMatches = localData.HV === cloudUserData.HV;
         const weightMatches = localData.WV === cloudUserData.WV;
         
-        console.log('🔍 資料比較:', {
-            local: { HV: localData.HV, WV: localData.WV, Gender: localGender },
-            cloud: { HV: cloudUserData.HV, WV: cloudUserData.WV, Gender: cloudUserData.Gender },
-            matches: { height: heightMatches, weight: weightMatches, gender: genderMatches }
-        });
-        
         if (heightMatches && weightMatches && genderMatches) {
             // 資料相同，刪除本地資料
-            console.log('🗑️ 雲端與本地資料相同，同步刪除本地資料');
             localStorage.removeItem('BodyID_size_Last');
             localStorage.removeItem('Gender_Last');
             
@@ -8453,12 +8122,10 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
             showNotification('🗑️ 本地資料已同步刪除', 'info');
             return true;
         } else {
-            console.log('ℹ️ 資料不同，保留本地資料');
             return false;
         }
         
     } catch (error) {
-        console.error('❌ 檢查本地資料時發生錯誤:', error);
         return false;
     }
 }
@@ -8476,28 +8143,24 @@ async function deleteUser(userKey) {
 
         if (!confirmed) return;
 
-        console.log(`🗑️ 開始刪除使用者: ${userKey}`);
         
         // 獲取當前 API 回應
         const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
         
         // 檢查使用者是否存在
         if (!currentApiResponse.BodyData || !currentApiResponse.BodyData[userKey]) {
-            console.error(`❌ 使用者 ${userKey} 不存在`);
             showNotification(`❌ 使用者 ${userKey} 不存在`, 'error');
             return;
         }
         
         // 檢查使用者數量（用於日誌記錄）
         const userKeys = Object.keys(currentApiResponse.BodyData);
-        console.log(`🔍 當前使用者數量: ${userKeys.length}`);
         
         // 獲取憑證資料
         const storedCredential = localStorage.getItem('google_auth_credential');
         const storedUserInfo = localStorage.getItem('google_user_info');
         
         if (!storedCredential) {
-            console.error(`❌ 沒有可用的憑證`);
             showNotification(`❌ 沒有可用的憑證，請重新登入`, 'error');
             return;
         }
@@ -8508,7 +8171,6 @@ async function deleteUser(userKey) {
                 const userInfo = JSON.parse(storedUserInfo);
                 subValue = userInfo.sub || '';
             } catch (e) {
-                console.warn('解析 localStorage 用戶資訊失敗:', e);
             }
         }
         
@@ -8523,11 +8185,9 @@ async function deleteUser(userKey) {
             const remainingUsers = Object.keys(newBodyData);
             if (remainingUsers.length > 0) {
                 newBodyDataPtr = remainingUsers[0];
-                console.log(`🔄 重新設定預設使用者為: ${newBodyDataPtr}`);
             } else {
                 // 如果沒有剩餘使用者，設定為空字串
                 newBodyDataPtr = '';
-                console.log(`🔄 沒有剩餘使用者，預設使用者設為空`);
             }
         }
         
@@ -8540,7 +8200,6 @@ async function deleteUser(userKey) {
             IDTYPE: 'Google'
         };
         
-        console.log(`📤 發送刪除使用者請求:`, payload);
         
         // 調用 API 刪除使用者
         const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
@@ -8556,7 +8215,6 @@ async function deleteUser(userKey) {
         }
         
         const data = await response.json();
-        console.log(`✅ 刪除使用者 API 回應:`, data);
         
         // 檢查 API 是否成功（根據 message 欄位）
         const isSuccess = data.message === "Existing user updated";
@@ -8566,8 +8224,6 @@ async function deleteUser(userKey) {
             const finalBodyData = data.BodyData || {};
             const finalBodyDataPtr = data.BodyData_ptr || '';
             
-            console.log('📋 使用 API 回傳的 BodyData:', finalBodyData);
-            console.log('📋 使用 API 回傳的 BodyData_ptr:', finalBodyDataPtr);
             
             // 檢查是否需要同步刪除本地資料
             const shouldDeleteLocalData = checkAndDeleteLocalDataIfSame(userKey, currentApiResponse.BodyData[userKey]);
@@ -8602,18 +8258,15 @@ async function deleteUser(userKey) {
             
             // 重新載入頁面以更新顯示
             setTimeout(() => {
-                console.log(`🔄 重新載入頁面以更新顯示`);
                 window.location.reload();
             }, 1500);
             
         } else {
             // API 失敗時，不更新本地資料，保持原有狀態
-            console.warn('⚠️ API 回應顯示失敗，保持原有資料狀態');
             throw new Error(data.message || '刪除使用者失敗');
         }
         
     } catch (error) {
-        console.error(`❌ 刪除使用者失敗:`, error);
         showNotification(`❌ 刪除使用者失敗: ${error.message}`, 'error');
     }
 }
