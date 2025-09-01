@@ -36,6 +36,9 @@ class InfGoogleLoginComponent extends HTMLElement {
         this.activeTimeouts = new Set();
         this.activeIntervals = new Set();
 
+        // 添加同步狀態標誌，防止重複執行
+        this.syncInProgress = false;
+
         // 監聽 localStorage 變化
         window.addEventListener('storage', this.handleStorageChange.bind(this));
 
@@ -177,7 +180,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.refreshApiData();
             } else {
                 // 其他情況使用本地快取的 API 資料
-                this.getApiResponse();
+                const cachedApiResponse = this.getApiResponse();
+                // 頁面載入時不觸發數據同步，只有首次登入時才觸發
+                console.log('📄 頁面載入：使用快取的 API 資料，不觸發數據同步');
             }
             return;
         }
@@ -196,7 +201,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.refreshApiData();
             } else {
                 // 其他情況使用本地快取的 API 資料
-                this.getApiResponse();
+                const cachedApiResponse = this.getApiResponse();
+                // 頁面載入時不觸發數據同步，只有首次登入時才觸發
+                console.log('📄 OAuth2 頁面載入：使用快取的 API 資料，不觸發數據同步');
             }
         } else {
             // 如果沒有有效的 token，清除所有狀態
@@ -484,6 +491,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.updateAvatar(); // 即使失敗也要更新頭像顯示
         });
 
+
+
         // 🔧 如果已有 API 資料，立即更新 BodyData
         const existingApiResponse = this.getApiResponse();
         if (existingApiResponse) {
@@ -646,15 +655,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             InfGoogleLoginComponent.defaultUserEventListenerAdded = true;
         }
 
-        // 監聽 FML_Done 訊息事件
-        if (!InfGoogleLoginComponent.fmlDoneEventListenerAdded) {
-            window.addEventListener('message', (event) => {
-                if (event.data && event.data.header === 'bid') {
-                    this.handleFMLDoneMessage(event.data);
-                }
-            });
-            InfGoogleLoginComponent.fmlDoneEventListenerAdded = true;
-        }
+
     }
 
     // 處理頭像點擊
@@ -686,10 +687,836 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         existingStyle.textContent = `
+        #container_BF_mbinfo:has(.inf-google-login-modal-container),
+        #SizeBox_cart:has(.inf-google-login-modal-container) {
+                overflow: hidden !important;
+        }
             #SizeBox_cart .inf-google-login-modal-container {
-                max-width: 90% !important;
+                max-width: 95% !important;
                 margin: 0 auto !important;
-                padding-top: 20px !important;
+                padding: 20px 10px 0px 10px!important;
+                width: 100% !important;
+                height: 100% !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                background: white !important;
+                border-radius: 8px !important;
+                position: relative !important;
+                overflow: hidden !important;
+            }
+        `;
+        // 找到對應的配置
+        const configs = [{
+                avatarContainerId: 'SB_Prod_cart',
+                modalContainerId: 'SizeBox_cart',
+                avatarStyle: {
+                    desktop: {
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        width: '28px',
+                        height: '28px',
+                    },
+                    mobile: {
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        width: '28px',
+                        height: '28px',
+                    }
+                },
+                modalContainerStyle: {
+                    desktop: {
+                        maxWidth: '90%',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    },
+                    mobile: {
+                        maxWidth: '90%',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    }
+                }
+            },
+            {
+                avatarContainerId: 'header_BF',
+                modalContainerId: 'container_BF_mbinfo',
+                avatarStyle: {
+                    desktop: {
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        width: '28px',
+                        height: '28px',
+                    },
+                    mobile: {
+                        position: 'absolute',
+                        left: '8px',
+                        top: '8px',
+                        width: '24px',
+                        height: '24px',
+                    }
+                },
+                modalContainerStyle: {
+                    desktop: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '440px',
+                        margin: '0 auto',
+                        paddingTop: '20px'
+                    },
+                    mobile: {
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        background: 'white',
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        maxWidth: '100%',
+                        margin: '0 auto',
+                        paddingTop: '10px'
+                    }
+                }
+            }
+        ];
+
+        configs.forEach(config => {
+            const container = document.getElementById(config.avatarContainerId);
+            if (container) {
+                const component = container.querySelector('inf-google-login');
+                if (component) {
+                    // 重新設定 avatar 樣式
+                    const currentStyle = this.getCurrentStyle(config.avatarStyle);
+                    Object.entries(currentStyle).forEach(([property, value]) => {
+                        const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                        component.style.setProperty(cssProperty, value);
+                    });
+
+                    // 重新設定 modal 容器樣式
+                    if (config.modalContainerId) {
+                        const modalContainer = document.getElementById(config.modalContainerId);
+                        if (modalContainer && config.modalContainerStyle) {
+                            const currentModalStyle = this.getCurrentStyle(config.modalContainerStyle);
+                            Object.entries(currentModalStyle).forEach(([property, value]) => {
+                                const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+                                modalContainer.style.setProperty(cssProperty, value);
+                            });
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 獲取當前樣式的輔助方法
+    getCurrentStyle(avatarStyle) {
+        const isDesktop = window.innerWidth >= 480;
+        if (avatarStyle && typeof avatarStyle === 'object' && avatarStyle.desktop && avatarStyle.mobile) {
+            return isDesktop ? avatarStyle.desktop : avatarStyle.mobile;
+        } else {
+            return avatarStyle || {
+                position: 'absolute',
+                left: '10px',
+                top: '10px',
+                width: '28px',
+                height: '28px',
+            };
+        }
+    }
+
+
+
+    // 獲取當前顯示的內容區域
+    getCurrentContentContainer() {
+        // 如果指定了目標容器 ID，優先使用
+        if (this.targetContainerId) {
+            const targetContainer = document.getElementById(this.targetContainerId);
+            if (targetContainer) {
+                return targetContainer;
+            } else {
+                console.warn(`指定的目標容器 ID "${this.targetContainerId}" 不存在`);
+            }
+        }
+
+        // 如果沒有指定目標容器，使用原本的邏輯
+        const advancedContainer = document.getElementById('intro-content-advanced');
+        const simpleContainer = document.getElementById('intro-content-simple');
+
+        // 檢查哪個容器目前可見
+        // 優先檢查 simple 容器，因為它可能是動態生成的
+        if (simpleContainer && simpleContainer.style.display !== 'none' && simpleContainer.style.opacity !== '0') {
+            return simpleContainer;
+        } else if (advancedContainer && advancedContainer.style.display !== 'none') {
+            return advancedContainer;
+        } else if (simpleContainer) {
+            // 如果都沒有明確顯示，預設使用 simple
+            return simpleContainer;
+        } else if (advancedContainer) {
+            // 如果只有 advanced 存在，使用 advanced
+            return advancedContainer;
+        }
+
+        return null;
+    }
+
+
+
+
+    // 安全的 timeout 包裝器
+    safeSetTimeout(callback, delay) {
+        const timeoutId = setTimeout(() => {
+            this.activeTimeouts.delete(timeoutId);
+            callback();
+        }, delay);
+        this.activeTimeouts.add(timeoutId);
+        return timeoutId;
+    }
+
+    // 安全的 interval 包裝器
+    safeSetInterval(callback, delay) {
+        const intervalId = setInterval(callback, delay);
+        this.activeIntervals.add(intervalId);
+        return intervalId;
+    }
+
+    // 清理所有活動的 timeout 和 interval
+    clearAllTimers() {
+        this.activeTimeouts.forEach(timeoutId => {
+            clearTimeout(timeoutId);
+        });
+        this.activeTimeouts.clear();
+
+        this.activeIntervals.forEach(intervalId => {
+            clearInterval(intervalId);
+        });
+        this.activeIntervals.clear();
+    }
+
+    // 等待動畫完成的 Promise
+    waitForAnimation(element, animationName) {
+        return new Promise((resolve) => {
+            const handleAnimationEnd = (event) => {
+                if (event.animationName === animationName) {
+                    element.removeEventListener('animationend', handleAnimationEnd);
+                    resolve();
+                }
+            };
+
+            element.addEventListener('animationend', handleAnimationEnd);
+
+            // 如果動畫已經完成，立即 resolve
+            const computedStyle = window.getComputedStyle(element);
+            if (computedStyle.animationPlayState === 'finished' ||
+                !computedStyle.animationName ||
+                computedStyle.animationName === 'none') {
+                resolve();
+            }
+        });
+    }
+
+    // 設置模態框容器樣式
+    setModalContainerStyle(style) {
+        this.modalContainerStyle = style;
+    }
+
+    // 獲取當前適用的樣式（響應式）
+    getCurrentStyle(styleConfig) {
+        if (!styleConfig) return null;
+
+        const isDesktop = window.innerWidth >= 480;
+
+        if (typeof styleConfig === 'object' && styleConfig.desktop && styleConfig.mobile) {
+            // 新的響應式格式
+            return isDesktop ? styleConfig.desktop : styleConfig.mobile;
+        } else {
+            // 向後兼容：舊的單一樣式格式
+            return styleConfig;
+        }
+    }
+
+    // 等待 Google 服務載入的 Promise
+    waitForGoogleServices() {
+        return new Promise((resolve, reject) => {
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                resolve();
+                return;
+            }
+
+            // 檢查是否已經在載入中
+            if (window.googleLoadingPromise) {
+                window.googleLoadingPromise.then(resolve).catch(reject);
+                return;
+            }
+
+            // 創建載入 Promise
+            window.googleLoadingPromise = new Promise((innerResolve, innerReject) => {
+                const maxWaitTime = 10000; // 10秒超時
+                const checkInterval = 100;
+                let elapsedTime = 0;
+
+                const checkGoogle = () => {
+                    if (window.google && window.google.accounts && window.google.accounts.id) {
+                        innerResolve();
+                        return;
+                    }
+
+                    elapsedTime += checkInterval;
+                    if (elapsedTime >= maxWaitTime) {
+                        innerReject(new Error('Google 服務載入超時'));
+                        return;
+                    }
+
+                    this.safeSetTimeout(checkGoogle, checkInterval);
+                };
+
+                checkGoogle();
+            });
+
+            window.googleLoadingPromise.then(resolve).catch(reject);
+        });
+    }
+
+    // 檢查存儲的憑證
+    async checkStoredCredential(shouldRefreshApi = false) {
+        // 首先檢查是否有 JWT 憑證（Google One Tap）
+        const jwtCredential = localStorage.getItem('google_auth_credential');
+        
+        if (jwtCredential) {
+            this.credential = jwtCredential;
+            this.isAuthenticated = true;
+            this.getUserInfo(); // 載入用戶資訊
+
+            if (shouldRefreshApi) {
+                // 只在頁面刷新時重新取得最新的個人資料
+                this.refreshApiData();
+            } else {
+                // 其他情況使用本地快取的 API 資料
+                const cachedApiResponse = this.getApiResponse();
+                // 頁面載入時不觸發數據同步，只有首次登入時才觸發
+                console.log('📄 頁面載入：使用快取的 API 資料，不觸發數據同步');
+            }
+            return;
+        }
+        
+        // 如果沒有 JWT 憑證，檢查是否有有效的 access token（OAuth2）
+        const accessToken = await this.getValidAccessToken();
+        
+        if (accessToken) {
+            // 創建 credential 格式
+            this.credential = `oauth2_${accessToken}`;
+            this.isAuthenticated = true;
+            this.getUserInfo(); // 載入用戶資訊
+
+            if (shouldRefreshApi) {
+                // 只在頁面刷新時重新取得最新的個人資料
+                this.refreshApiData();
+            } else {
+                // 其他情況使用本地快取的 API 資料
+                const cachedApiResponse = this.getApiResponse();
+                // 頁面載入時不觸發數據同步，只有首次登入時才觸發
+                console.log('📄 OAuth2 頁面載入：使用快取的 API 資料，不觸發數據同步');
+            }
+        } else {
+            // 如果沒有有效的 token，清除所有狀態
+            this.credential = null;
+            this.isAuthenticated = false;
+            this.clearTokens();
+        }
+    }
+
+    // 刷新 API 資料以確保個人資料為最新
+    async refreshApiData() {
+        if (!this.credential) {
+            console.warn('無憑證，無法刷新 API 資料');
+            return;
+        }
+
+        // 全局防重複調用：如果 5 秒內已經調用過，就跳過
+        const now = Date.now();
+        if (now - InfGoogleLoginComponent.lastApiRefreshTime < 5000) {
+
+            // 仍然載入本地快取的資料
+            this.getApiResponse();
+            return;
+        }
+
+        // 實例級別防重複調用
+        if (this.apiRefreshInProgress) {
+
+            return;
+        }
+
+        try {
+            this.apiRefreshInProgress = true;
+            InfGoogleLoginComponent.lastApiRefreshTime = now;
+
+
+            // 重新調用 API 獲取最新資料
+            const freshApiData = await this.callInfFitsAPI(this.credential);
+
+            if (freshApiData) {
+
+                // 觸發資料更新事件
+                this.dispatchEvent(new CustomEvent('api-data-refreshed', {
+                    detail: {
+                        apiResponse: freshApiData,
+                        timestamp: new Date().toISOString()
+                    },
+                    bubbles: true,
+                    composed: true
+                }));
+            }
+        } catch (error) {
+            console.warn('⚠️ 刷新個人資料失敗，使用本地快取資料:', error);
+
+            // 🔐 如果是憑證失效錯誤（401），不載入本地快取，因為用戶已被登出
+            if (error.message && error.message.includes('憑證已失效')) {
+
+                return;
+            }
+
+            // 如果是其他錯誤，仍然載入本地的 API 回應數據
+            this.getApiResponse();
+        } finally {
+            // 重置標記，但延遲一段時間以避免短時間內重複調用
+            setTimeout(() => {
+                this.apiRefreshInProgress = false;
+            }, 1000);
+        }
+    }
+
+    // 保存憑證
+    saveCredential(credential) {
+        if (credential) {
+            const oldCredential = this.credential;
+            localStorage.setItem('google_auth_credential', credential);
+            this.credential = credential;
+            this.isAuthenticated = true;
+
+            // 觸發 localStorage 更新事件
+            this.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    key: 'google_auth_credential',
+                    value: credential
+                },
+                bubbles: true,
+                composed: true
+            }));
+
+            // 觸發 storage 事件，通知其他組件實例
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'google_auth_credential',
+                newValue: credential,
+                oldValue: oldCredential,
+                storageArea: localStorage
+            }));
+        }
+    }
+
+    // 清除憑證
+    clearCredential() {
+        const oldCredential = this.credential;
+        localStorage.removeItem('google_auth_credential');
+        localStorage.removeItem('google_user_info');
+        localStorage.removeItem('inffits_api_response'); // 清除 API 回應數據
+        this.credential = null;
+        this.userInfo = null;
+        this.isAuthenticated = false;
+        this.apiResponse = null;
+        this.updateAvatar();
+
+        // 觸發 localStorage 更新事件
+        this.dispatchEvent(new CustomEvent('localStorage-updated', {
+            detail: {
+                key: 'google_auth_credential',
+                value: null
+            },
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    // 保存用戶資訊
+    saveUserInfo(userInfo) {
+        if (userInfo) {
+            localStorage.setItem('google_user_info', JSON.stringify(userInfo));
+            this.userInfo = userInfo;
+            this.updateAvatar();
+
+            // 觸發 localStorage 更新事件
+            this.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    key: 'google_user_info',
+                    value: userInfo
+                },
+                bubbles: true,
+                composed: true
+            }));
+        }
+    }
+
+    // 獲取用戶資訊
+    getUserInfo() {
+        if (!this.userInfo) {
+            const stored = localStorage.getItem('google_user_info');
+            if (stored) {
+                try {
+                    this.userInfo = JSON.parse(stored);
+                } catch (error) {
+                    console.warn('解析用戶資訊失敗:', error);
+                    this.userInfo = null;
+                }
+            }
+        }
+        return this.userInfo;
+    }
+
+    // 更新頭像顯示
+    updateAvatar() {
+        const defaultAvatar = this.shadowRoot.getElementById('default-avatar');
+        const avatarImage = this.shadowRoot.getElementById('avatar-image');
+
+        // 檢查 Google Identity Services 是否已載入
+        if (!this.isGoogleLoaded) {
+            // 如果 Google 服務未載入，隱藏整個頭像容器
+            const avatarContainer = this.shadowRoot.getElementById('avatar-container');
+            if (avatarContainer) {
+                avatarContainer.style.display = 'none';
+            }
+            return;
+        }
+
+        // 確保頭像容器可見
+        const avatarContainer = this.shadowRoot.getElementById('avatar-container');
+        if (avatarContainer) {
+            avatarContainer.style.display = 'inline-block';
+        }
+
+        // 優先使用 API 回應中的 picture，如果沒有則使用 Google 用戶資訊中的 picture
+        let pictureUrl = null;
+        const apiResponse = this.getApiResponse();
+        const userInfo = this.getUserInfo();
+
+        if (apiResponse && apiResponse.picture) {
+            pictureUrl = apiResponse.picture;
+        } else if (userInfo && userInfo.picture) {
+            pictureUrl = userInfo.picture;
+        }
+
+        if (this.isAuthenticated && pictureUrl) {
+            // 顯示用戶頭像
+            avatarImage.src = pictureUrl;
+            avatarImage.style.display = 'block';
+            defaultAvatar.style.display = 'none';
+        } else {
+            // 顯示預設頭像
+            avatarImage.style.display = 'none';
+            defaultAvatar.style.display = 'flex';
+        }
+    }
+
+    // 解析 Google 憑證
+    parseCredential(credential) {
+        try {
+            // JWT 憑證格式：header.payload.signature
+            const parts = credential.split('.');
+            if (parts.length !== 3) {
+                throw new Error('無效的 JWT 格式');
+            }
+
+            // 解碼 payload 部分
+            const payload = JSON.parse(atob(parts[1]));
+
+            return {
+                sub: payload.sub,
+                name: payload.name,
+                given_name: payload.given_name,
+                family_name: payload.family_name,
+                picture: payload.picture,
+                email: payload.email,
+                email_verified: payload.email_verified,
+                locale: payload.locale
+            };
+        } catch (error) {
+            console.error('解析 Google 憑證失敗:', error);
+            return null;
+        }
+    }
+
+    // 監聽的屬性變更
+    static get observedAttributes() {
+        return ['client-id', 'auto-select', 'data-client-id', 'data-auto-select', 'data-login-uri', 'target-container-id', 'data-target-container-id'];
+    }
+
+    // 屬性變更回調
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            switch (name) {
+                case 'client-id':
+                case 'data-client-id':
+                    this.clientId = newValue;
+                    break;
+                case 'auto-select':
+                case 'data-auto-select':
+                    this.autoSelect = newValue === 'true';
+                    break;
+                case 'data-login-uri':
+                    this.loginUri = newValue;
+                    break;
+                case 'target-container-id':
+                case 'data-target-container-id':
+                    this.targetContainerId = newValue;
+                    break;
+            }
+
+            // 如果組件已連接且 Google 已載入，重新初始化
+            if (this.isConnected && this.isGoogleLoaded) {
+                this.initializeGoogleSignIn();
+            }
+        }
+    }
+
+    // 組件掛載到 DOM 時
+    connectedCallback() {
+        // 讀取屬性值
+        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id');
+        this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
+        this.loginUri = this.getAttribute('data-login-uri');
+        this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
+
+        // 載入 Google Fonts
+        this.loadGoogleFonts();
+
+        this.render();
+        this.setupEventListeners(); // 在 DOM 渲染後設置事件監聽器
+
+        // 檢查 Google 服務是否已經載入
+        if (window.google && window.google.accounts) {
+            this.isGoogleLoaded = true;
+        }
+
+        // 確保在組件連接時檢查並同步登入狀態
+        this.checkStoredCredential(true).then(() => {
+            this.updateAvatar(); // 初始化頭像顯示
+        }).catch(error => {
+            this.updateAvatar(); // 即使失敗也要更新頭像顯示
+        });
+
+
+
+        // 🔧 如果已有 API 資料，立即更新 BodyData
+        const existingApiResponse = this.getApiResponse();
+        if (existingApiResponse) {
+            this.updateBodyDataDisplay(existingApiResponse);
+        }
+
+        this.loadGoogleIdentityServices();
+    }
+
+    // 載入 Google Fonts
+    loadGoogleFonts() {
+        // 檢查是否已經載入過字體
+        if (document.querySelector('link[href*="fonts.googleapis.com"]')) {
+            return;
+        }
+
+        // 創建 Google Fonts 連結
+        const fontLink = document.createElement('link');
+        fontLink.rel = 'stylesheet';
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Figtree:wght@300;400;500;600;700&display=swap';
+        fontLink.crossOrigin = 'anonymous';
+
+        // 添加到 document head
+        document.head.appendChild(fontLink);
+
+        // 監聽字體載入完成事件
+        fontLink.onload = () => {};
+
+        fontLink.onerror = () => {
+            console.warn('Google Fonts 載入失敗，將使用系統預設字體');
+        };
+    }
+
+    // 設置事件監聽器
+    setupEventListeners() {
+        const avatarContainer = this.shadowRoot.getElementById('avatar-container');
+
+        if (avatarContainer) {
+            avatarContainer.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.handleAvatarClick();
+            });
+        } else {
+            console.error('找不到頭像容器元素');
+        }
+
+        // 設置登入畫面關閉按鈕
+        const closeLoginModal = this.shadowRoot.getElementById('close-login-modal');
+        if (closeLoginModal) {
+            closeLoginModal.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideLoginModal();
+            });
+        }
+
+        // 設置個人資訊畫面關閉按鈕
+        const closeProfileModal = this.shadowRoot.getElementById('close-profile-modal');
+        if (closeProfileModal) {
+            closeProfileModal.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideProfileModal();
+            });
+        }
+
+        // 點擊登入畫面背景關閉
+        const loginModal = this.shadowRoot.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.addEventListener('click', (event) => {
+                if (event.target === loginModal) {
+                    this.hideLoginModal();
+                }
+            });
+        }
+
+        // 點擊個人資訊畫面背景關閉
+        const profileModal = this.shadowRoot.getElementById('profile-modal');
+        if (profileModal) {
+            profileModal.addEventListener('click', (event) => {
+                if (event.target === profileModal) {
+                    this.hideProfileModal();
+                }
+            });
+        }
+
+        // 設置返回按鈕
+        const backArrow = this.shadowRoot.getElementById('back-arrow');
+        if (backArrow) {
+            backArrow.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideLoginModal();
+            });
+        }
+
+        const profileBackArrow = this.shadowRoot.getElementById('profile-back-arrow');
+        if (profileBackArrow) {
+            profileBackArrow.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.hideProfileModal();
+            });
+        }
+
+        // 設置 Google 登入按鈕
+        const googleLoginButton = this.shadowRoot.getElementById('inf-google-login-button');
+        if (googleLoginButton) {
+            googleLoginButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.triggerGoogleSignIn();
+            });
+        }
+
+
+
+        // 設置登出按鈕
+        const logoutButton = this.shadowRoot.getElementById('logout-button');
+        if (logoutButton) {
+            logoutButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.handleLogout();
+            });
+        }
+
+        // 監聽預設使用者切換事件（使用靜態標記防止重複添加）
+        if (!InfGoogleLoginComponent.defaultUserEventListenerAdded) {
+            document.addEventListener('set-default-user', (event) => {
+                // console.log('🎯 捕獲到 set-default-user 事件:', event.detail);
+                event.preventDefault();
+                event.stopPropagation();
+                const userKey = event.detail.userKey;
+                // console.log('🔄 準備設置預設使用者為:', userKey);
+                
+                // 找到觸發事件的組件實例（安全的方式）
+                let component = null;
+                try {
+                    // 嘗試從事件目標找到組件
+                    if (event.target && typeof event.target.closest === 'function') {
+                        component = event.target.closest('inf-google-login');
+                    }
+                } catch (error) {
+                    console.warn('無法從事件目標找到組件:', error);
+                }
+                
+                // 如果找不到，則查找頁面上的第一個組件實例
+                if (!component) {
+                    component = document.querySelector('inf-google-login');
+                }
+                
+                if (component && typeof component.setDefaultUser === 'function') {
+                    component.setDefaultUser(userKey);
+                } else {
+                    console.warn('找不到可用的組件實例或 setDefaultUser 方法');
+                }
+            });
+            InfGoogleLoginComponent.defaultUserEventListenerAdded = true;
+        }
+
+
+    }
+
+    // 處理頭像點擊
+    async handleAvatarClick() {
+        // 重新設定 CSS 樣式，確保樣式正確
+        this.reapplyStyles();
+
+        // 檢查當前 API 資料狀態
+        const currentApiResponse = this.getApiResponse();
+
+        if (this.isAuthenticated) {
+            // 已登入：顯示個人資訊畫面
+            this.showProfileModal();
+        } else {
+            // 未登入：顯示登入畫面
+            this.showLoginModal();
+        }
+    }
+
+    // 重新應用樣式的方法
+    reapplyStyles() {
+        // 添加 CSS 規則來設定 SizeBox_cart 的 modal 容器樣式
+        const styleId = 'sizebox-cart-modal-style';
+        let existingStyle = document.getElementById(styleId);
+        if (!existingStyle) {
+            existingStyle = document.createElement('style');
+            existingStyle.id = styleId;
+            document.head.appendChild(existingStyle);
+        }
+
+        existingStyle.textContent = `
+        #container_BF_mbinfo:has(.inf-google-login-modal-container),
+        #SizeBox_cart:has(.inf-google-login-modal-container) {
+                overflow: hidden !important;
+        }
+            #SizeBox_cart .inf-google-login-modal-container {
+                max-width: 95% !important;
+                margin: 0 auto !important;
+                padding: 20px 10px 0px 10px!important;
                 width: 100% !important;
                 height: 100% !important;
                 display: flex !important;
@@ -1257,6 +2084,178 @@ class InfGoogleLoginComponent extends HTMLElement {
                     letter-spacing: 0.36px;
                 }
             }
+            .profile-modal__setting-btn {
+               display: flex;
+                height: 20px;
+                width: 20px;
+                padding: 4px;
+                border-radius: 60px;
+                opacity: 1;
+                font-size: 12px;
+                align-items: center;
+                flex-direction: column;
+                box-shadow: 0 0 12px #0003, inset -72px 0 #fff;
+                text-align: center;
+                justify-content: center;
+                cursor: pointer;
+                position: relative;
+            }
+            
+            .profile-modal__dropdown {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                margin-top: 4px;
+                background: white;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+                min-width: 140px;
+                z-index: 1000;
+                opacity: 0;
+                visibility: hidden;
+                transform: scale(0.95);
+                transition: all 0.15s ease;
+            }
+            
+            .profile-modal__dropdown.show {
+                opacity: 1;
+                visibility: visible;
+                transform: scale(1);
+            }
+            
+            .profile-modal__dropdown-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 12px;
+                cursor: pointer;
+                transition: background 0.15s ease;
+                font-size: 13px;
+            }
+            
+            .profile-modal__dropdown-item:hover {
+                background: #F8FAFC;
+            }
+            
+            .profile-modal__dropdown-item.logout {
+                color: #6B7280;
+            }
+            
+            .profile-modal__dropdown-item.delete {
+                color: #6B7280;
+            }
+            
+            .profile-modal__dropdown-item.delete:hover {
+                color: #DC2626;
+            }
+            
+            .profile-modal__dropdown-item svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            /* 自定義確認彈窗樣式 */
+            .custom-confirm-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .custom-confirm-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .custom-confirm-modal {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                max-width: 380px;
+                width: 90%;
+                transform: scale(0.9);
+                transition: all 0.3s ease;
+                overflow: hidden;
+                border: 1px solid #E5E7EB;
+            }
+
+            .custom-confirm-overlay.show .custom-confirm-modal {
+                transform: scale(1);
+            }
+
+            .custom-confirm-header {
+                color: #374151;
+                padding-top: 20px;
+                text-align: center;
+            }
+
+            .custom-confirm-title {
+                font-size: 16px;
+                font-weight: 600;
+                margin: 0;
+                color: #1F2937;
+            }
+
+            .custom-confirm-content {
+                padding: 20px;
+                text-align: center;
+            }
+
+            .custom-confirm-message {
+                color: #6B7280;
+                font-size: 14px;
+                line-height: 1.5;
+                margin: 0 0 20px;
+            }
+
+            .custom-confirm-actions {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+            }
+
+            .custom-confirm-btn {
+                padding: 10px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                border: none;
+                transition: all 0.2s ease;
+                min-width: 100px;
+            }
+
+            .custom-confirm-btn.cancel {
+                background: #F3F4F6;
+                color: #6B7280;
+                border: 1px solid #D1D5DB;
+            }
+
+            .custom-confirm-btn.cancel:hover {
+                background: #E5E7EB;
+                border-color: #9CA3AF;
+            }
+
+            .custom-confirm-btn.confirm {
+                background: #DC2626;
+                color: white;
+            }
+
+            .custom-confirm-btn.confirm:hover {
+                background: #B91C1C;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+            }
             .profile-modal__logout-btn {
                 display: flex;
                 align-items: center;
@@ -1585,7 +2584,27 @@ class InfGoogleLoginComponent extends HTMLElement {
                         </svg>
                     </div>
                     <div class="profile-modal__title">個人資訊</div>
-                    <button class="profile-modal__logout-btn" id="modal-logout-button">登出</button>
+                    <div class="profile-modal__setting-btn" id="profile-setting-btn">
+                        <img height="15px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAQAAAAAYLlVAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAAAdgAAAHYAfpcpnIAAAAHdElNRQfpBgQOLjND9MctAAACi0lEQVRo3u2YTUhUURTHfyM1m5hPV0XmKsxcWWPUJiQnBIU0JSHaRC1ahEQEuQlTXEVRmxatMiq1JgrbZCWtWxQ0pcnQrrFoaJGOMS3E3mnRY7ozz3Geb57Xove/m/fOu+/8z73n4x4uePCwzvCV+V5FK3E2k+U1D5nXbd4eZpD8WKBXL30LPxT63+OyPvpqviIIEzSykRr6THM6dBlwEUG4qURJOwbCW3dp1CDcx1blbYg65qllQZHdpwc4xVyFrJ94uZw4YfH406IZJy0znI3EH5VV7m7o6rFBeb7GgyIX7GUTOUUWB5dcYAP9CMJ1JUriLCEkde1NlIwZB7vwU8sQiwjCIV0GQDM5S/hc0kcP0MS0Qp7ltPsU5Q+jg8TZQpZXPCKrd/0ePPwfKJeGzhChmxgBMkzyHEP3os7wXSlf72nSS3/VUr5zNOuj70IQFhmgBj+NZpOTIaLLgGkEgzZFMowgXCj1Q+me0Ami3ADucVSRhfhIiBT9isx2T+hsnCjS++yv7gnXwgWjHCtwQZqgPRe4gSmEJQ4oC7y1chC6jcNmGg6yDT+7Tf9/0ZeGcGWZQrRfHz1AL1mFforYSpPX5jAK00WMEJ95waT+w8iDh38LlaRhA51sBz4wzoxuwyOMYeSLjcGozmILEd5ZCm6SsD4DxhCENN0ECNBJCkG4q4u+AQMhTVTZkTSCQf3qlamXVHYbknZ8wFm+5SVznCOBj/M8saXBlZ4wUPBvcL3vCR2nc+l7wtJo4zjQwrgiawVgmAmbLqgIOzEQUkrmVzOL8JMdlSm2jxEzDY8QJEgPswjCbV30ECZpCaw3hPQZABFGCkrxHad1sJLDqJ4O6oAUj0npXL0HD67iF0TWfTWq41byAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDI1LTA2LTA0VDE0OjQ2OjIxKzAwOjAwCttSSgAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyNC0wMi0yMFQwNDo0NTowOCswMDowMCROR08AAAAodEVYdGRhdGU6dGltZXN0YW1wADIwMjUtMDYtMDRUMTQ6NDY6NTErMDA6MDAmVsIwAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAABJRU5ErkJggg==">
+                        <div class="profile-modal__dropdown" id="profile-dropdown">
+                            <div class="profile-modal__dropdown-item logout" id="profile-logout-item">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                登出
+                            </div>
+                            <div class="profile-modal__dropdown-item delete" id="profile-delete-item">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                刪除帳號
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
                 
                 <div class="profile-modal__content">
@@ -1664,12 +2683,41 @@ class InfGoogleLoginComponent extends HTMLElement {
                 });
             }
 
-            // 登出按鈕
-            const logoutButton = container.querySelector('#modal-logout-button');
-            if (logoutButton) {
-                logoutButton.addEventListener('click', () => {
-                    this.handleLogout();
+            // 設定按鈕下拉選單
+            const settingBtn = container.querySelector('#profile-setting-btn');
+            const dropdown = container.querySelector('#profile-dropdown');
+            
+            if (settingBtn && dropdown) {
+                // 點擊設定按鈕切換下拉選單
+                settingBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('show');
                 });
+                
+                // 點擊其他地方關閉下拉選單
+                document.addEventListener('click', (e) => {
+                    if (!settingBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+                
+                // 登出選項
+                const logoutItem = container.querySelector('#profile-logout-item');
+                if (logoutItem) {
+                    logoutItem.addEventListener('click', () => {
+                    this.handleLogout();
+                        dropdown.classList.remove('show');
+                    });
+                }
+                
+                // 刪除帳號選項
+                const deleteItem = container.querySelector('#profile-delete-item');
+                if (deleteItem) {
+                    deleteItem.addEventListener('click', () => {
+                        this.handleDeleteAccount();
+                        dropdown.classList.remove('show');
+                    });
+                }
             }
 
             // 🔧 修復：顯示個人資訊畫面時，更新個人資訊內容（包含 BodyData）
@@ -1788,8 +2836,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             return '';
         }
 
-
-
         // 確定預設使用者
         let defaultUserKey = bodyDataPtr;
         if (!defaultUserKey || !bodyData[defaultUserKey]) {
@@ -1801,6 +2847,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         let formattedHtml = '<div style="display: flex; flex-direction: column; gap: 16px;">';
+
         // 遍歷所有 User 資料
         
         // 對使用者進行排序，確保 storeNew 排在第一位，預設使用者（BodyData_ptr）排在第二位
@@ -1830,8 +2877,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 let shoesInfo = null;
 
                 // 檢查是否為新格式（包含 body 和 shoes）
-                if (userData.body && typeof userData.body === 'object') {
-                    bodyInfo = userData|| userData.body;
+                        if (userData && typeof userData === 'object') {
+            bodyInfo = userData;
                     shoesInfo = userData.shoes;
                 }
 
@@ -1883,13 +2930,10 @@ class InfGoogleLoginComponent extends HTMLElement {
 
                 formattedHtml += `
                     <div style="
-                        background: linear-gradient(135deg, #FFFFFF, #F8FAFC);
-                        border: 1px solid #E2E8F0;
-                        border-radius: 12px;
                         padding: 16px;
-                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                         transition: all 0.2s ease;
                         position: relative;
+                        border-radius: 50%;
                     ">
                         <div style="
                             position: absolute;
@@ -1903,36 +2947,34 @@ class InfGoogleLoginComponent extends HTMLElement {
                             <button 
                                 onclick="
                                     console.log('🗑️ 點擊刪除按鈕，使用者:', '${userKey.replace(/'/g, "\\'")}');
-                                    
-                                    // 顯示確認對話框
-                                    if (confirm('⚠️ 確定要刪除使用者 ${userKey.replace(/'/g, "\\'")} 嗎？\\n\\n此操作無法復原，所有身體資料將被永久刪除。')) {
-                                        deleteUser('${userKey.replace(/'/g, "\\'")}');
-                                    }
+                                    deleteUser('${userKey.replace(/'/g, "\\'")}');
                                 "
                                 style="
-                                    background: linear-gradient(135deg, #EF4444, #DC2626);
-                                    color: white;
-                                    padding: 6px 10px;
-                                    border-radius: 12px;
+                                    color:#34495e;
                                     font-size: 11px;
                                     font-weight: 600;
                                     display: flex;
                                     justify-content: center;
                                     align-items: center;
                                     gap: 4px;
-                                    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
                                     border: none;
                                     cursor: pointer;
                                     transition: all 0.2s ease;
                                     font-family: inherit;
-                                    min-width: 50px;
-                                    min-height: 24px;
+                                    width:24px;
+                                    height:24px;
+                                    background: white;
+                                    border-radius: 50%;
+                                    box-shadow:0 0 12px #0003, inset -72px 0 #fff;
                                 "
-                                onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(239, 68, 68, 0.4)'"
-                                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(239, 68, 68, 0.3)'"
+                                onmouseover="this.style.transform='scale(1.05)'; this.style.color='rgba(239, 68, 68, 0.9)'"
+                                onmouseout="this.style.transform='scale(1)'; this.style.color='#34495e'"
                                 title="刪除使用者"
                             >
-                                刪除
+                                 <svg viewBox="0 0 24 24" fill="none">
+                                    <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </button>
                             
                             ${isDefaultUser ? `
@@ -1959,6 +3001,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     font-family: inherit;
                                     min-width: 40px;
                                     min-height: 24px;
+                                    display: none;
                                 "
                                 onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(16, 185, 129, 0.4)'"
                                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(16, 185, 129, 0.3)'"
@@ -1990,6 +3033,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     font-family: inherit;
                                     min-width: 60px;
                                     min-height: 24px;
+                                    display: none;
                                 "
                                 onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(107, 114, 128, 0.4)'"
                                 onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(107, 114, 128, 0.3)'"
@@ -2643,6 +3687,215 @@ class InfGoogleLoginComponent extends HTMLElement {
         }));
     }
 
+    // 顯示自定義確認彈窗
+    showCustomConfirm(title, message, onConfirm, onCancel) {
+        return new Promise((resolve) => {
+            // 創建遮罩層
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-confirm-overlay';
+            overlay.id = 'custom-confirm-overlay';
+
+            // 創建彈窗內容
+            overlay.innerHTML = `
+                <div class="custom-confirm-modal">
+                    <div class="custom-confirm-header">
+                        <h3 class="custom-confirm-title">${title}</h3>
+                    </div>
+                    <div class="custom-confirm-content">
+                        <p class="custom-confirm-message">${message}</p>
+                        <div class="custom-confirm-actions">
+                            <button class="custom-confirm-btn cancel" id="confirm-cancel-btn">取消</button>
+                            <button class="custom-confirm-btn confirm" id="confirm-confirm-btn">確認</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 添加到頁面
+            document.body.appendChild(overlay);
+
+            // 顯示動畫
+            setTimeout(() => {
+                overlay.classList.add('show');
+            }, 10);
+
+            // 綁定事件
+            const cancelBtn = overlay.querySelector('#confirm-cancel-btn');
+            const confirmBtn = overlay.querySelector('#confirm-confirm-btn');
+
+            const closeModal = (result) => {
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    if (overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                    resolve(result);
+                }, 300);
+            };
+
+            // 取消按鈕
+            cancelBtn.addEventListener('click', () => {
+                if (onCancel) onCancel();
+                closeModal(false);
+            });
+
+            // 確認按鈕
+            confirmBtn.addEventListener('click', () => {
+                if (onConfirm) onConfirm();
+                closeModal(true);
+            });
+
+            // 點擊遮罩層關閉
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    if (onCancel) onCancel();
+                    closeModal(false);
+                }
+            });
+
+            // ESC 鍵關閉
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    if (onCancel) onCancel();
+                    closeModal(false);
+                    document.removeEventListener('keydown', handleEsc);
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+        });
+    }
+
+    // 處理刪除帳號
+    async handleDeleteAccount() {
+        // 顯示自定義確認彈窗
+        const confirmed = await this.showCustomConfirm(
+            '刪除帳號',
+            '此操作無法復原，所有資料將被永久刪除。<br>確定要繼續嗎？',
+            null, // onConfirm
+            null  // onCancel
+        );
+
+        if (!confirmed) return;
+        
+        try {
+            // 顯示載入狀態
+            const loadingNotification = this.showLoadingNotification('正在刪除帳號...');
+
+            // 獲取必要的憑證資訊
+            const storedCredential = localStorage.getItem('google_auth_credential');
+            const userInfo = this.getUserInfo();
+            
+            if (!storedCredential || !userInfo) {
+                throw new Error('沒有可用的憑證資訊');
+            }
+
+            // 準備 API 請求資料
+            const payload = {
+                delete_user: true,
+                credential: storedCredential,
+                sub: userInfo.sub || userInfo.id,
+                IDTYPE: "Google"
+            };
+
+            console.log('🔄 正在調用刪除帳號 API:', payload);
+
+            // 調用刪除帳號 API
+            const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('憑證已失效，請重新登入');
+                }
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ 帳號刪除成功:', data);
+
+            // 隱藏個人資訊畫面
+            this.hideProfileModal();
+
+            // 清除所有本地資料
+            this.clearAllData();
+
+            // 執行登出
+            this.signOut();
+
+            // 觸發刪除帳號事件
+            this.dispatchEvent(new CustomEvent('google-account-deleted', {
+                detail: {
+                    apiResponse: data,
+                    timestamp: new Date().toISOString()
+                },
+                bubbles: true,
+                composed: true
+            }));
+
+            // 移除載入通知
+            if (loadingNotification && loadingNotification.parentNode) {
+                loadingNotification.parentNode.removeChild(loadingNotification);
+            }
+
+            // 顯示成功訊息
+            this.showSuccessNotification('帳號已成功刪除');
+
+        } catch (error) {
+            console.error('❌ 刪除帳號失敗:', error);
+            
+            // 移除載入通知
+            if (loadingNotification && loadingNotification.parentNode) {
+                loadingNotification.parentNode.removeChild(loadingNotification);
+            }
+            
+            this.showErrorNotification('刪除帳號失敗: ' + error.message);
+            
+            // 如果刪除失敗，不要清除本地資料，讓用戶可以重試
+        }
+    }
+
+    // 清除所有本地資料
+    clearAllData() {
+        try {
+            // 清除所有相關的 localStorage 項目
+            const keysToRemove = [
+                'google_auth_credential',
+                'inffits_api_response',
+                'google_user_info',
+                'google_access_token',
+                'google_refresh_token',
+                'google_token_expiry'
+            ];
+
+            keysToRemove.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            // 清除所有相關的 sessionStorage 項目
+            const sessionKeysToRemove = [
+                'google_auth_credential',
+                'inffits_api_response'
+            ];
+
+            sessionKeysToRemove.forEach(key => {
+                if (sessionStorage.getItem(key)) {
+                    sessionStorage.removeItem(key);
+                }
+            });
+
+            console.log('✅ 所有本地資料已清除');
+        } catch (error) {
+            console.error('清除本地資料失敗:', error);
+        }
+    }
+
 
 
 
@@ -2964,6 +4217,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 更新用戶資訊中的 picture
                     userInfo.picture = apiResponse.picture;
                     this.saveUserInfo(userInfo);
+                }
+
+                // 首次登入成功後，觸發數據同步邏輯
+                if (apiResponse) {
+                    this.handleLoginDataSync(apiResponse);
                 }
 
                 // 更新頭像顯示
@@ -3786,6 +5044,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     this.saveUserInfo(payload);
                 }
             }
+
+            // 首次登入成功後，觸發數據同步邏輯
+            if (apiResponse) {
+                this.handleLoginDataSync(apiResponse);
+            }
             
             // 更新頭像顯示
             this.updateAvatar();
@@ -3876,8 +5139,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
             const data = await response.json();
-            // 保存 API 回應數據
-            this.saveApiResponse(data);
+            // 保存 API 回應數據（不觸發同步，由調用方決定是否觸發）
+            this.saveApiResponse(data, false);
 
             return data;
 
@@ -3888,7 +5151,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 保存 API 回應數據
-    saveApiResponse(data) {
+    saveApiResponse(data, triggerSync = false) {
         try {
             localStorage.setItem('inffits_api_response', JSON.stringify(data));
             this.apiResponse = data;
@@ -3910,6 +5173,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                 oldValue: null,
                 storageArea: localStorage
             }));
+
+            // 只在明確要求時才處理登入資料同步邏輯（例如首次登入）
+            if (triggerSync) {
+                this.handleLoginDataSync(data);
+            }
         } catch (error) {
             console.warn('保存 API 回應數據失敗:', error);
         }
@@ -3949,6 +5217,1087 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         }
         return this.apiResponse;
+    }
+
+    // 登入資料新增與讀取邏輯處理
+    async handleLoginDataSync(apiResponse) {
+        console.log('🚀 handleLoginDataSync 被調用');
+        console.log('  - isAuthenticated:', this.isAuthenticated);
+        console.log('  - apiResponse 存在:', !!apiResponse);
+        console.log('  - syncInProgress:', this.syncInProgress);
+        
+        try {
+            // 確保使用者已經認證且有有效的 API 回應
+            if (!this.isAuthenticated || !apiResponse) {
+                console.log('ℹ️ 使用者未認證或無有效 API 回應，跳過資料同步');
+                return;
+            }
+
+            // 防止重複執行同步邏輯
+            if (this.syncInProgress) {
+                console.log('ℹ️ 資料同步正在進行中，跳過重複執行');
+                return;
+            }
+
+            this.syncInProgress = true;
+            console.log('🔄 開始處理登入資料同步邏輯');
+            
+            try {
+                // 檢查本地是否有資料
+                const hasLocalData = this.checkLocalSizeData();
+                
+                // 檢查雲端是否有資料
+                const hasCloudData = this.checkCloudBodyData(apiResponse);
+                
+                console.log(`📊 資料狀態：本地=${hasLocalData ? '有' : '無'}，雲端=${hasCloudData ? '有' : '無'}`);
+                
+                if (hasLocalData && !hasCloudData) {
+                    // 情況：已登入 本地已使用 雲端無資料
+                    // 只有在首次登入時才上傳，頁面載入時不自動上傳
+                    console.log('ℹ️ 本地有資料但雲端無資料，首次登入時會自動上傳');
+                    // 不自動上傳，等下次真正登入時再處理
+                } else if (hasLocalData && hasCloudData) {
+                    // 情況：已登入 本地已使用 雲端有資料 → 詢問使用者是否用本地覆蓋雲端
+                    console.log('⚡ 本地和雲端都有資料，詢問使用者選擇');
+                    await this.showDataConflictDialog();
+                } else if (!hasLocalData && hasCloudData) {
+                    // 情況：已登入 本地未使用 雲端有資料 → 將雲端資料下載到本地
+                    console.log('🔽 本地無資料但雲端有資料，下載雲端資料到本地');
+                    await this.downloadCloudDataToLocal(apiResponse);
+                } else {
+                    // 情況：已登入 本地未使用 雲端未使用 → 無需處理
+                    console.log('ℹ️ 本地和雲端都無資料，無需處理');
+                }
+            } finally {
+                // 重置同步狀態
+                console.log('🔄 重置同步狀態');
+                this.syncInProgress = false;
+            }
+        } catch (error) {
+            console.log('ℹ️ 處理登入資料同步時發生錯誤，靜默跳過:', error);
+            this.syncInProgress = false;
+        }
+    }
+
+    // 檢查本地是否有尺寸資料
+    checkLocalSizeData() {
+            const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
+            const genderLast = localStorage.getItem('Gender_Last');
+        
+        console.log('🔍 檢查本地資料:');
+        console.log('  - BodyID_size_Last:', bodyIdSizeLast);
+        console.log('  - Gender_Last:', genderLast);
+            
+            if (!bodyIdSizeLast || !genderLast) {
+            console.log('❌ 本地缺少必要資料');
+            return false;
+            }
+            
+            try {
+                const sizeData = JSON.parse(bodyIdSizeLast);
+            // 檢查是否有完整的身高體重資料
+            const hasCompleteData = sizeData.HV && sizeData.WV && genderLast;
+            console.log(`📊 本地資料完整性檢查: ${hasCompleteData ? '完整' : '不完整'}`);
+            return hasCompleteData;
+        } catch (error) {
+            console.log('❌ 解析本地資料失敗:', error);
+            return false;
+        }
+    }
+
+    // 檢查雲端是否有身體資料
+    checkCloudBodyData(apiResponse) {
+        const bodyData = apiResponse?.BodyData || {};
+        
+        // 優先檢查與本地性別對應的雲端資料
+        const localGender = localStorage.getItem('Gender_Last');
+        let targetKey = null;
+        
+        if (localGender === 'M') {
+            targetKey = 'bodyM';
+        } else if (localGender === 'F') {
+            targetKey = 'bodyF';
+        }
+        
+        // 先檢查對應性別的資料
+        if (targetKey && bodyData[targetKey]) {
+            const userData = bodyData[targetKey];
+            const bodyInfo = userData;
+            if (userData && (bodyInfo.HV || bodyInfo.WV || bodyInfo.Gender)) {
+                console.log(`✅ 找到對應性別 ${targetKey} 的雲端資料`);
+                return true;
+            }
+        }
+        
+        // 如果沒有對應性別資料，檢查是否有任何其他使用者資料
+        const userKeys = Object.keys(bodyData);
+        for (const userKey of userKeys) {
+            const userData = bodyData[userKey];
+            const bodyInfo = userData;
+            if (userData && (bodyInfo.HV || bodyInfo.WV || bodyInfo.Gender)) {
+                console.log(`✅ 找到其他雲端資料: ${userKey}`);
+                return true;
+            }
+        }
+        
+        console.log('❌ 沒有找到任何雲端身體資料');
+        return false;
+    }
+
+    // 上傳本地資料到雲端
+    async uploadLocalDataToCloud() {
+        try {
+            console.log('🔼 開始上傳本地資料到雲端');
+            
+            const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
+            const genderLast = localStorage.getItem('Gender_Last');
+            
+            if (!bodyIdSizeLast || !genderLast) {
+                console.log('❌ 缺少本地資料，無法上傳');
+                    return;
+                }
+                
+            const sizeData = JSON.parse(bodyIdSizeLast);
+            
+            // 準備上傳的資料
+            const uploadData = {
+                HV: sizeData.HV,
+                WV: sizeData.WV,
+                Gender: genderLast
+            };
+            
+            // 調用上傳 API
+            await this.callUploadDataAPI(uploadData);
+            
+        } catch (error) {
+            console.error('❌ 上傳本地資料失敗:', error);
+            showNotification('❌ 上傳資料失敗，請稍後再試', 'error');
+        }
+    }
+
+    // 下載雲端資料到本地
+    async downloadCloudDataToLocal(apiResponse) {
+        try {
+            console.log('🔽 開始下載雲端資料到本地');
+            
+            const bodyData = apiResponse?.BodyData || {};
+            const userKeys = Object.keys(bodyData);
+            
+            if (userKeys.length === 0) {
+                console.log('❌ 雲端無使用者資料');
+                    return;
+                }
+                
+            // 優先尋找 bodyF 或 bodyM 資料（因為它們直接包含身高體重）
+            let targetKey = null;
+            let userData = null;
+            
+            // 優先選擇 bodyF 或 bodyM（它們有完整的身體資料）
+            if (bodyData.bodyF) {
+                targetKey = 'bodyF';
+                userData = bodyData.bodyF;
+                console.log('🎯 找到雲端女性資料 bodyF');
+            } else if (bodyData.bodyM) {
+                targetKey = 'bodyM';
+                userData = bodyData.bodyM;
+                console.log('🎯 找到雲端男性資料 bodyM');
+            } else {
+                // 如果沒有 bodyF/bodyM，使用預設使用者或第一個使用者
+                targetKey = apiResponse.BodyData_ptr || userKeys[0];
+                userData = bodyData[targetKey];
+                console.log(`🎯 使用預設雲端資料: ${targetKey}`);
+            }
+            
+            if (userData) {
+                // 所有資料都直接使用，不需要 .body 屬性
+                const bodyInfo = userData;
+                console.log('🔍 準備下載的身體資料:', bodyInfo);
+                console.log('🔍 資料來源:', targetKey);
+                
+                let hasData = false;
+                
+                // 將雲端資料保存到本地 BodyID_size_Last
+                if (targetKey === 'bodyF' || targetKey === 'bodyM') {
+                    // bodyF/bodyM 整包資料都保存到 BodyID_size_Last
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyInfo));
+                    console.log('✅ 完整身體資料已保存到 BodyID_size_Last:', bodyInfo);
+                    hasData = true;
+                } else if (bodyInfo.HV && bodyInfo.WV) {
+                    // 其他資料源只保存 HV, WV
+                    const localSizeData = {
+                        HV: bodyInfo.HV,
+                        WV: bodyInfo.WV
+                    };
+                    
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(localSizeData));
+                    console.log('✅ 身高體重資料已保存到 BodyID_size_Last:', localSizeData);
+                    hasData = true;
+                }
+                
+                // 將雲端資料保存到本地 Gender_Last
+                let genderToSave = null;
+                if (targetKey === 'bodyM') {
+                    genderToSave = 'M';
+                } else if (targetKey === 'bodyF') {
+                    genderToSave = 'F';
+                } else if (bodyInfo.Gender) {
+                    genderToSave = bodyInfo.Gender;
+                }
+                
+                if (genderToSave) {
+                    localStorage.setItem('Gender_Last', genderToSave);
+                    console.log('✅ 性別資料已保存到 Gender_Last:', genderToSave);
+                    hasData = true;
+                }
+                
+                if (hasData) {
+                    // 觸發 localStorage 更新事件
+                    window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                        detail: {
+                            keys: ['BodyID_size_Last', 'Gender_Last']
+                        }
+                    }));
+                    
+                    showNotification('✅ 雲端資料已同步到本地', 'success');
+                } else {
+                    console.log('⚠️ 雲端資料中沒有可用的身高體重或性別資訊');
+                }
+            } else {
+                console.log('❌ 無法取得雲端使用者資料');
+            }
+            
+        } catch (error) {
+            console.error('❌ 下載雲端資料失敗:', error);
+            showNotification('❌ 下載資料失敗，請稍後再試', 'error');
+        }
+    }
+
+        // 顯示資料衝突對話框
+    async showDataConflictDialog() {
+        try {
+            // 先比較本地和雲端資料是否相同
+            const localData = this.getLocalDataInfo();
+            const cloudData = this.getCloudDataInfo();
+            
+            console.log('🔍 比較本地和雲端資料:');
+            console.log('  本地:', localData);
+            console.log('  雲端:', cloudData);
+            
+            // 檢查資料是否相同
+            const isSameData = (
+                localData.height === cloudData.height &&
+                localData.weight === cloudData.weight &&
+                localData.gender === cloudData.gender
+            );
+            
+            if (isSameData) {
+                console.log('✅ 本地和雲端資料相同，無需顯示選擇對話框');
+                return;
+            }
+            
+            console.log('⚡ 本地和雲端資料不同，顯示選擇對話框');
+            const result = await this.showDataVersionDialog();
+
+            if (result === 'local') {
+                // 使用者選擇使用本地資料
+                console.log('👤 使用者選擇使用本地資料，上傳到雲端');
+                await this.uploadLocalDataToCloud();
+            } else if (result === 'cloud') {
+                // 使用者選擇使用雲端資料
+                console.log('👤 使用者選擇使用雲端資料，下載到本地');
+                const currentApiResponse = this.getApiResponse();
+                await this.downloadCloudDataToLocal(currentApiResponse);
+            } else {
+                console.log('👤 使用者取消選擇');
+            }
+        } catch (error) {
+            console.error('❌ 顯示資料衝突對話框失敗:', error);
+        }
+    }
+
+    // 顯示資料版本選擇對話框
+    async showDataVersionDialog() {
+        return new Promise((resolve) => {
+            // 檢查是否已經有對話框正在顯示
+            const existingOverlay = document.getElementById('data-version-overlay');
+            if (existingOverlay) {
+                console.log('ℹ️ 資料版本對話框已存在，跳過重複顯示');
+                resolve('cancel');
+                return;
+            }
+
+            // 創建遮罩層
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-confirm-overlay';
+            overlay.id = 'data-version-overlay';
+
+            // 獲取本地和雲端資料進行比較顯示
+            const localData = this.getLocalDataInfo();
+            const cloudData = this.getCloudDataInfo();
+
+            // 添加專用的 CSS 樣式，確保不影響頁面其他元素
+            const style = document.createElement('style');
+            style.id = 'data-version-dialog-styles';
+            style.textContent = `
+                * {
+                    box-sizing: border-box;
+                }
+                
+                #data-version-overlay {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    background: rgba(0, 0, 0, 0.5) !important;
+                    display: flex !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    z-index: 10000 !important;
+                    opacity: 0 !important;
+                    transition: opacity 0.3s ease !important;
+                    pointer-events: auto !important;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                }
+                
+                #data-version-overlay.show {
+                    opacity: 1 !important;
+                }
+                
+                #data-version-overlay * {
+                    box-sizing: border-box !important;
+                }
+                
+                #data-version-overlay .custom-confirm-modal {
+                    background: white !important;
+                    border-radius: 12px !important;
+                    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3) !important;
+                    max-width: 500px !important;
+                    width: 90% !important;
+                    max-height: 90vh !important;
+                    overflow-y: auto !important;
+                    position: relative !important;
+                    margin: 0 !important;
+                }
+                
+                #data-version-overlay .custom-confirm-header {
+                    padding: 20px !important;
+                    border-bottom: 1px solid #e5e7eb !important;
+                    text-align: center !important;
+                }
+                
+                #data-version-overlay .custom-confirm-title {
+                    margin: 0 !important;
+                    font-size: 18px !important;
+                    font-weight: 600 !important;
+                    color: #1f2937 !important;
+                    font-family: inherit !important;
+                }
+                
+                #data-version-overlay .custom-confirm-content {
+                    padding: 20px !important;
+                }
+                
+                #data-version-overlay .custom-confirm-message {
+                    margin: 0 0 20px 0 !important;
+                    text-align: center !important;
+                    color: #6b7280 !important;
+                    font-size: 14px !important;
+                    line-height: 1.5 !important;
+                    font-family: inherit !important;
+                }
+                
+                #data-version-overlay .data-comparison {
+                    display: flex !important;
+                    gap: 15px !important;
+                    margin: 20px 0 !important;
+                }
+                
+                #data-version-overlay .data-card {
+                    flex: 1 !important;
+                    min-width: 0 !important;
+                    padding: 15px !important;
+                    border: 2px solid #e5e7eb !important;
+                    border-radius: 8px !important;
+                    background: #f9fafb !important;
+                    overflow: hidden !important;
+                }
+                
+                #data-version-overlay .data-card p {
+                    margin: 0 0 10px 0 !important;
+                    color: #374151 !important;
+                    font-size: 14px !important;
+                    font-weight: 600 !important;
+                    font-family: inherit !important;
+                    line-height: 1.2 !important;
+                }
+                
+                #data-version-overlay .data-info {
+                    font-family: inherit !important;
+                }
+                
+                #data-version-overlay .data-info div {
+                    margin: 0 0 4px 0 !important;
+                    padding: 0 !important;
+                    font-size: 12px !important;
+                    color: #6b7280 !important;
+                    line-height: 1.4 !important;
+                    border: none !important;
+                    background: none !important;
+                    width: 100% !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                }
+                
+                #data-version-overlay .data-info div:last-child {
+                    margin-bottom: 0 !important;
+                }
+                
+                #data-version-overlay .custom-confirm-actions {
+                    display: flex !important;
+                    gap: 10px !important;
+                    justify-content: center !important;
+                    margin-top: 20px !important;
+                    flex-wrap: wrap !important;
+                }
+                
+                #data-version-overlay .custom-confirm-btn {
+                    border: none !important;
+                    padding: 10px 20px !important;
+                    border-radius: 6px !important;
+                    cursor: pointer !important;
+                    font-weight: 500 !important;
+                    font-size: 14px !important;
+                    font-family: inherit !important;
+                    min-width: 100px !important;
+                    transition: all 0.2s ease !important;
+                    outline: none !important;
+                    text-decoration: none !important;
+                }
+                
+                #data-version-overlay .custom-confirm-btn:hover {
+                    opacity: 0.9 !important;
+                }
+                
+                @media (max-width: 480px) {
+                    #data-version-overlay .data-comparison {
+                        flex-direction: column !important;
+                        gap: 15px !important;
+                    }
+                    
+                    #data-version-overlay .custom-confirm-actions {
+                        flex-direction: column !important;
+                    }
+                    
+                    #data-version-overlay .custom-confirm-btn {
+                        width: 100% !important;
+                        min-width: auto !important;
+                    }
+                }
+            `;
+            
+            // 先移除舊的樣式（如果存在）
+            const existingStyle = document.getElementById('data-version-dialog-styles');
+            if (existingStyle) {
+                existingStyle.remove();
+            }
+            
+            document.head.appendChild(style);
+
+            // 創建彈窗內容
+            overlay.innerHTML = `
+                <div class="custom-confirm-modal">
+                    <div class="custom-confirm-header">
+                        <h3 class="custom-confirm-title">選擇要使用的資料版本</h3>
+                    </div>
+                    <div class="custom-confirm-content">
+                        <p class="custom-confirm-message">發現本地和雲端都有尺寸資料，請選擇要使用哪個版本：</p>
+                        
+                        <div class="data-comparison">
+                            <div class="data-card">
+                                <p>📱 本地資料</p>
+                                <div class="data-info">
+                                    <div>身高：${localData.height}</div>
+                                    <div>體重：${localData.weight}</div>
+                                    <div>性別：${localData.gender}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="data-card">
+                                <p>☁️ 雲端資料</p>
+                                <div class="data-info">
+                                    <div>身高：${cloudData.height}</div>
+                                    <div>體重：${cloudData.weight}</div>
+                                    <div>性別：${cloudData.gender}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="custom-confirm-actions">
+                            <button class="custom-confirm-btn" id="use-local-btn" style="background: #10b981; color: white;">使用本地資料</button>
+                            <button class="custom-confirm-btn" id="use-cloud-btn" style="background: #3b82f6; color: white;">使用雲端資料</button>
+                            <button class="custom-confirm-btn cancel" id="version-cancel-btn" style="background: #6b7280; color: white;">取消</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 添加到頁面
+            document.body.appendChild(overlay);
+
+            // 顯示動畫
+            setTimeout(() => {
+                overlay.classList.add('show');
+            }, 10);
+
+            // 關閉函數
+            const closeModal = (result) => {
+                overlay.classList.remove('show');
+                setTimeout(() => {
+                    if (overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                    // 移除樣式
+                    const dialogStyle = document.getElementById('data-version-dialog-styles');
+                    if (dialogStyle) {
+                        dialogStyle.remove();
+                    }
+                    resolve(result);
+                }, 200);
+            };
+
+            // 按鈕事件
+            const useLocalBtn = overlay.querySelector('#use-local-btn');
+            const useCloudBtn = overlay.querySelector('#use-cloud-btn');
+            const cancelBtn = overlay.querySelector('#version-cancel-btn');
+
+            useLocalBtn.addEventListener('click', () => {
+                closeModal('local');
+            });
+
+            useCloudBtn.addEventListener('click', () => {
+                closeModal('cloud');
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                closeModal('cancel');
+            });
+
+            // 點擊遮罩層關閉
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeModal('cancel');
+                }
+            });
+
+            // ESC 鍵關閉
+            const handleEsc = (e) => {
+                if (e.key === 'Escape') {
+                    document.removeEventListener('keydown', handleEsc);
+                    closeModal('cancel');
+                }
+            };
+            document.addEventListener('keydown', handleEsc);
+        });
+    }
+
+    // 獲取本地資料資訊
+    getLocalDataInfo() {
+        try {
+            const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
+            const genderLast = localStorage.getItem('Gender_Last');
+            
+            if (!bodyIdSizeLast || !genderLast) {
+                return { height: '未設定', weight: '未設定', gender: '未設定' };
+            }
+            
+            const sizeData = JSON.parse(bodyIdSizeLast);
+            return {
+                height: sizeData.HV ? `${sizeData.HV} cm` : '未設定',
+                weight: sizeData.WV ? `${sizeData.WV} kg` : '未設定',
+                gender: genderLast === 'M' ? '男性' : genderLast === 'F' ? '女性' : '未設定'
+            };
+        } catch (error) {
+            return { height: '未設定', weight: '未設定', gender: '未設定' };
+        }
+    }
+
+    // 獲取雲端資料資訊
+    getCloudDataInfo() {
+        try {
+            const apiResponse = this.getApiResponse();
+            console.log('🔍 完整 API 回應:', apiResponse);
+            
+            const bodyData = apiResponse?.BodyData || {};
+            console.log('🔍 BodyData:', bodyData);
+            console.log('🔍 BodyData 的所有 keys:', Object.keys(bodyData));
+            
+            // 根據本地性別決定要比較哪個雲端資料
+            const localGender = localStorage.getItem('Gender_Last');
+            console.log('🔍 本地性別:', localGender);
+            
+            let targetKey = null;
+            if (localGender === 'M') {
+                targetKey = 'bodyM';
+            } else if (localGender === 'F') {
+                targetKey = 'bodyF';
+            }
+            console.log('🔍 目標 key:', targetKey);
+            
+            // 如果沒有對應的性別資料，嘗試使用預設或第一個可用的
+            let userData = null;
+            if (targetKey && bodyData[targetKey]) {
+                userData = bodyData[targetKey];
+                console.log(`✅ 找到對應的雲端資料: ${targetKey}`, userData);
+            } else {
+                console.log(`❌ 沒有找到 ${targetKey} 資料`);
+                
+                // 回退到原邏輯：使用預設使用者或第一個可用的
+                const userKeys = Object.keys(bodyData);
+                console.log('🔍 所有可用的 userKeys:', userKeys);
+                
+                if (userKeys.length > 0) {
+                    const defaultUserKey = apiResponse.BodyData_ptr || userKeys[0];
+                    userData = bodyData[defaultUserKey];
+                    console.log(`🔍 使用預設/第一個雲端資料: ${defaultUserKey}`, userData);
+                } else {
+                    console.log('❌ 沒有任何使用者資料');
+                }
+            }
+            
+            if (userData) {
+                // 所有資料都直接使用，沒有 .body 屬性
+                const bodyInfo = userData;
+                console.log('🔍 身體資料:', bodyInfo);
+                
+                // 如果是從 bodyM/bodyF 取得資料，直接根據 targetKey 判斷性別
+                let genderDisplay = '未設定';
+                if (targetKey === 'bodyM') {
+                    genderDisplay = '男性';
+                } else if (targetKey === 'bodyF') {
+                    genderDisplay = '女性';
+                } else if (bodyInfo.Gender) {
+                    genderDisplay = bodyInfo.Gender === 'M' ? '男性' : bodyInfo.Gender === 'F' ? '女性' : '未設定';
+                }
+                
+                const result = {
+                    height: bodyInfo.HV ? `${bodyInfo.HV} cm` : '未設定',
+                    weight: bodyInfo.WV ? `${bodyInfo.WV} kg` : '未設定',
+                    gender: genderDisplay
+                };
+                console.log('✅ 雲端資料結果:', result);
+                return result;
+            }
+            
+            console.log('❌ 沒有找到對應的雲端資料');
+            return { height: '未設定', weight: '未設定', gender: '未設定' };
+        } catch (error) {
+            console.error('❌ 獲取雲端資料時發生錯誤:', error);
+            return { height: '未設定', weight: '未設定', gender: '未設定' };
+        }
+    }
+
+    // 調用 update_bodydata API 的函數（供外部調用）
+    async updateBodyDataAPI(bodyData) {
+        try {
+            console.log('🔄 開始調用 update_bodydata API:', bodyData);
+            
+            // 獲取憑證
+            const credential = localStorage.getItem('google_auth_credential');
+            if (!credential) {
+                console.error('❌ 沒有可用的憑證來更新身體資料');
+                return;
+            }
+
+            // 獲取用戶 sub
+            const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
+            const sub = userInfo.sub;
+            if (!sub) {
+                console.error('❌ 沒有可用的用戶 sub');
+                return;
+            }
+
+            // 從 URL 參數獲取性別
+            const urlParams = new URLSearchParams(window.location.search);
+            const genderFromUrl = urlParams.toString().split('&')[0]; // 取得第一個參數，例如 'F'
+            
+            // 根據 URL 參數設置 BodyData 格式和 BodyData_ptr
+            let formattedBodyData, bodyDataPtr;
+            if (genderFromUrl === 'F') {
+                formattedBodyData = { bodyF: bodyData };
+                bodyDataPtr = 'bodyF';
+            } else if (genderFromUrl === 'M') {
+                formattedBodyData = { bodyM: bodyData };
+                bodyDataPtr = 'bodyM';
+            } else {
+                // 預設為女性
+                formattedBodyData = { bodyF: bodyData };
+                bodyDataPtr = 'bodyF';
+            }
+            
+            console.log('🎯 根據 URL 參數設置:', { genderFromUrl, bodyDataPtr, formattedBodyData });
+            
+            // 構建 API 請求
+            const payload = {
+                BodyData: formattedBodyData,
+                BodyData_ptr: bodyDataPtr,
+                update_bodydata: true,
+                credential: credential,
+                sub: sub,
+                IDTYPE: 'Google'
+            };
+
+            console.log('📤 發送 API 請求:', payload);
+
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ update_bodydata API 調用成功:', result);
+                
+                // 更新本地儲存的 API 回應
+                localStorage.setItem('inffits_api_response', JSON.stringify(result));
+                
+                // 同時更新本地的 BodyID_size_Last 和 Gender_Last
+                if (genderFromUrl === 'F') {
+                    // 女性：整包 bodyData 保存到 BodyID_size_Last
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    localStorage.setItem('Gender_Last', 'F');
+                    console.log('✅ 已同步更新本地女性資料:', bodyData);
+                } else if (genderFromUrl === 'M') {
+                    // 男性：整包 bodyData 保存到 BodyID_size_Last
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    localStorage.setItem('Gender_Last', 'M');
+                    console.log('✅ 已同步更新本地男性資料:', bodyData);
+                }
+                
+                // 觸發更新事件
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'inffits_api_response',
+                    newValue: JSON.stringify(result),
+                    oldValue: null,
+                    storageArea: localStorage
+                }));
+                
+                // 觸發本地資料更新事件
+                window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                    detail: {
+                        keys: ['BodyID_size_Last', 'Gender_Last']
+                    }
+                }));
+                
+            } else {
+                console.error('❌ update_bodydata API 調用失敗:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.error('❌ update_bodydata API 調用錯誤:', error);
+        }
+    }
+
+    // 調用 update_bodydata API 的函數（供外部調用）
+    async updateBodyDataAPI(bodyData) {
+        try {
+            console.log('🔄 開始調用 update_bodydata API:', bodyData);
+            
+            // 獲取憑證
+            const credential = localStorage.getItem('google_auth_credential');
+            if (!credential) {
+                console.error('❌ 沒有可用的憑證來更新身體資料');
+                return;
+            }
+
+            // 獲取用戶 sub
+            const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
+            const sub = userInfo.sub;
+            if (!sub) {
+                console.error('❌ 沒有可用的用戶 sub');
+                return;
+            }
+
+            // 從 URL 參數獲取性別
+            const urlParams = new URLSearchParams(window.location.search);
+            const genderFromUrl = urlParams.toString().split('&')[0]; // 取得第一個參數，例如 'F'
+            
+            // 根據 URL 參數設置 BodyData 格式和 BodyData_ptr
+            let formattedBodyData, bodyDataPtr;
+            if (genderFromUrl === 'F') {
+                formattedBodyData = { bodyF: bodyData };
+                bodyDataPtr = 'bodyF';
+            } else if (genderFromUrl === 'M') {
+                formattedBodyData = { bodyM: bodyData };
+                bodyDataPtr = 'bodyM';
+            } else {
+                // 預設為女性
+                formattedBodyData = { bodyF: bodyData };
+                bodyDataPtr = 'bodyF';
+            }
+            
+            console.log('🎯 根據 URL 參數設置:', { genderFromUrl, bodyDataPtr, formattedBodyData });
+            
+            // 構建 API 請求
+            const payload = {
+                BodyData: formattedBodyData,
+                BodyData_ptr: bodyDataPtr,
+                update_bodydata: true,
+                credential: credential,
+                sub: sub,
+                IDTYPE: 'Google'
+            };
+
+            console.log('📤 發送 API 請求:', payload);
+
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('✅ update_bodydata API 調用成功:', result);
+                
+                // 更新本地儲存的 API 回應
+                localStorage.setItem('inffits_api_response', JSON.stringify(result));
+                
+                // 同時更新本地的 BodyID_size_Last 和 Gender_Last
+                if (genderFromUrl === 'F') {
+                    // 女性：整包 bodyData 保存到 BodyID_size_Last
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    localStorage.setItem('Gender_Last', 'F');
+                    console.log('✅ 已同步更新本地女性資料:', bodyData);
+                } else if (genderFromUrl === 'M') {
+                    // 男性：整包 bodyData 保存到 BodyID_size_Last
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    localStorage.setItem('Gender_Last', 'M');
+                    console.log('✅ 已同步更新本地男性資料:', bodyData);
+                }
+                
+                // 觸發更新事件
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'inffits_api_response',
+                    newValue: JSON.stringify(result),
+                    oldValue: null,
+                    storageArea: localStorage
+                }));
+                
+                // 觸發本地資料更新事件
+                window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                    detail: {
+                        keys: ['BodyID_size_Last', 'Gender_Last']
+                    }
+                }));
+                
+            } else {
+                console.error('❌ update_bodydata API 調用失敗:', response.status, response.statusText);
+            }
+        } catch (error) {
+            console.error('❌ update_bodydata API 調用錯誤:', error);
+        }
+    }
+
+    // 呼叫上傳資料 API
+    async callUploadDataAPI(uploadData) {
+        try {
+            // 獲取憑證資料
+            const storedCredential = localStorage.getItem('google_auth_credential');
+            const storedUserInfo = localStorage.getItem('google_user_info');
+            
+            if (!storedCredential) {
+                throw new Error('沒有可用的憑證');
+            }
+            
+            let subValue = '';
+            if (storedUserInfo) {
+                try {
+                    const userInfo = JSON.parse(storedUserInfo);
+                    subValue = userInfo.sub || '';
+                } catch (e) {
+                    console.warn('解析 localStorage 用戶資訊失敗:', e);
+                }
+            }
+            
+            // 獲取現有的 API 回應
+            const currentApiResponse = this.getApiResponse() || {};
+            const existingBodyData = currentApiResponse.BodyData || {};
+            
+            // 建立新的使用者資料結構
+            const genderKey = uploadData.Gender === 'M' ? 'bodyM' : 'bodyF';
+            const newBodyData = {
+                ...existingBodyData,
+                [genderKey]: {
+                    HV: uploadData.HV,
+                    WV: uploadData.WV,
+                    Gender: uploadData.Gender
+                }
+            };
+            
+            // 準備 API payload
+            const payload = {
+                BodyData: newBodyData,
+                BodyData_ptr: genderKey,
+                update_bodydata: true,
+                credential: storedCredential,
+                sub: subValue,
+                IDTYPE: 'Google'
+            };
+            
+            console.log('📤 發送上傳資料請求:', payload);
+            
+            // 發送 API 請求
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ 上傳資料 API 回應:', data);
+            
+            // 更新本地儲存的 API 回應
+            this.saveApiResponseSilently(data);
+            
+            showNotification('✅ 本地資料已成功上傳到雲端', 'success');
+            
+        } catch (error) {
+            console.error('❌ 呼叫上傳資料 API 失敗:', error);
+            throw error;
+        }
+    }
+
+
+
+    // 從 BodyID_size_Last 恢復 BodyData
+    async restoreBodyDataFromSizeLast(sizeData) {
+        try {
+            console.log(`🔄 開始從 BodyID_size_Last 恢復 BodyData:`, sizeData);
+            
+            // 獲取憑證資料
+            const storedCredential = localStorage.getItem('google_auth_credential');
+            const storedUserInfo = localStorage.getItem('google_user_info');
+            
+            if (!storedCredential) {
+                console.log('ℹ️ 沒有可用的憑證，靜默跳過');
+                return;
+            }
+            
+            let subValue = '';
+            if (storedUserInfo) {
+                try {
+                    const userInfo = JSON.parse(storedUserInfo);
+                    subValue = userInfo.sub || '';
+                } catch (e) {
+                    console.warn('解析 localStorage 用戶資訊失敗:', e);
+                }
+            }
+            
+            // 獲取性別資料
+            const genderLast = localStorage.getItem('Gender_Last');
+            console.log(`👤 從 localStorage 獲取性別: ${genderLast}`);
+            
+            // 獲取現有的 BodyData
+            const currentApiResponse = this.getApiResponse();
+            const existingBodyData = currentApiResponse?.BodyData || {};
+            
+            // 創建新的 BodyData，保留現有資料
+            const newBodyData = { ...existingBodyData };
+            
+            // 根據性別決定加到 bodyM 或 bodyF
+            if (genderLast === 'M') {
+                if (!newBodyData.bodyM) {
+                    newBodyData.bodyM = {};
+                }
+                // 直接展開 sizeData 的所有屬性，避免嵌套 body
+                newBodyData.bodyM = { ...newBodyData.bodyM, ...sizeData };
+                console.log(`👨 將資料添加到 bodyM:`, newBodyData.bodyM);
+            } else if (genderLast === 'F') {
+                if (!newBodyData.bodyF) {
+                    newBodyData.bodyF = {};
+                }
+                // 直接展開 sizeData 的所有屬性，避免嵌套 body
+                newBodyData.bodyF = { ...newBodyData.bodyF, ...sizeData };
+                console.log(`👩 將資料添加到 bodyF:`, newBodyData.bodyF);
+            } else {
+                console.log(`ℹ️ 未知性別 ${genderLast}，靜默跳過`);
+                return;
+            }
+            
+            // 準備 API 請求資料
+            const payload = {
+                BodyData: newBodyData,
+                update_bodydata: true,
+                credential: storedCredential,
+                sub: subValue,
+                IDTYPE: 'Google'
+            };
+            
+            console.log('📤 發送恢復 BodyData 請求:', payload);
+            
+            // 調用 API 更新 BodyData
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ 恢復 BodyData API 回應:', data);
+            
+            // 檢查 API 是否成功（根據 message 欄位或 success 欄位）
+            const isSuccess = data.success === true || data.message === "Existing user updated";
+            
+            if (isSuccess) {
+                // 更新本地儲存的 API 回應
+                this.saveApiResponse(data);
+                
+                // 更新頁面中的身高體重輸入欄位
+                this.updateHeightWeightInputs(sizeData.HV, sizeData.WV);
+                
+                // 顯示成功通知
+                const genderText = genderLast === 'M' ? '男性' : genderLast === 'F' ? '女性' : '未知性別';
+                showNotification(`✅ 已從歷史記錄恢復${genderText}身體資料`, 'success');
+                
+                // 觸發恢復成功事件
+                this.dispatchEvent(new CustomEvent('bodydata-restored', {
+                    detail: {
+                        sizeData: sizeData,
+                        gender: genderLast,
+                        newBodyData: newBodyData,
+                        data: data,
+                        timestamp: new Date().toISOString()
+                    },
+                    bubbles: true,
+                    composed: true
+                }));
+            } else {
+                // API 失敗時，靜默處理，不顯示錯誤訊息
+                console.log('ℹ️ 恢復 BodyData API 回應失敗，靜默跳過');
+            }
+            
+        } catch (error) {
+            // 發生錯誤時，靜默處理，不顯示錯誤訊息
+            console.log('ℹ️ 從 BodyID_size_Last 恢復 BodyData 時發生錯誤，靜默跳過');
+        }
     }
 
     // 處理登入失敗
@@ -4012,142 +6361,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             oldValue: this.credential,
             storageArea: localStorage
         }));
-    }
-
-    // 處理 FML_Done 訊息
-    async handleFMLDoneMessage(messageData) {
-        try {
-            // 檢查是否有有效的憑證
-            const credential = localStorage.getItem('google_auth_credential');
-            if (!credential) {
-                console.warn('❌ 沒有可用的憑證來處理 FML_Done 訊息');
-                return;
-            }
-
-            // 獲取當前 API 回應
-            const currentApiResponse = this.getApiResponse();
-            if (!currentApiResponse || !currentApiResponse.BodyData) {
-                console.warn('❌ 沒有可用的 BodyData 來處理 FML_Done 訊息');
-                return;
-            }
-
-            // 準備新的使用者資料
-            const newUserData = {
-                ...messageData.value,
-                // 確保必要的欄位存在
-                BUS: messageData.value.BUS || '0',
-                MRID: messageData.value.MRID || 'INF',
-                DataItem: messageData.value.DataItem || '0100',
-                LGVID: messageData.value.LGVID || '',
-                ClothID: messageData.value.ClothID || '',
-                DnChest: messageData.value.DnChest || '',
-                Gender: messageData.value.Gender || 'M',
-                GVID: messageData.value.GVID || '',
-                body: messageData.value.body || { CC: '' },
-                Pattern_Prefer: messageData.value.Pattern_Prefer || '0',
-                Hip: messageData.value.Hip || '',
-                HV: messageData.value.HV || '',
-                Sizes: messageData.value.Sizes || '',
-                FMLpath: messageData.value.FMLpath || 'FMLSep',
-                Shoulder: messageData.value.Shoulder || '',
-                UpChest: messageData.value.UpChest || '',
-                Waist: messageData.value.Waist || '',
-                WV: messageData.value.WV || '',
-                ga_id: messageData.value.ga_id || 'x',
-                FitP: messageData.value.FitP || '0,0,0,0'
-            };
-
-            // 檢查是否已存在「新使用者」
-            const existingUserKeys = Object.keys(currentApiResponse.BodyData);
-            const newUserKey = 'storeNew';
-            const isNewUserExists = existingUserKeys.includes(newUserKey);
-
-            // 創建新的 BodyData，將「新使用者」放在第一筆
-            const newBodyData = {};
-            
-            // 首先添加「新使用者」
-            newBodyData[newUserKey] = newUserData;
-            
-            // 然後添加其他使用者（排除已存在的 storeNew）
-            existingUserKeys.forEach(key => {
-                if (key !== newUserKey) {
-                    newBodyData[key] = currentApiResponse.BodyData[key];
-                }
-            });
-
-            // 決定 BodyData_ptr
-            let bodyDataPtr = currentApiResponse.BodyData_ptr;
-            
-            // 如果 BodyData_ptr 是空的，將「新使用者」設為預設
-            if (!bodyDataPtr || bodyDataPtr === '') {
-                bodyDataPtr = newUserKey;
-            }
-
-            // 準備 API 請求資料
-            const payload = {
-                BodyData: newBodyData,
-                BodyData_ptr: bodyDataPtr,
-                update_bodydata: true,
-                credential: credential,
-                IDTYPE: "Google"
-            };
-
-            // 調用 API 更新 BodyData
-            const response = await fetch("https://api.inffits.com/inffits_account_register_and_retrieve_data/model", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    // 401 錯誤處理：憑證失效，自動登出
-                    console.warn('🔐 API 回應 401 - 憑證已失效，執行自動登出');
-                    this.signOut();
-                    this.dispatchEvent(new CustomEvent('credential-expired', {
-                        detail: {
-                            message: '憑證已失效，已自動登出',
-                            timestamp: new Date().toISOString()
-                        },
-                        bubbles: true,
-                        composed: true
-                    }));
-                    throw new Error(`憑證已失效，已自動登出`);
-                }
-                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            const actionText = isNewUserExists ? '更新' : '新增';
-            console.log(`✅ FML_Done 訊息處理成功，${actionText}使用者:`, newUserKey, data);
-
-            // 保存新的 API 回應（不觸發額外的 storage 事件）
-            this.saveApiResponseSilently(data);
-
-            // 更新顯示
-            this.updateBodyDataDisplay(data);
-
-            // 觸發事件通知其他組件
-            this.dispatchEvent(new CustomEvent('fml-done-processed', {
-                detail: {
-                    newUserKey: newUserKey,
-                    messageData: messageData,
-                    apiResponse: data,
-                    isNewUser: !isNewUserExists,
-                    timestamp: new Date().toISOString()
-                },
-                bubbles: true,
-                composed: true
-            }));
-
-        } catch (error) {
-            console.error('❌ 處理 FML_Done 訊息失敗:', error);
-
-            // 顯示錯誤提示（可選）
-            this.showErrorNotification('處理 FML_Done 訊息失敗: ' + error.message);
-        }
     }
 
     // 設置預設使用者
@@ -4286,6 +6499,96 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         }, 3000);
     }
+
+    // 顯示載入通知
+    showLoadingNotification(message) {
+        // 創建載入通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        `;
+
+        // 添加載入動畫
+        const spinner = document.createElement('div');
+        spinner.style.cssText = `
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        `;
+
+        const text = document.createElement('span');
+        text.textContent = message;
+
+        notification.appendChild(spinner);
+        notification.appendChild(text);
+        document.body.appendChild(notification);
+
+        // 添加載入動畫的 CSS
+        if (!document.getElementById('loading-spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'loading-spinner-style';
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        return notification; // 返回通知元素，以便後續移除
+    }
+
+    // 顯示成功通知
+    showSuccessNotification(message) {
+        // 創建成功通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease-out;
+        `;
+
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        // 3秒後自動移除
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
 }
 
 // 更新編輯圖標的 onclick 屬性
@@ -4322,19 +6625,89 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
     }
 }
 
+// 同步更新本地 localStorage 資料
+function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
+    try {
+        console.log(`🔄 updateLocalStorageFromAPI 被調用: userKey=${userKey}, fieldName=${fieldName}, newValue=${newValue}`);
+        
+        // 獲取當前 API 回應
+        const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
+        const bodyData = currentApiResponse.BodyData || {};
+        
+        // 統一處理所有用戶類型
+        const userData = bodyData[userKey];
+        if (userData) {
+            const bodyInfo = userData;
+            
+            // 對於 bodyF/bodyM，整包資料保存到 BodyID_size_Last
+            if (userKey === 'bodyF' || userKey === 'bodyM') {
+                localStorage.setItem('BodyID_size_Last', JSON.stringify(userData));
+                console.log(`✅ 已更新 BodyID_size_Last (${userKey}):`, userData);
+                
+                // 更新性別資料
+                if (userKey === 'bodyF') {
+                    localStorage.setItem('Gender_Last', 'F');
+                } else if (userKey === 'bodyM') {
+                    localStorage.setItem('Gender_Last', 'M');
+                }
+            } else {
+                // 對於其他用戶，只保存 HV 和 WV
+                if (bodyInfo.HV && bodyInfo.WV) {
+                    const localSizeData = {
+                        HV: bodyInfo.HV,
+                        WV: bodyInfo.WV
+                    };
+                    localStorage.setItem('BodyID_size_Last', JSON.stringify(localSizeData));
+                    console.log('✅ 已更新 BodyID_size_Last:', localSizeData);
+                }
+                
+                // 更新性別資料
+                if (bodyInfo.Gender) {
+                    localStorage.setItem('Gender_Last', bodyInfo.Gender);
+                    console.log('✅ 已更新 Gender_Last:', bodyInfo.Gender);
+                }
+            }
+            
+            // 觸發本地資料更新事件
+            window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    keys: ['BodyID_size_Last', 'Gender_Last'],
+                    source: 'field-edit'
+                }
+            }));
+        }
+    } catch (error) {
+        console.error('❌ 同步更新本地資料失敗:', error);
+    }
+}
+
 // 更新 BMI 顯示
 function updateBMI(userKey) {
+    console.log(`🔍 updateBMI 被調用，userKey: ${userKey}`);
+    
     // 獲取當前 API 回應
     const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
+    console.log('🔍 當前 API 回應:', currentApiResponse);
     
     // 獲取指定用戶的身體資料
     const userBodyData = currentApiResponse.BodyData[userKey];
-    if (!userBodyData || !userBodyData.body) {
+    if (!userBodyData) {
         console.log(`❌ 用戶 ${userKey} 沒有身體資料`);
         return;
     }
     
-    const bodyInfo = userBodyData.body;
+    // 直接使用身體資料，沒有 .body 屬性
+    const bodyInfo = userBodyData;
+    
+    if (!bodyInfo) {
+        console.log(`❌ 用戶 ${userKey} 沒有身體資料`);
+        return;
+    }
+    
+    if (!bodyInfo) {
+        console.log(`❌ 用戶 ${userKey} 沒有有效的身體資料`);
+        return;
+    }
     
     // 設定預設值
     let bmiValue = '尚未提供';
@@ -4347,9 +6720,12 @@ function updateBMI(userKey) {
         const weight = parseFloat(bodyInfo.WV);
         
         if (!isNaN(height) && !isNaN(weight) && height > 0 && weight > 0) {
-            // 計算 BMI
-            const bmi = (weight / (height * height) * 10000).toFixed(1); // 身高轉換為米
+            // 計算 BMI (身高 cm 轉換為 m)
+            const heightInMeters = height / 100;
+            const bmi = (weight / (heightInMeters * heightInMeters)).toFixed(1);
             bmiValue = bmi;
+            
+            console.log(`🔍 BMI計算：身高=${height}cm (${heightInMeters}m), 體重=${weight}kg, BMI=${bmi}`);
             
             // 確定 BMI 狀態和顏色
             if (bmi < 18.5) {
@@ -5173,7 +7549,7 @@ function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLa
     
     // 更新編輯圖標狀態（顯示為編輯中）
     if (editIcon) {
-        editIcon.style.setProperty('background', 'rgba(16, 185, 129, 0.2)', 'important');
+        editIcon.style.setProperty('background', 'rgba(190, 209, 252, 0.2)', 'important');
         editIcon.style.cursor = 'not-allowed';
         editIcon.title = '正在編輯中...';
     }
@@ -5335,7 +7711,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         // 準備更新 payload
         const payload = await prepareUpdatePayload(fieldName, userKey, dataType, newValue);
 
-    // 發送 API 請求
+            // 發送 API 請求
         const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
         method: 'POST',
         headers: {
@@ -5345,7 +7721,11 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         });
         
         if (!response.ok) {
-            throw new Error(`HTTP error ${response.status}`);
+            if (response.status === 401) {
+                throw new Error('憑證已過期，請重新登入');
+            } else {
+                throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+            }
         }
         
         const data = await response.json();
@@ -5392,12 +7772,16 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
             composed: true
         }));
 
-        // 如果更新的是身高、體重或性別，則更新 BMI
+        // 如果更新的是身高、體重或性別，則更新 BMI 和本地資料
         if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
-            console.log('🔍 更新 BMI 顯示');
+            console.log('🔍 更新 BMI 顯示和本地資料同步');
+            
             // 延遲執行 BMI 更新，確保 DOM 完全更新
         setTimeout(() => {
                 updateBMI(userKey);
+                
+                // 同步更新本地 localStorage
+                updateLocalStorageFromAPI(userKey, fieldName, newValue);
             }, 100);
         }
         
@@ -5446,6 +7830,32 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         
     } catch (error) {
         console.error('❌ 欄位更新失敗:', error);
+        
+        // 檢查是否為憑證問題
+        if (error.message.includes('401') || error.message.includes('憑證') || error.message.includes('認證')) {
+            console.log('🔐 檢測到憑證問題，自動登出用戶');
+            showNotification('🔐 憑證已過期，已自動登出', 'warning');
+            
+            // 清除所有認證相關的 localStorage
+            localStorage.removeItem('google_auth_credential');
+            localStorage.removeItem('google_user_info');
+            localStorage.removeItem('inffits_api_response');
+            
+            // 觸發登出事件
+            window.dispatchEvent(new CustomEvent('google-logout', {
+                detail: { reason: 'credential_expired' },
+                bubbles: true,
+                composed: true
+            }));
+            
+            // 重新載入頁面或跳轉到登入頁面
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+            return;
+        }
+        
         showNotification(`❌ ${fieldLabel}更新失敗，請稍後再試`, 'error');
         
         // 先恢復編輯圖標狀態和欄位容器狀態
@@ -5510,10 +7920,9 @@ async function prepareUpdatePayload(fieldName, userKey, dataType, newValue) {
         if (!newBodyData[userKey]) {
             newBodyData[userKey] = {};
         }
-        if (!newBodyData[userKey].body) {
-            newBodyData[userKey].body = {};
-        }
-        newBodyData[userKey].body[fieldName] = newValue;
+        
+        // 直接更新資料，沒有 .body 層
+        newBodyData[userKey][fieldName] = newValue;
     }
     
     // 獲取憑證
@@ -5621,9 +8030,97 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// 全域自定義確認彈窗函數
+function showCustomConfirm(title, message, onConfirm, onCancel) {
+    return new Promise((resolve) => {
+        // 創建遮罩層
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-confirm-overlay';
+        overlay.id = 'custom-confirm-overlay';
+
+        // 創建彈窗內容
+        overlay.innerHTML = `
+            <div class="custom-confirm-modal">
+                <div class="custom-confirm-header">
+                    <h3 class="custom-confirm-title">${title}</h3>
+                </div>
+                <div class="custom-confirm-content">
+                    <p class="custom-confirm-message">${message}</p>
+                    <div class="custom-confirm-actions">
+                        <button class="custom-confirm-btn cancel" id="confirm-cancel-btn">取消</button>
+                        <button class="custom-confirm-btn confirm" id="confirm-confirm-btn">確認</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // 添加到頁面
+        document.body.appendChild(overlay);
+
+        // 顯示動畫
+        setTimeout(() => {
+            overlay.classList.add('show');
+        }, 10);
+
+        // 綁定事件
+        const cancelBtn = overlay.querySelector('#confirm-cancel-btn');
+        const confirmBtn = overlay.querySelector('#confirm-confirm-btn');
+
+        const closeModal = (result) => {
+            overlay.classList.remove('show');
+            setTimeout(() => {
+                if (overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+                resolve(result);
+            }, 300);
+        };
+
+        // 取消按鈕
+        cancelBtn.addEventListener('click', () => {
+            if (onCancel) onCancel();
+            closeModal(false);
+        });
+
+        // 確認按鈕
+        confirmBtn.addEventListener('click', () => {
+            if (onConfirm) onConfirm();
+            closeModal(true);
+        });
+
+        // 點擊遮罩層關閉
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (onCancel) onCancel();
+                closeModal(false);
+            }
+        });
+
+        // ESC 鍵關閉
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                if (onCancel) onCancel();
+                closeModal(false);
+                document.removeEventListener('keydown', handleEsc);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    });
+}
+
 // 刪除使用者功能
 async function deleteUser(userKey) {
     try {
+        // 顯示自定義確認彈窗
+        const confirmed = await showCustomConfirm(
+            '刪除使用者',
+            `確定要刪除使用者 ${userKey} 嗎？<br>此操作無法復原，所有身體資料將被永久刪除。`,
+            null, // onConfirm
+            null  // onCancel
+        );
+
+        if (!confirmed) return;
+
         console.log(`🗑️ 開始刪除使用者: ${userKey}`);
         
         // 獲取當前 API 回應
@@ -5681,9 +8178,8 @@ async function deleteUser(userKey) {
         
         // 準備 API 請求資料
         const payload = {
-            BodyData: newBodyData,
-            BodyData_ptr: newBodyDataPtr,
-            update_bodydata: true,
+            BodyData_ptr: userKey, // 指定要刪除的使用者
+            delete_bodydata: true,
             credential: storedCredential,
             sub: subValue,
             IDTYPE: 'Google'
@@ -5692,7 +8188,7 @@ async function deleteUser(userKey) {
         console.log(`📤 發送刪除使用者請求:`, payload);
         
         // 調用 API 刪除使用者
-        const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
+        const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -5707,17 +8203,27 @@ async function deleteUser(userKey) {
         const data = await response.json();
         console.log(`✅ 刪除使用者 API 回應:`, data);
         
-        if (data.success) {
+        // 檢查 API 是否成功（根據 message 欄位）
+        const isSuccess = data.message === "Existing user updated";
+        
+        if (isSuccess) {
+            // 使用 API 回傳的資料更新本地儲存
+            const finalBodyData = data.BodyData || {};
+            const finalBodyDataPtr = data.BodyData_ptr || '';
+            
+            console.log('📋 使用 API 回傳的 BodyData:', finalBodyData);
+            console.log('📋 使用 API 回傳的 BodyData_ptr:', finalBodyDataPtr);
+            
             // 更新本地儲存的 API 回應
             const updatedApiResponse = {
                 ...currentApiResponse,
-                BodyData: newBodyData,
-                BodyData_ptr: newBodyDataPtr
+                BodyData: finalBodyData,
+                BodyData_ptr: finalBodyDataPtr
             };
             localStorage.setItem('inffits_api_response', JSON.stringify(updatedApiResponse));
             
             // 顯示成功訊息
-            const remainingCount = Object.keys(newBodyData).length;
+            const remainingCount = Object.keys(finalBodyData).length;
             if (remainingCount === 0) {
                 showNotification(`✅ 使用者 ${userKey} 已成功刪除，所有使用者已清空`, 'success');
             } else {
@@ -5728,7 +8234,7 @@ async function deleteUser(userKey) {
             document.dispatchEvent(new CustomEvent('user-deleted', {
                 detail: { 
                     deletedUserKey: userKey,
-                    newDefaultUser: newBodyDataPtr,
+                    newDefaultUser: finalBodyDataPtr,
                     data: data,
                     timestamp: new Date().toISOString()
                 },
@@ -5743,6 +8249,8 @@ async function deleteUser(userKey) {
             }, 1500);
             
         } else {
+            // API 失敗時，不更新本地資料，保持原有狀態
+            console.warn('⚠️ API 回應顯示失敗，保持原有資料狀態');
             throw new Error(data.message || '刪除使用者失敗');
         }
         
@@ -5751,3 +8259,4 @@ async function deleteUser(userKey) {
         showNotification(`❌ 刪除使用者失敗: ${error.message}`, 'error');
     }
 }
+
