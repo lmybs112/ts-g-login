@@ -5352,12 +5352,16 @@ class InfGoogleLoginComponent extends HTMLElement {
             const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
             const genderLast = localStorage.getItem('Gender_Last');
             
+            console.log('🔍 本地資料檢查:', { bodyIdSizeLast, genderLast });
+            
             if (!bodyIdSizeLast || !genderLast) {
                 console.log('❌ 缺少本地資料，無法上傳');
+                showNotification('❌ 缺少本地資料，無法上傳', 'error');
                 return;
             }
             
             const sizeData = JSON.parse(bodyIdSizeLast);
+            console.log('🔍 解析的本地資料:', sizeData);
             
             // 準備上傳的資料
             const uploadData = {
@@ -5366,8 +5370,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 Gender: genderLast
             };
             
+            console.log('📤 準備上傳的資料:', uploadData);
+            
             // 調用上傳 API
+            console.log('🚀 開始調用 callUploadDataAPI...');
             await this.callUploadDataAPI(uploadData);
+            console.log('✅ callUploadDataAPI 調用完成');
             
         } catch (error) {
             console.error('❌ 上傳本地資料失敗:', error);
@@ -6134,9 +6142,16 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 呼叫上傳資料 API
     async callUploadDataAPI(uploadData) {
         try {
+            console.log('🔐 開始 callUploadDataAPI，輸入資料:', uploadData);
+            
             // 獲取憑證資料
             const storedCredential = localStorage.getItem('google_auth_credential');
             const storedUserInfo = localStorage.getItem('google_user_info');
+            
+            console.log('🔍 憑證檢查:', { 
+                hasCredential: !!storedCredential, 
+                hasUserInfo: !!storedUserInfo 
+            });
             
             if (!storedCredential) {
                 throw new Error('沒有可用的憑證');
@@ -6180,6 +6195,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             console.log('📤 發送上傳資料請求:', payload);
             
             // 發送 API 請求
+            console.log('🌐 開始發送 fetch 請求...');
             const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
                 method: 'POST',
                 headers: {
@@ -6188,8 +6204,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 body: JSON.stringify(payload)
             });
             
+            console.log('📡 收到 API 回應:', { status: response.status, ok: response.ok });
+            
             if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ API 回應錯誤:', errorText);
+                throw new Error(`HTTP error ${response.status}: ${errorText}`);
             }
             
             const data = await response.json();
