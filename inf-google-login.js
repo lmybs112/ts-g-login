@@ -225,7 +225,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         if (now - InfGoogleLoginComponent.lastApiRefreshTime < 5000) {
 
             // 仍然載入本地快取的資料
-            this.getApiResponse();
+                this.getApiResponse();
             return;
         }
 
@@ -5354,9 +5354,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             
             if (!bodyIdSizeLast || !genderLast) {
                 console.log('❌ 缺少本地資料，無法上傳');
-                    return;
-                }
-                
+                return;
+            }
+            
             const sizeData = JSON.parse(bodyIdSizeLast);
             
             // 準備上傳的資料
@@ -5621,6 +5621,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                     border-radius: 8px !important;
                     background: #f9fafb !important;
                     overflow: hidden !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                }
+                
+                #data-version-overlay .data-card:hover {
+                    border-color: #3b82f6 !important;
+                    background: #eff6ff !important;
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
                 }
                 
                 #data-version-overlay .data-card p {
@@ -5715,7 +5724,16 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <p class="custom-confirm-message">發現本地和雲端都有尺寸資料，請選擇要使用哪個版本：</p>
                         
                         <div class="data-comparison">
-                            <div class="data-card">
+                            <div class="data-card" id="cloud-data-card" style="border-color: #3b82f6; background: #eff6ff;">
+                                <p>☁️ 雲端資料 <span style="font-size: 12px; color: #3b82f6; font-weight: 500;">(預設)</span></p>
+                                <div class="data-info">
+                                    <div>身高：${cloudData.height}</div>
+                                    <div>體重：${cloudData.weight}</div>
+                                    <div>性別：${cloudData.gender}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="data-card" id="local-data-card">
                                 <p>📱 本地資料</p>
                                 <div class="data-info">
                                     <div>身高：${localData.height}</div>
@@ -5723,21 +5741,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     <div>性別：${localData.gender}</div>
                                 </div>
                             </div>
-                            
-                            <div class="data-card">
-                                <p>☁️ 雲端資料</p>
-                                <div class="data-info">
-                                    <div>身高：${cloudData.height}</div>
-                                    <div>體重：${cloudData.weight}</div>
-                                    <div>性別：${cloudData.gender}</div>
-                                </div>
-                            </div>
                         </div>
                         
                         <div class="custom-confirm-actions">
-                            <button class="custom-confirm-btn" id="use-local-btn" style="background: #10b981; color: white;">使用本地資料</button>
-                            <button class="custom-confirm-btn" id="use-cloud-btn" style="background: #3b82f6; color: white;">使用雲端資料</button>
-                            <button class="custom-confirm-btn cancel" id="version-cancel-btn" style="background: #6b7280; color: white;">取消</button>
+                            <button class="custom-confirm-btn" id="confirm-btn" style="background: #3b82f6; color: white;">確定</button>
                         </div>
                     </div>
                 </div>
@@ -5767,21 +5774,34 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }, 200);
             };
 
+            // 卡片選擇邏輯
+            let selectedData = 'cloud'; // 預設選擇雲端資料
+            const cloudCard = overlay.querySelector('#cloud-data-card');
+            const localCard = overlay.querySelector('#local-data-card');
+
+            const selectCard = (card, dataType) => {
+                // 重置所有卡片樣式
+                cloudCard.style.borderColor = '#e5e7eb';
+                cloudCard.style.background = '#f9fafb';
+                localCard.style.borderColor = '#e5e7eb';
+                localCard.style.background = '#f9fafb';
+                
+                // 設置選中卡片的樣式
+                card.style.borderColor = '#3b82f6';
+                card.style.background = '#eff6ff';
+                
+                selectedData = dataType;
+            };
+
+            // 綁定卡片點擊事件
+            cloudCard.addEventListener('click', () => selectCard(cloudCard, 'cloud'));
+            localCard.addEventListener('click', () => selectCard(localCard, 'local'));
+
             // 按鈕事件
-            const useLocalBtn = overlay.querySelector('#use-local-btn');
-            const useCloudBtn = overlay.querySelector('#use-cloud-btn');
-            const cancelBtn = overlay.querySelector('#version-cancel-btn');
+            const confirmBtn = overlay.querySelector('#confirm-btn');
 
-            useLocalBtn.addEventListener('click', () => {
-                closeModal('local');
-            });
-
-            useCloudBtn.addEventListener('click', () => {
-                closeModal('cloud');
-            });
-
-            cancelBtn.addEventListener('click', () => {
-                closeModal('cancel');
+            confirmBtn.addEventListener('click', () => {
+                closeModal(selectedData);
             });
 
             // 點擊遮罩層關閉
@@ -5812,7 +5832,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 return { height: '未設定', weight: '未設定', gender: '未設定' };
             }
             
-            const sizeData = JSON.parse(bodyIdSizeLast);
+                const sizeData = JSON.parse(bodyIdSizeLast);
             return {
                 height: sizeData.HV ? `${sizeData.HV} cm` : '未設定',
                 weight: sizeData.WV ? `${sizeData.WV} kg` : '未設定',
@@ -5907,9 +5927,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
                 console.error('❌ 沒有可用的憑證來更新身體資料');
-                return;
-            }
-
+                    return;
+                }
+                
             // 獲取用戶 sub
             const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
             const sub = userInfo.sub;
@@ -6010,9 +6030,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
                 console.error('❌ 沒有可用的憑證來更新身體資料');
-                return;
-            }
-
+                    return;
+                }
+                
             // 獲取用戶 sub
             const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
             const sub = userInfo.sub;
@@ -7711,7 +7731,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         // 準備更新 payload
         const payload = await prepareUpdatePayload(fieldName, userKey, dataType, newValue);
 
-            // 發送 API 請求
+    // 發送 API 請求
         const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model', {
         method: 'POST',
         headers: {
