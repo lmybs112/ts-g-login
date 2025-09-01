@@ -5362,8 +5362,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 if (hasLocalData && !hasCloudData) {
                     // 情況：已登入 本地已使用 雲端無資料
-                    // 只有在首次登入時才上傳，頁面載入時不自動上傳
-                    // 不自動上傳，等下次真正登入時再處理
+                    // 自動上傳本地資料到雲端
+                    console.log('🔄 檢測到本地有數據但雲端無數據，開始自動上傳...');
+                    await this.uploadLocalDataToCloud();
+                    console.log('✅ 本地數據自動上傳完成');
                 } else if (hasLocalData && hasCloudData) {
                     // 情況：已登入 本地已使用 雲端有資料 → 詢問使用者是否用本地覆蓋雲端
                     await this.showDataConflictDialog();
@@ -5384,7 +5386,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查本地是否有尺寸資料
     checkLocalSizeData() {
-            const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
+            const bodyIdSizeLast = localStorage.getItem('BodyID_size');
             const genderLast = localStorage.getItem('Gender_Last');
         
             
@@ -5442,7 +5444,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     async uploadLocalDataToCloud() {
         try {
             
-            const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
+            const bodyIdSizeLast = localStorage.getItem('BodyID_size');
             const genderLast = localStorage.getItem('Gender_Last');
             
             
@@ -5503,10 +5505,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 let hasData = false;
                 
-                // 將雲端資料保存到本地 BodyID_size_Last
+                // 將雲端資料保存到本地 BodyID_size
                 if (targetKey === 'bodyF' || targetKey === 'bodyM') {
-                    // bodyF/bodyM 整包資料都保存到 BodyID_size_Last
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyInfo));
+                    // bodyF/bodyM 整包資料都保存到 BodyID_size
+                    localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
                     // 其他資料源只保存 HV, WV
@@ -5515,7 +5517,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         WV: bodyInfo.WV
                     };
                     
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(localSizeData));
+                    localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
                 }
                 
@@ -5538,7 +5540,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 觸發 localStorage 更新事件
                     window.dispatchEvent(new CustomEvent('localStorage-updated', {
                         detail: {
-                            keys: ['BodyID_size_Last', 'Gender_Last']
+                            keys: ['BodyID_size', 'Gender_Last']
                         }
                     }));
                     
@@ -5928,7 +5930,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 獲取本地資料資訊
     getLocalDataInfo() {
         try {
-            const bodyIdSizeLast = localStorage.getItem('BodyID_size_Last');
+            const bodyIdSizeLast = localStorage.getItem('BodyID_size');
             const genderLast = localStorage.getItem('Gender_Last');
             
             if (!bodyIdSizeLast || !genderLast) {
@@ -6068,14 +6070,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 更新本地儲存的 API 回應
                 localStorage.setItem('inffits_api_response', JSON.stringify(result));
                 
-                // 同時更新本地的 BodyID_size_Last 和 Gender_Last
+                // 同時更新本地的 BodyID_size 和 Gender_Last
                 if (genderFromUrl === 'F') {
-                    // 女性：整包 bodyData 保存到 BodyID_size_Last
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    // 女性：整包 bodyData 保存到 BodyID_size
+                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'F');
                 } else if (genderFromUrl === 'M') {
-                    // 男性：整包 bodyData 保存到 BodyID_size_Last
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    // 男性：整包 bodyData 保存到 BodyID_size
+                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
                 }
                 
@@ -6090,7 +6092,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 觸發本地資料更新事件
                 window.dispatchEvent(new CustomEvent('localStorage-updated', {
                     detail: {
-                        keys: ['BodyID_size_Last', 'Gender_Last']
+                        keys: ['BodyID_size', 'Gender_Last']
                     }
                 }));
                 
@@ -6161,14 +6163,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 更新本地儲存的 API 回應
                 localStorage.setItem('inffits_api_response', JSON.stringify(result));
                 
-                // 同時更新本地的 BodyID_size_Last 和 Gender_Last
+                // 同時更新本地的 BodyID_size 和 Gender_Last
                 if (genderFromUrl === 'F') {
-                    // 女性：整包 bodyData 保存到 BodyID_size_Last
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    // 女性：整包 bodyData 保存到 BodyID_size
+                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'F');
                 } else if (genderFromUrl === 'M') {
-                    // 男性：整包 bodyData 保存到 BodyID_size_Last
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(bodyData));
+                    // 男性：整包 bodyData 保存到 BodyID_size
+                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
                 }
                 
@@ -6183,7 +6185,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 觸發本地資料更新事件
                 window.dispatchEvent(new CustomEvent('localStorage-updated', {
                     detail: {
-                        keys: ['BodyID_size_Last', 'Gender_Last']
+                        keys: ['BodyID_size', 'Gender_Last']
                     }
                 }));
                 
@@ -6269,7 +6271,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
 
 
-    // 從 BodyID_size_Last 恢復 BodyData
+    // 從 BodyID_size 恢復 BodyData
     async restoreBodyDataFromSizeLast(sizeData) {
         try {
             
@@ -6703,9 +6705,9 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
         if (userData) {
             const bodyInfo = userData;
             
-            // 對於 bodyF/bodyM，整包資料保存到 BodyID_size_Last
+            // 對於 bodyF/bodyM，整包資料保存到 BodyID_size
             if (userKey === 'bodyF' || userKey === 'bodyM') {
-                localStorage.setItem('BodyID_size_Last', JSON.stringify(userData));
+                localStorage.setItem('BodyID_size', JSON.stringify(userData));
                 
                 // 更新性別資料
                 if (userKey === 'bodyF') {
@@ -6720,7 +6722,7 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                         HV: bodyInfo.HV,
                         WV: bodyInfo.WV
                     };
-                    localStorage.setItem('BodyID_size_Last', JSON.stringify(localSizeData));
+                    localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                 }
                 
                 // 更新性別資料
@@ -6732,7 +6734,7 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             // 觸發本地資料更新事件
             window.dispatchEvent(new CustomEvent('localStorage-updated', {
                 detail: {
-                    keys: ['BodyID_size_Last', 'Gender_Last'],
+                    keys: ['BodyID_size', 'Gender_Last'],
                     source: 'field-edit'
                 }
             }));
@@ -8104,7 +8106,7 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
     try {
         
         // 獲取本地資料
-        const localBodyData = localStorage.getItem('BodyID_size_Last');
+        const localBodyData = localStorage.getItem('BodyID_size');
         const localGender = localStorage.getItem('Gender_Last');
         
         if (!localBodyData || !localGender) {
@@ -8133,13 +8135,13 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
         
         if (heightMatches && weightMatches && genderMatches) {
             // 資料相同，刪除本地資料
-            localStorage.removeItem('BodyID_size_Last');
+            localStorage.removeItem('BodyID_size');
             localStorage.removeItem('Gender_Last');
             
             // 觸發本地資料更新事件
             window.dispatchEvent(new CustomEvent('localStorage-updated', {
                 detail: {
-                    keys: ['BodyID_size_Last', 'Gender_Last'],
+                    keys: ['BodyID_size', 'Gender_Last'],
                     action: 'deleted'
                 }
             }));
