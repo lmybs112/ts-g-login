@@ -5687,39 +5687,69 @@ class InfGoogleLoginComponent extends HTMLElement {
                 #data-version-overlay .data-card {
                     flex: 1 !important;
                     min-width: 0 !important;
-                    padding: 15px !important;
+                    padding: 20px !important;
                     border: 2px solid #e5e7eb !important;
-                    border-radius: 8px !important;
-                    background: #f9fafb !important;
+                    border-radius: 12px !important;
+                    background: white !important;
                     overflow: hidden !important;
                     cursor: pointer !important;
                     transition: all 0.2s ease !important;
+                    position: relative !important;
                 }
                 
                 #data-version-overlay .data-card:hover {
-                    border-color: #3b82f6 !important;
-                    background: #eff6ff !important;
+                    border-color: #d1d5db !important;
                     transform: translateY(-1px) !important;
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
                 }
                 
                 #data-version-overlay .data-card.selected {
-                    border-color: #3b82f6 !important;
-                    background: #eff6ff !important;
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
+                    border-color: #000000 !important;
+                    background: white !important;
                 }
                 
                 #data-version-overlay .data-card.selected:hover {
-                    transform: translateY(-1px) !important;
+                    border-color: #000000 !important;
                 }
                 
-                #data-version-overlay .data-card p {
-                    margin: 0 0 10px 0 !important;
-                    color: #374151 !important;
-                    font-size: 14px !important;
+                #data-version-overlay .selection-indicator {
+                    position: absolute !important;
+                    top: 12px !important;
+                    right: 12px !important;
+                    width: 20px !important;
+                    height: 20px !important;
+                    border-radius: 50% !important;
+                    background: #000000 !important;
+                    color: white !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    font-size: 12px !important;
+                    font-weight: bold !important;
+                    opacity: 0 !important;
+                    transition: opacity 0.2s ease !important;
+                }
+                
+                #data-version-overlay .data-card.selected .selection-indicator {
+                    opacity: 1 !important;
+                }
+                
+                #data-version-overlay .card-content {
+                    margin-top: 5px !important;
+                }
+                
+                #data-version-overlay .card-title {
+                    margin: 0 0 15px 0 !important;
+                    color: #6b7280 !important;
+                    font-size: 16px !important;
                     font-weight: 600 !important;
                     font-family: inherit !important;
                     line-height: 1.2 !important;
+                    text-align: center !important;
+                }
+                
+                #data-version-overlay .data-card.selected .card-title {
+                    color: #000000 !important;
+                    font-weight: 700 !important;
                 }
                 
                 #data-version-overlay .data-info {
@@ -5727,9 +5757,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }
                 
                 #data-version-overlay .data-info div {
-                    margin: 0 0 4px 0 !important;
+                    margin: 0 0 6px 0 !important;
                     padding: 0 !important;
-                    font-size: 12px !important;
+                    font-size: 13px !important;
                     color: #6b7280 !important;
                     line-height: 1.4 !important;
                     border: none !important;
@@ -5738,6 +5768,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                     white-space: nowrap !important;
                     overflow: hidden !important;
                     text-overflow: ellipsis !important;
+                    text-align: center !important;
+                }
+                
+                #data-version-overlay .data-card.selected .data-info div {
+                    color: #000000 !important;
+                    font-weight: 500 !important;
                 }
                 
                 #data-version-overlay .data-info div:last-child {
@@ -5806,20 +5842,26 @@ class InfGoogleLoginComponent extends HTMLElement {
                         
                         <div class="data-comparison">
                             <div class="data-card selected" id="cloud-data-card">
-                                <p>☁️ 雲端資料</p>
-                                <div class="data-info">
-                                    <div>身高：${cloudData.height}</div>
-                                    <div>體重：${cloudData.weight}</div>
-                                    <div>性別：${cloudData.gender}</div>
+                                <div class="selection-indicator">✓</div>
+                                <div class="card-content">
+                                    <div class="card-title">☁️ 雲端資料</div>
+                                    <div class="data-info">
+                                        <div>身高：${cloudData.height}</div>
+                                        <div>體重：${cloudData.weight}</div>
+                                        <div>性別：${cloudData.gender}</div>
+                                    </div>
                                 </div>
                             </div>
                             
                             <div class="data-card" id="local-data-card">
-                                <p>📱 本地資料</p>
-                                <div class="data-info">
-                                    <div>身高：${localData.height}</div>
-                                    <div>體重：${localData.weight}</div>
-                                    <div>性別：${localData.gender}</div>
+                                <div class="selection-indicator"></div>
+                                <div class="card-content">
+                                    <div class="card-title">📱 本地資料</div>
+                                    <div class="data-info">
+                                        <div>身高：${localData.height}</div>
+                                        <div>體重：${localData.weight}</div>
+                                        <div>性別：${localData.gender}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -5865,8 +5907,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                 cloudCard.classList.remove('selected');
                 localCard.classList.remove('selected');
                 
+                // 清空所有選中指示器
+                cloudCard.querySelector('.selection-indicator').textContent = '';
+                localCard.querySelector('.selection-indicator').textContent = '';
+                
                 // 設置選中卡片的樣式
                 card.classList.add('selected');
+                card.querySelector('.selection-indicator').textContent = '✓';
                 
                 selectedData = dataType;
             };
