@@ -49,6 +49,9 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 檢查本地存儲的憑證（初始化時不刷新 API，等到掛載時再刷新）
         this.checkStoredCredential(false);
+        
+        // 設置 token 自動刷新機制
+        this.setupTokenRefresh();
     }
 
     // 安全的 timeout 包裝器
@@ -163,6 +166,200 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             window.googleLoadingPromise.then(resolve).catch(reject);
         });
+    }
+
+    // 設置 token 自動刷新機制
+    setupTokenRefresh() {
+        // 每 50 分鐘檢查一次 token 狀態（Google token 通常 1 小時過期）
+        const refreshInterval = this.safeSetInterval(() => {
+            if (this.isAuthenticated) {
+                this.checkAndRefreshToken();
+            }
+        }, 50 * 60 * 1000); // 50 分鐘
+        
+        // 保存 interval ID 以便清理
+        this.activeIntervals.add(refreshInterval);
+        
+        console.log('🔄 Token 自動刷新機制已設置（每 50 分鐘檢查一次）');
+    }
+
+    // 檢查並刷新 token
+    async checkAndRefreshToken() {
+        try {
+            console.log('🔄 檢查 token 狀態...');
+            
+            const credential = localStorage.getItem('google_auth_credential');
+            if (!credential) {
+                console.log('ℹ️ 沒有找到憑證，跳過 token 檢查');
+                return;
+            }
+            
+            // 優先檢查是否有 refresh token
+            const refreshToken = localStorage.getItem('google_refresh_token');
+            if (refreshToken) {
+                console.log('🔄 發現 refresh token，檢查 access token 狀態...');
+                
+                // 檢查 access token 是否即將過期
+                const expiresAt = localStorage.getItem('google_token_expires_at');
+                if (expiresAt) {
+                    const now = Date.now();
+                    const expiresAtTime = parseInt(expiresAt);
+                    const timeUntilExpiry = expiresAtTime - now;
+                    
+                    console.log('⏰ OAuth2 Token 過期檢查:', {
+                        expires: new Date(expiresAtTime).toLocaleString(),
+                        timeUntilExpiry: Math.round(timeUntilExpiry / 1000 / 60) + ' 分鐘'
+                    });
+                    
+                    // 如果 token 將在 10 分鐘內過期，提前刷新
+                    if (timeUntilExpiry < 10 * 60 * 1000) {
+                        console.log('⚠️ OAuth2 Token 將在 10 分鐘內過期，使用 refresh token 刷新...');
+                        try {
+                            const newAccessToken = await this.refreshAccessToken(refreshToken);
+                            if (newAccessToken) {
+                                console.log('✅ 使用 refresh token 成功刷新 access token');
+                                const newCredential = `oauth2_${newAccessToken}`;
+                                this.saveCredential(newCredential);
+                                return;
+                            }
+                        } catch (error) {
+                            console.log('⚠️ 使用 refresh token 刷新失敗:', error);
+                        }
+                    } else {
+                        console.log('✅ OAuth2 Token 仍然有效');
+                        return;
+                    }
+                }
+            }
+            
+            // 對於 JWT token，檢查過期時間
+            const tokenInfoStr = localStorage.getItem('google_token_info');
+            if (tokenInfoStr) {
+                try {
+                    const tokenInfo = JSON.parse(tokenInfoStr);
+                    const now = Date.now();
+                    const timeUntilExpiry = (tokenInfo.created_at + tokenInfo.expires_in) - now;
+                    
+                    console.log('⏰ JWT Token 過期檢查:', {
+                        created: new Date(tokenInfo.created_at).toLocaleString(),
+                        expires: new Date(tokenInfo.created_at + tokenInfo.expires_in).toLocaleString(),
+                        timeUntilExpiry: Math.round(timeUntilExpiry / 1000 / 60) + ' 分鐘'
+                    });
+                    
+                    // 如果 token 將在 10 分鐘內過期，提前刷新
+                    if (timeUntilExpiry < 10 * 60 * 1000) {
+                        console.log('⚠️ JWT Token 將在 10 分鐘內過期，嘗試刷新...');
+                        await this.refreshGoogleToken();
+                        return;
+                    }
+                } catch (error) {
+                    console.log('⚠️ 解析 token 資訊失敗:', error);
+                }
+            }
+            
+            // 嘗試調用一個簡單的 API 來測試 token 是否有效
+            const testResponse = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    credential: credential,
+                    sub: JSON.parse(localStorage.getItem('google_user_info') || '{}').sub || '',
+                    IDTYPE: 'Google',
+                    test_token: true // 標記為測試請求
+                })
+            });
+            
+            if (testResponse.ok) {
+                console.log('✅ Token 仍然有效');
+            } else if (testResponse.status === 401) {
+                console.log('⚠️ Token 已過期，嘗試自動刷新...');
+                await this.refreshGoogleToken();
+            }
+            
+        } catch (error) {
+            console.log('⚠️ Token 檢查失敗，可能需要重新登入:', error);
+        }
+    }
+
+    // 刷新 Google token
+    async refreshGoogleToken() {
+        try {
+            console.log('🔄 開始刷新 Google token...');
+            
+            // 首先嘗試使用 refresh token 刷新 access token
+            const refreshToken = localStorage.getItem('google_refresh_token');
+            if (refreshToken) {
+                console.log('🔄 使用 refresh token 刷新 access token...');
+                try {
+                    const newAccessToken = await this.refreshAccessToken(refreshToken);
+                    if (newAccessToken) {
+                        console.log('✅ 使用 refresh token 成功刷新 access token');
+                        
+                        // 更新憑證
+                        const newCredential = `oauth2_${newAccessToken}`;
+                        this.saveCredential(newCredential);
+                        
+                        // 觸發成功事件
+                        this.dispatchEvent(new CustomEvent('token-refreshed', {
+                            detail: {
+                                newCredential: newCredential,
+                                timestamp: new Date().toISOString()
+                            },
+                            bubbles: true,
+                            composed: true
+                        }));
+                        
+                        return;
+                    }
+                } catch (error) {
+                    console.log('⚠️ 使用 refresh token 刷新失敗，嘗試其他方法:', error);
+                }
+            }
+            
+            // 如果沒有 refresh token 或刷新失敗，嘗試使用 Google Identity Services
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                console.log('🔄 嘗試使用 Google Identity Services 重新認證...');
+                // 觸發無聲的重新認證
+                window.google.accounts.id.prompt((notification) => {
+                    if (notification.isDisplayed()) {
+                        console.log('✅ Google 重新認證對話框已顯示');
+                    } else {
+                        console.log('⚠️ 無法顯示重新認證對話框，需要用戶手動重新登入');
+                        this.handleTokenExpiration();
+                    }
+                });
+            } else {
+                // 如果 Google Identity Services 不可用，直接處理過期
+                console.log('⚠️ 無法使用 refresh token 或 Google Identity Services，需要用戶重新登入');
+                this.handleTokenExpiration();
+            }
+            
+        } catch (error) {
+            console.error('❌ 刷新 token 失敗:', error);
+            this.handleTokenExpiration();
+        }
+    }
+
+    // 處理 token 過期
+    handleTokenExpiration() {
+        console.log('🔐 Token 已過期，清除認證資料');
+        
+        // 清除認證資料
+        localStorage.removeItem('google_auth_credential');
+        localStorage.removeItem('google_user_info');
+        localStorage.removeItem('inffits_api_response');
+        
+        // 觸發登出事件
+        window.dispatchEvent(new CustomEvent('google-logout', {
+            detail: { reason: 'token_expired' },
+            bubbles: true,
+            composed: true
+        }));
+        
+        // 顯示通知
+        showNotification('🔐 登入已過期，請重新登入', 'warning');
     }
 
     // 檢查存儲的憑證
@@ -282,6 +479,22 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.credential = credential;
             this.isAuthenticated = true;
 
+            // 記錄 token 創建時間，用於計算過期時間
+            const tokenInfo = {
+                credential: credential,
+                created_at: Date.now(),
+                expires_in: 3600000 // 1 小時（毫秒）
+            };
+            localStorage.setItem('google_token_info', JSON.stringify(tokenInfo));
+            
+            // 如果是 OAuth2 憑證，提取並保存 access token
+            if (credential && credential.startsWith('oauth2_')) {
+                const accessToken = credential.replace('oauth2_', '');
+                localStorage.setItem('google_access_token', accessToken);
+                localStorage.setItem('google_token_expires_at', (Date.now() + 3600000).toString());
+                console.log('🔐 已保存 OAuth2 access token');
+            }
+
             // 觸發 localStorage 更新事件
             this.dispatchEvent(new CustomEvent('localStorage-updated', {
                 detail: {
@@ -308,6 +521,12 @@ class InfGoogleLoginComponent extends HTMLElement {
         localStorage.removeItem('google_auth_credential');
         localStorage.removeItem('google_user_info');
         localStorage.removeItem('inffits_api_response'); // 清除 API 回應數據
+        localStorage.removeItem('google_token_info'); // 清除 token 資訊
+        // 清除 OAuth2 tokens
+        localStorage.removeItem('google_access_token');
+        localStorage.removeItem('google_refresh_token');
+        localStorage.removeItem('google_token_expires_at');
+        
         this.credential = null;
         this.userInfo = null;
         this.isAuthenticated = false;
@@ -4081,7 +4300,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                     cancel_on_tap_outside: false,
                     context: 'signin',
                     select_account: true,
-                    use_fedcm_for_prompt: true
+                    use_fedcm_for_prompt: true,
+                    // 延長 token 有效期的配置
+                    prompt_parent_id: 'google-login-container',
+                    state_cookie_domain: window.location.hostname,
+                    ux_mode: 'popup',
+                    // 請求更長的 token 有效期
+                    scope: 'openid email profile',
+                    access_type: 'offline',
+                    include_granted_scopes: true
                 };
 
                 // 重新初始化
@@ -4301,13 +4528,15 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 access token
     async refreshAccessToken(refreshToken) {
         try {
+            console.log('🔄 開始刷新 access token...');
+            
             const response = await fetch('https://oauth2.googleapis.com/token', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    client_id: 'YOUR_GOOGLE_CLIENT_ID', // 需要替換為實際的 client ID
+                    client_id: this.clientId, // 使用組件的 client ID
                     client_secret: 'YOUR_GOOGLE_CLIENT_SECRET', // 需要替換為實際的 client secret
                     refresh_token: refreshToken,
                     grant_type: 'refresh_token',
@@ -4315,17 +4544,20 @@ class InfGoogleLoginComponent extends HTMLElement {
             });
 
             if (!response.ok) {
-                throw new Error(`刷新 token 失敗: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ 刷新 token API 回應錯誤:', response.status, errorText);
+                throw new Error(`刷新 token 失敗: ${response.status} - ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('✅ 成功獲取新的 access token');
             
             // 保存新的 access token
             this.saveTokens(data.access_token, refreshToken);
             
             return data.access_token;
         } catch (error) {
-            console.error('刷新 access token 失敗:', error);
+            console.error('❌ 刷新 access token 失敗:', error);
             throw error;
         }
     }
@@ -5004,7 +5236,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 prompt: 'select_account',
                 auto_prompt: false,
                 state: 'google_signin',
-                scope: 'openid email profile'
+                scope: 'openid email profile',
+                // 延長 token 有效期的配置
+                access_type: 'offline',
+                include_granted_scopes: true,
+                // 請求更長的 token 有效期
+                response_type: 'token',
+                // 設置 token 過期時間（最長 1 小時）
+                token_expiry: 3600
             };
 
             window.google.accounts.id.initialize(config);
