@@ -5632,6 +5632,16 @@ class InfGoogleLoginComponent extends HTMLElement {
                     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
                 }
                 
+                #data-version-overlay .data-card.selected {
+                    border-color: #3b82f6 !important;
+                    background: #eff6ff !important;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
+                }
+                
+                #data-version-overlay .data-card.selected:hover {
+                    transform: translateY(-1px) !important;
+                }
+                
                 #data-version-overlay .data-card p {
                     margin: 0 0 10px 0 !important;
                     color: #374151 !important;
@@ -5724,8 +5734,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <p class="custom-confirm-message">發現本地和雲端都有尺寸資料，請選擇要使用哪個版本：</p>
                         
                         <div class="data-comparison">
-                            <div class="data-card" id="cloud-data-card" style="border-color: #3b82f6; background: #eff6ff;">
-                                <p>☁️ 雲端資料 <span style="font-size: 12px; color: #3b82f6; font-weight: 500;">(預設)</span></p>
+                            <div class="data-card selected" id="cloud-data-card">
+                                <p>☁️ 雲端資料</p>
                                 <div class="data-info">
                                     <div>身高：${cloudData.height}</div>
                                     <div>體重：${cloudData.weight}</div>
@@ -5780,15 +5790,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             const localCard = overlay.querySelector('#local-data-card');
 
             const selectCard = (card, dataType) => {
-                // 重置所有卡片樣式
-                cloudCard.style.borderColor = '#e5e7eb';
-                cloudCard.style.background = '#f9fafb';
-                localCard.style.borderColor = '#e5e7eb';
-                localCard.style.background = '#f9fafb';
+                // 移除所有卡片的選中狀態
+                cloudCard.classList.remove('selected');
+                localCard.classList.remove('selected');
                 
                 // 設置選中卡片的樣式
-                card.style.borderColor = '#3b82f6';
-                card.style.background = '#eff6ff';
+                card.classList.add('selected');
                 
                 selectedData = dataType;
             };
