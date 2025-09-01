@@ -8155,6 +8155,75 @@ function showCustomConfirm(title, message, onConfirm, onCancel) {
     });
 }
 
+// 檢查並刪除本地資料（如果與雲端資料相同）
+function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
+    try {
+        console.log('🔍 檢查是否需要同步刪除本地資料');
+        
+        // 獲取本地資料
+        const localBodyData = localStorage.getItem('BodyID_size_Last');
+        const localGender = localStorage.getItem('Gender_Last');
+        
+        if (!localBodyData || !localGender) {
+            console.log('ℹ️ 本地無資料，無需刪除');
+            return false;
+        }
+        
+        let localData;
+        try {
+            localData = JSON.parse(localBodyData);
+        } catch (error) {
+            console.log('❌ 本地資料格式錯誤，無需刪除');
+            return false;
+        }
+        
+        // 檢查性別是否匹配
+        const genderMatches = (userKey === 'bodyF' && localGender === 'F') || 
+                             (userKey === 'bodyM' && localGender === 'M') ||
+                             (cloudUserData.Gender === localGender);
+        
+        if (!genderMatches) {
+            console.log('ℹ️ 性別不匹配，無需刪除本地資料');
+            return false;
+        }
+        
+        // 檢查身高體重是否相同
+        const heightMatches = localData.HV === cloudUserData.HV;
+        const weightMatches = localData.WV === cloudUserData.WV;
+        
+        console.log('🔍 資料比較:', {
+            local: { HV: localData.HV, WV: localData.WV, Gender: localGender },
+            cloud: { HV: cloudUserData.HV, WV: cloudUserData.WV, Gender: cloudUserData.Gender },
+            matches: { height: heightMatches, weight: weightMatches, gender: genderMatches }
+        });
+        
+        if (heightMatches && weightMatches && genderMatches) {
+            // 資料相同，刪除本地資料
+            console.log('🗑️ 雲端與本地資料相同，同步刪除本地資料');
+            localStorage.removeItem('BodyID_size_Last');
+            localStorage.removeItem('Gender_Last');
+            
+            // 觸發本地資料更新事件
+            window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    keys: ['BodyID_size_Last', 'Gender_Last'],
+                    action: 'deleted'
+                }
+            }));
+            
+            showNotification('🗑️ 本地資料已同步刪除', 'info');
+            return true;
+        } else {
+            console.log('ℹ️ 資料不同，保留本地資料');
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('❌ 檢查本地資料時發生錯誤:', error);
+        return false;
+    }
+}
+
 // 刪除使用者功能
 async function deleteUser(userKey) {
     try {
@@ -8260,6 +8329,9 @@ async function deleteUser(userKey) {
             
             console.log('📋 使用 API 回傳的 BodyData:', finalBodyData);
             console.log('📋 使用 API 回傳的 BodyData_ptr:', finalBodyDataPtr);
+            
+            // 檢查是否需要同步刪除本地資料
+            const shouldDeleteLocalData = checkAndDeleteLocalDataIfSame(userKey, currentApiResponse.BodyData[userKey]);
             
             // 更新本地儲存的 API 回應
             const updatedApiResponse = {
