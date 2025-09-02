@@ -6108,8 +6108,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 // 根據參數決定是否觸發 Find My Size 功能
                 if (shouldTriggerFindMySize) {
-                    // 設置延遲觸發標記，等待用戶離開個人資訊頁面後觸發
-                    this.setDelayedTriggerFindMySize();
+                    // 檢查是否在個人資訊頁面，如果是則延遲觸發，否則立即觸發
+                    if (isOnPersonalInfoPage()) {
+                        // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
+                        this.setDelayedTriggerFindMySize();
+                    } else {
+                        // 不在編輯頁面，立即觸發
+                        this.triggerFindMySize();
+                    }
                 }
                 
             } else {
