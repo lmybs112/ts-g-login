@@ -5546,17 +5546,17 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 確保 BodyID_size 有 TS 字段
                     ensureBodyIDSizeHasTS();
                     
+                    // 調試：檢查本地資料是否已更新
+                    const updatedBodyIDSize = localStorage.getItem('BodyID_size');
+                    console.log('本地資料已更新:', updatedBodyIDSize);
+                    
                     // 檢查是否需要觸發 Find My Size 功能
                     if (isOnPersonalInfoPage()) {
-                        // 在編輯頁面，檢查是否只是資料同步還是需要觸發 Find My Size
-                        // 如果只是選擇雲端資料，設置雲端資料同步標記
-                        // 如果需要觸發 Find My Size，設置延遲觸發標記
-                        if (this.shouldTriggerFindMySize()) {
-                            this.setDelayedTriggerFindMySize();
-                        } else {
-                            this.setCloudDataSyncFlag();
-                        }
+                        console.log('在個人資訊頁面，設置延遲觸發 Find My Size 標記');
+                        // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
+                        this.setDelayedTriggerFindMySize();
                     } else {
+                        console.log('不在個人資訊頁面，立即觸發 Find My Size');
                         // 不在編輯頁面，立即觸發
                         this.triggerFindMySize();
                         // 登入時雲端有資料、本地無資料，觸發 Find My Size 後需要重新載入
@@ -5568,6 +5568,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     
                     showNotification('✅ 雲端資料已同步到本地', 'success');
                 } else {
+                    console.log('沒有資料需要同步');
                 }
             } else {
             }
@@ -6392,10 +6393,9 @@ class InfGoogleLoginComponent extends HTMLElement {
     
     // 判斷是否需要觸發 Find My Size
     shouldTriggerFindMySize() {
-        // 檢查是否只是資料同步還是需要觸發 Find My Size
-        // 這裡可以根據具體業務邏輯來判斷
-        // 暫時返回 false，表示只是資料同步，不需要觸發 Find My Size
-        return false;
+        // 根據用戶需求：選完雲端 -> 更新本地 -> 關閉彈窗 -> trigger find my size
+        // 所以當在個人資訊頁面時，應該要觸發 Find My Size
+        return true;
     }
     
     // 公開方法：手動觸發登入
