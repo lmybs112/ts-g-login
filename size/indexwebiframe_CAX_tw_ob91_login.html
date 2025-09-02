@@ -948,11 +948,17 @@
                 
                 // 為返回按鈕添加事件監聽器，當用戶點擊返回時觸發延遲的 Find My Size
                 const backArrows = document.querySelectorAll('.type_backarrow, .go-back-left-arrow-img');
-                backArrows.forEach(arrow => {
+                console.log('找到返回按鈕數量:', backArrows.length);
+                backArrows.forEach((arrow, index) => {
+                    console.log(`綁定返回按鈕 ${index}:`, arrow);
                     arrow.addEventListener('click', function() {
+                        console.log('返回按鈕被點擊!');
                         // 檢查是否有延遲觸發的 Find My Size
                         if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
+                            console.log('調用 checkAndTriggerDelayedFindMySize');
                             window.checkAndTriggerDelayedFindMySize();
+                        } else {
+                            console.log('checkAndTriggerDelayedFindMySize 函數不存在');
                         }
                     });
                 });
