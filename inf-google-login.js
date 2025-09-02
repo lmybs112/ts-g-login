@@ -6114,11 +6114,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 // 根據參數決定是否觸發 Find My Size 功能
                 if (shouldTriggerFindMySize) {
+                    console.log('updateBodyDataAPI: 需要觸發 Find My Size，檢查頁面狀態...');
                     // 檢查是否在個人資訊頁面，如果是則延遲觸發，否則立即觸發
                     if (isOnPersonalInfoPage()) {
+                        console.log('updateBodyDataAPI: 在編輯頁面，設置延遲觸發標記');
                         // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
                         this.setDelayedTriggerFindMySize();
                     } else {
+                        console.log('updateBodyDataAPI: 不在編輯頁面，立即觸發');
                         // 不在編輯頁面，立即觸發
                         this.triggerFindMySize();
                     }
@@ -8113,10 +8116,15 @@ function isOnPersonalInfoPage() {
         '.personal-info-page'             // 個人資訊頁面類
     ];
     
-    return personalInfoElements.some(selector => {
+    const result = personalInfoElements.some(selector => {
         const element = document.querySelector(selector);
-        return element && element.style.display !== 'none' && element.offsetParent !== null;
+        const isVisible = element && element.style.display !== 'none' && element.offsetParent !== null;
+        console.log(`檢查元素 ${selector}:`, element, '是否可見:', isVisible);
+        return isVisible;
     });
+    
+    console.log('isOnPersonalInfoPage 結果:', result);
+    return result;
 }
 
 // 檢查並觸發延遲的 Find My Size
