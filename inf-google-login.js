@@ -4571,14 +4571,14 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 清空現有按鈕內容
             existingButton.innerHTML = '';
 
-            // 創建新的 Google 登入按鈕
+            // 創建 Google 登入按鈕
             const googleButton = document.createElement('div');
             googleButton.id = 'g_id_onload';
             googleButton.setAttribute('data-client_id', this.clientId);
             googleButton.setAttribute('data-callback', 'handleGoogleCredentialResponse');
             googleButton.setAttribute('data-auto_prompt', 'false');
             googleButton.setAttribute('data-context', 'signin');
-            googleButton.setAttribute('data-ux_mode', 'popup'); // 使用彈出視窗模式
+            googleButton.setAttribute('data-ux_mode', 'popup');
 
             // 創建 Google 登入按鈕的渲染元素
             const googleButtonRender = document.createElement('div');
