@@ -6108,7 +6108,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 // 根據參數決定是否觸發 Find My Size 功能
                 if (shouldTriggerFindMySize) {
-                    this.triggerFindMySize();
+                    // 設置延遲觸發標記，等待用戶離開個人資訊頁面後觸發
+                    this.setDelayedTriggerFindMySize();
                 }
                 
             } else {
@@ -6327,9 +6328,15 @@ class InfGoogleLoginComponent extends HTMLElement {
             console.log("Find My Size button clicked.");
         } else {
             console.warn("Find My Size button not found.");
-        }
+                }
     }
-
+    
+    // 設置延遲觸發 Find My Size 的標記
+    setDelayedTriggerFindMySize() {
+        localStorage.setItem('delayed_trigger_findmysize', 'true');
+        console.log("設置延遲觸發 Find My Size 標記，等待離開個人資訊頁面");
+    }
+    
     // 公開方法：手動觸發登入
     signIn() {
         this.triggerGoogleSignIn();
@@ -7310,9 +7317,12 @@ function createGoogleLoginComponents(configs = [{
         initComponents();
     }
     
-    // 頁面加載時確保 BodyID_size 有 TS 字段
+        // 頁面加載時確保 BodyID_size 有 TS 字段
     ensureBodyIDSizeHasTS();
-
+    
+    // 檢查並觸發延遲的 Find My Size
+    checkAndTriggerDelayedFindMySize();
+    
     // 簡化的 DOM 變化監聽器
     const observer = new MutationObserver((mutations) => {
         let shouldInit = false;
@@ -8073,6 +8083,53 @@ function showCustomConfirm(title, message, onConfirm, onCancel) {
         document.addEventListener('keydown', handleEsc);
     });
 }
+
+// 檢查當前是否在個人資訊頁面
+function isOnPersonalInfoPage() {
+    // 檢查是否有個人資訊相關的元素存在
+    const personalInfoElements = [
+        '#container_BF_mbinfo',           // 個人資訊容器
+        '.mbinfo-container',              // 個人資訊容器類
+        '[data-page="personal-info"]',    // 個人資訊頁面標記
+        '.personal-info-page'             // 個人資訊頁面類
+    ];
+    
+    return personalInfoElements.some(selector => {
+        const element = document.querySelector(selector);
+        return element && element.style.display !== 'none' && element.offsetParent !== null;
+    });
+}
+
+// 檢查並觸發延遲的 Find My Size
+function checkAndTriggerDelayedFindMySize() {
+    try {
+        const shouldTrigger = localStorage.getItem('delayed_trigger_findmysize');
+        if (shouldTrigger === 'true') {
+            // 檢查是否還在個人資訊頁面
+            if (isOnPersonalInfoPage()) {
+                console.log("仍在個人資訊頁面，延遲觸發 Find My Size");
+                return; // 如果還在個人資訊頁面，不觸發
+            }
+            
+            localStorage.removeItem('delayed_trigger_findmysize');
+            console.log("已離開個人資訊頁面，觸發延遲的 Find My Size 功能");
+            
+            // 找到 inf-google-login 組件並觸發
+            const infGoogleLoginElement = document.querySelector('inf-google-login');
+            if (infGoogleLoginElement && infGoogleLoginElement.triggerFindMySize) {
+                infGoogleLoginElement.triggerFindMySize();
+            } else {
+                // 如果找不到組件，使用全局函數
+                triggerFindMySizeGlobal();
+            }
+        }
+    } catch (error) {
+        console.warn("Error checking delayed trigger:", error);
+    }
+}
+
+// 導出函數供外部調用
+window.checkAndTriggerDelayedFindMySize = checkAndTriggerDelayedFindMySize;
 
 // 檢查並刪除本地資料（如果與雲端資料相同）
 function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {

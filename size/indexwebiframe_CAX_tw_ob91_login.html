@@ -945,6 +945,11 @@
             script.sync = true;
             script.onload = () => {
                 window.createGoogleLoginComponentsByType('size');
+                
+                // 檢查並觸發延遲的 Find My Size
+                if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
+                    window.checkAndTriggerDelayedFindMySize();
+                }
             };
             document.body.appendChild(script);
         });
