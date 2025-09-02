@@ -6353,22 +6353,13 @@ class InfGoogleLoginComponent extends HTMLElement {
         
         // 處理 AWS Lambda 錯誤
         handleAWSLambdaError() {
-            console.error('AWS Lambda 錯誤，清除本地 BodyID_size 並重新整理頁面');
-            
             // 清除本地的 BodyID_size
             localStorage.removeItem('BodyID_size');
-            
-            // 顯示錯誤通知
-            if (typeof showNotification === 'function') {
-                showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
-            } else {
-                alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
-            }
             
             // 延遲重新整理頁面
             setTimeout(() => {
                 window.location.reload();
-            }, 2000); // 延遲2秒，讓用戶看到錯誤訊息
+            }, 2000);
         }
     
     // 設置延遲觸發 Find My Size 的標記

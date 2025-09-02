@@ -939,35 +939,16 @@
     <script src="https://inffits.com/webDesign/HTML/js/components/jquery-mousewheel.min.js"></script>
     <script src="https://inffits.com/webDesign/HTML/js/iframe/inf_main_CAX.min.js"></script>
     <script>
-        // 立即設置 AWS Lambda 錯誤監聽器（不等待 DOM 載入）
-        console.log('設置 AWS Lambda 錯誤監聽器...');
-        
-        // 調試：監聽所有錯誤
+        // 設置 AWS Lambda 錯誤監聽器
         window.addEventListener('error', function(event) {
-            console.log('🔍 捕獲到錯誤事件:', event);
-            console.log('🔍 錯誤對象:', event.error);
-            console.log('🔍 錯誤訊息:', event.error ? event.error.message : '無錯誤訊息');
-            
             if (event.error && event.error.message && event.error.message.includes('DP_CODE')) {
-                console.error('✅ 捕獲到 AWS Lambda DP_CODE 錯誤:', event.error);
-                
                 // 找到 inf-google-login 組件並調用錯誤處理方法
                 const infGoogleLoginElement = document.querySelector('inf-google-login');
                 if (infGoogleLoginElement && infGoogleLoginElement.handleAWSLambdaError) {
                     infGoogleLoginElement.handleAWSLambdaError();
                 } else {
                     // 如果找不到組件，直接處理錯誤
-                    console.error('AWS Lambda 錯誤，清除本地 BodyID_size 並重新整理頁面');
                     localStorage.removeItem('BodyID_size');
-                    
-                    // 檢查 showNotification 函數是否存在
-                    if (typeof showNotification === 'function') {
-                        showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
-                    } else {
-                        // 如果沒有通知函數，使用 alert
-                        alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
-                    }
-                    
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
@@ -975,32 +956,16 @@
             }
         });
         
-        // 調試：監聽所有 Promise 錯誤
+        // 監聽未處理的 Promise 錯誤
         window.addEventListener('unhandledrejection', function(event) {
-            console.log('🔍 捕獲到 Promise 錯誤事件:', event);
-            console.log('🔍 錯誤原因:', event.reason);
-            console.log('🔍 錯誤訊息:', event.reason ? event.reason.message : '無錯誤訊息');
-            
             if (event.reason && event.reason.message && event.reason.message.includes('DP_CODE')) {
-                console.error('✅ 捕獲到未處理的 AWS Lambda DP_CODE 錯誤:', event.reason);
-                
                 // 找到 inf-google-login 組件並調用錯誤處理方法
                 const infGoogleLoginElement = document.querySelector('inf-google-login');
                 if (infGoogleLoginElement && infGoogleLoginElement.handleAWSLambdaError) {
                     infGoogleLoginElement.handleAWSLambdaError();
                 } else {
                     // 如果找不到組件，直接處理錯誤
-                    console.error('AWS Lambda 錯誤，清除本地 BodyID_size 並重新整理頁面');
                     localStorage.removeItem('BodyID_size');
-                    
-                    // 檢查 showNotification 函數是否存在
-                    if (typeof showNotification === 'function') {
-                        showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
-                    } else {
-                        // 如果沒有通知函數，使用 alert
-                        alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
-                    }
-                    
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
@@ -1008,25 +973,19 @@
             }
         });
         
-        // 調試：監聽 console.error
+        // 監聽 console.error 中的 DP_CODE 錯誤
         const originalConsoleError = console.error;
         console.error = function(...args) {
-            console.log('🔍 捕獲到 console.error:', args);
-            
-            // 檢查是否包含 DP_CODE 錯誤
             const errorString = args.join(' ');
             if (errorString.includes('DP_CODE')) {
-                console.error('✅ 捕獲到 console.error 中的 DP_CODE 錯誤');
                 window.handleAWSLambdaErrorGlobal();
             }
-            
             // 調用原始方法
             originalConsoleError.apply(console, args);
         };
         
-        // 調試：監聽網絡錯誤（AWS Lambda 400 錯誤）
+        // 監聽網絡錯誤（AWS Lambda 400 錯誤）
         window.addEventListener('load', function() {
-            // 監聽 XMLHttpRequest 錯誤
             const originalXHROpen = XMLHttpRequest.prototype.open;
             const originalXHRSend = XMLHttpRequest.prototype.send;
             
@@ -1037,20 +996,14 @@
             
             XMLHttpRequest.prototype.send = function(...args) {
                 this.addEventListener('error', function() {
-                    console.log('🔍 捕獲到 XHR 錯誤:', this._url);
                     if (this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
-                        console.error('✅ 捕獲到 AWS Lambda 網絡錯誤');
                         window.handleAWSLambdaErrorGlobal();
                     }
                 });
                 
                 this.addEventListener('load', function() {
-                    if (this.status >= 400) {
-                        console.log('🔍 捕獲到 XHR 4xx/5xx 錯誤:', this._url, this.status);
-                        if (this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
-                            console.error('✅ 捕獲到 AWS Lambda HTTP 錯誤:', this.status);
-                            window.handleAWSLambdaErrorGlobal();
-                        }
+                    if (this.status >= 400 && this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
+                        window.handleAWSLambdaErrorGlobal();
                     }
                 });
                 
@@ -1060,15 +1013,7 @@
         
         // 全局錯誤處理函數
         window.handleAWSLambdaErrorGlobal = function() {
-            console.error('全局處理 AWS Lambda 錯誤');
             localStorage.removeItem('BodyID_size');
-            
-            if (typeof showNotification === 'function') {
-                showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
-            } else {
-                alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
-            }
-            
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
