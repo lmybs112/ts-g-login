@@ -1046,12 +1046,18 @@
                                             const shouldTrigger = localStorage.getItem('delayed_trigger_findmysize');
                                             if (shouldTrigger === 'true') {
                                                 localStorage.removeItem('delayed_trigger_findmysize');
-                                                console.log('有延遲觸發 Find My Size 標記，延遲重新整理頁面');
+                                                console.log('有延遲觸發 Find My Size 標記，直接觸發 Find My Size');
                                                 
-                                                // 延遲重新整理頁面
-                                                setTimeout(() => {
-                                                    window.location.reload();
-                                                }, 1000);
+                                                // 直接觸發 Find My Size，不重新整理頁面
+                                                const infGoogleLoginElement = document.querySelector('inf-google-login');
+                                                if (infGoogleLoginElement && infGoogleLoginElement.triggerFindMySize) {
+                                                    infGoogleLoginElement.triggerFindMySize();
+                                                } else {
+                                                    // 如果找不到組件，使用全局函數
+                                                    if (typeof triggerFindMySizeGlobal === 'function') {
+                                                        triggerFindMySizeGlobal();
+                                                    }
+                                                }
                                             }
                                             
                                             // 檢查是否有雲端資料同步標記

@@ -6383,16 +6383,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             if ($btn.length > 0) {
                 $btn.trigger("click");
                 console.log("Find My Size button clicked.");
-                
-                // 如果頁面還是空白，延遲刷新頁面
-                setTimeout(() => {
-                    // 檢查是否有推薦尺寸數據
-                    const recomSize = $("#recomSize");
-                    if (!recomSize.length || !recomSize.text().trim()) {
-                        console.log("沒有找到推薦尺寸數據，刷新頁面");
-                        window.location.reload();
-                    }
-                }, 3000); // 等待3秒，如果還是沒有數據就刷新
             } else {
                 console.warn("Find My Size button not found.");
             }
