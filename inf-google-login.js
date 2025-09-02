@@ -39,8 +39,14 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 添加同步狀態標誌，防止重複執行
         this.syncInProgress = false;
 
-        // 監聽 localStorage 變化
-        window.addEventListener('storage', this.handleStorageChange.bind(this));
+        // 檢查是否為無痕瀏覽器
+        this.isIncognitoMode = this.detectIncognitoMode();
+        console.log('無痕瀏覽器檢測結果:', this.isIncognitoMode);
+
+        // 監聽 localStorage 變化（僅在非無痕模式下）
+        if (!this.isIncognitoMode) {
+            window.addEventListener('storage', this.handleStorageChange.bind(this));
+        }
 
         // 綁定方法到 this 上下文
         this.handleCredentialResponse = this.handleCredentialResponse.bind(this);
@@ -52,6 +58,35 @@ class InfGoogleLoginComponent extends HTMLElement {
         
         // 設置 token 自動刷新機制
         this.setupTokenRefresh();
+    }
+
+    // 檢測是否為無痕瀏覽器
+    detectIncognitoMode() {
+        try {
+            // 方法1: 檢查 localStorage 是否可用
+            const testKey = '__incognito_test__';
+            localStorage.setItem(testKey, 'test');
+            localStorage.removeItem(testKey);
+            
+            // 方法2: 檢查 sessionStorage 是否可用
+            sessionStorage.setItem(testKey, 'test');
+            sessionStorage.removeItem(testKey);
+            
+            // 方法3: 檢查 indexedDB 是否可用
+            if (!window.indexedDB) {
+                return true;
+            }
+            
+            // 方法4: 檢查 FileSystem API 是否可用
+            if (window.webkitRequestFileSystem && !window.webkitRequestFileSystem(window.TEMPORARY, 1024, () => {}, () => {})) {
+                return true;
+            }
+            
+            return false;
+        } catch (error) {
+            console.log('無痕瀏覽器檢測失敗，假設為無痕模式:', error);
+            return true;
+        }
     }
 
     // 安全的 timeout 包裝器
@@ -170,6 +205,12 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 設置 token 自動刷新機制
     setupTokenRefresh() {
+        // 在無痕瀏覽器中，跳過 token 自動刷新
+        if (this.isIncognitoMode) {
+            console.log('🕵️ 無痕瀏覽器模式，跳過 token 自動刷新');
+            return;
+        }
+
         // 每 50 分鐘檢查一次 token 狀態（Google token 通常 1 小時過期）
         const refreshInterval = this.safeSetInterval(() => {
             if (this.isAuthenticated) {
@@ -314,6 +355,14 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查存儲的憑證
     async checkStoredCredential(shouldRefreshApi = false) {
+        // 在無痕瀏覽器中，跳過本地憑證檢查
+        if (this.isIncognitoMode) {
+            console.log('🕵️ 無痕瀏覽器模式，跳過本地憑證檢查');
+            this.credential = null;
+            this.isAuthenticated = false;
+            return;
+        }
+
         // 首先檢查是否有 JWT 憑證（Google One Tap）
         const jwtCredential = localStorage.getItem('google_auth_credential');
         
@@ -1144,6 +1193,14 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查存儲的憑證
     async checkStoredCredential(shouldRefreshApi = false) {
+        // 在無痕瀏覽器中，跳過本地憑證檢查
+        if (this.isIncognitoMode) {
+            console.log('🕵️ 無痕瀏覽器模式，跳過本地憑證檢查');
+            this.credential = null;
+            this.isAuthenticated = false;
+            return;
+        }
+
         // 首先檢查是否有 JWT 憑證（Google One Tap）
         const jwtCredential = localStorage.getItem('google_auth_credential');
         
@@ -4034,6 +4091,13 @@ class InfGoogleLoginComponent extends HTMLElement {
     triggerGoogleSignIn() {
         if (window.google && window.google.accounts) {
 
+            // 在無痕瀏覽器中，直接使用彈出視窗登入
+            if (this.isIncognitoMode) {
+                console.log('🕵️ 無痕瀏覽器模式，使用彈出視窗登入');
+                this.fallbackGoogleSignIn();
+                return;
+            }
+
             // 檢查是否有活躍的 Google 會話
             const hasActiveSession = this.checkGoogleSession();
 
@@ -4216,6 +4280,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                     include_granted_scopes: true
                 };
 
+                // 在無痕瀏覽器中調整配置
+                if (this.isIncognitoMode) {
+                    console.log('🕵️ 無痕瀏覽器模式，調整備用登入配置');
+                    config.use_fedcm_for_prompt = false; // 禁用 FedCM
+                    config.ux_mode = 'redirect'; // 使用重定向而不是彈出視窗
+                    config.prompt = 'consent'; // 強制顯示同意頁面
+                }
+
                 // 重新初始化
                 window.google.accounts.id.initialize(config);
 
@@ -4244,6 +4316,23 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 直接觸發 Google 登入（最後手段）
     triggerDirectGoogleSignIn() {
         try {
+            // 在無痕瀏覽器中，使用更簡單的 OAuth2 流程
+            if (this.isIncognitoMode) {
+                console.log('🕵️ 無痕瀏覽器模式，使用簡化 OAuth2 流程');
+                const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                    `client_id=${encodeURIComponent(this.clientId)}` +
+                    `&redirect_uri=${encodeURIComponent(window.location.origin)}` +
+                    `&response_type=token` + // 使用 token 而不是 code，避免複雜的 token 交換
+                    `&scope=${encodeURIComponent('openid email profile')}` +
+                    `&state=${encodeURIComponent('google_signin')}` +
+                    `&prompt=consent` +
+                    `&access_type=online`; // 不請求 refresh token
+
+                // 直接重定向到授權頁面
+                window.location.href = authUrl;
+                return;
+            }
+
             // 構建 OAuth2 授權 URL，請求 refresh token
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
                 `client_id=${encodeURIComponent(this.clientId)}` +
@@ -5110,7 +5199,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         try {
-            // 初始化 Google Identity Services
+            // 根據是否為無痕瀏覽器調整配置
             const config = {
                 client_id: this.clientId,
                 callback: this.handleCredentialResponse,
@@ -5131,10 +5220,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                 token_expiry: 3600
             };
 
+            // 在無痕瀏覽器中調整配置
+            if (this.isIncognitoMode) {
+                console.log('🕵️ 無痕瀏覽器模式，調整 Google 登入配置');
+                config.auto_prompt = false; // 禁用自動提示
+                config.prompt = 'consent'; // 強制顯示同意頁面
+                config.select_account = false; // 不強制選擇帳戶
+            }
+
             window.google.accounts.id.initialize(config);
 
-
         } catch (error) {
+            console.error('Google 初始化失敗:', error);
         }
     }
 
@@ -5678,11 +5775,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         console.log('不在個人資訊頁面，立即觸發 Find My Size');
                         // 不在編輯頁面，立即觸發
                         this.triggerFindMySize();
-                        // 登入時雲端有資料、本地無資料，觸發 Find My Size 後需要重新載入
-                        setTimeout(() => {
-                            console.log('登入時雲端資料同步完成，觸發 Find My Size 後重新載入頁面');
-                            window.location.reload();
-                        }, 1000); // 延遲1秒重新載入，確保 Find My Size 功能執行完成
                     }
                     
                     if (typeof showNotification === 'function') {
