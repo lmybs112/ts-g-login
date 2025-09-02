@@ -5470,6 +5470,26 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
+    // 用戶主動選擇雲端資料並同步到本地
+    async selectCloudDataAndSync(apiResponse) {
+        console.log('用戶選擇雲端資料，開始同步到本地:', apiResponse);
+        
+        try {
+            // 調用原有的下載邏輯
+            await this.downloadCloudDataToLocal(apiResponse);
+            
+            // 如果同步成功，設置延遲觸發標記
+            const bodyIDSize = localStorage.getItem('BodyID_size');
+            if (bodyIDSize) {
+                console.log('雲端資料同步成功，設置延遲觸發 Find My Size 標記');
+                this.setDelayedTriggerFindMySize();
+            }
+        } catch (error) {
+            console.error('選擇雲端資料同步失敗:', error);
+            showNotification('❌ 雲端資料同步失敗', 'error');
+        }
+    }
+    
     // 下載雲端資料到本地
     async downloadCloudDataToLocal(apiResponse) {
         try {
@@ -5605,7 +5625,17 @@ class InfGoogleLoginComponent extends HTMLElement {
             } else if (result === 'cloud') {
                 // 使用者選擇使用雲端資料
                 const currentApiResponse = this.getApiResponse();
-                await this.downloadCloudDataToLocal(currentApiResponse);
+                
+                // 檢查是否在個人資訊頁面
+                if (isOnPersonalInfoPage()) {
+                    console.log('在個人資訊頁面選擇雲端資料，調用 selectCloudDataAndSync');
+                    // 在個人資訊頁面，使用專門的方法處理
+                    await this.selectCloudDataAndSync(currentApiResponse);
+                } else {
+                    console.log('不在個人資訊頁面，調用 downloadCloudDataToLocal');
+                    // 不在個人資訊頁面，使用原有的下載邏輯
+                    await this.downloadCloudDataToLocal(currentApiResponse);
+                }
             } else {
             }
         } catch (error) {
