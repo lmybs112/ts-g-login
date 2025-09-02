@@ -5372,7 +5372,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 } else if (!hasLocalData && hasCloudData) {
                     // 情況：已登入 本地未使用 雲端有資料 → 將雲端資料下載到本地
                     await this.downloadCloudDataToLocal(apiResponse);
-                    triggerFindMySize(); // 觸發 Find My Size 按鈕點擊
                 } else {
                     // 情況：已登入 本地未使用 雲端未使用 → 無需處理
                 }
@@ -5545,10 +5544,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                         }
                     }));
                     
-                    showNotification('✅ 雲端資料已同步到本地', 'success');
+                    // 觸發 Find My Size 功能
+                    this.triggerFindMySize();
                     
-                    // 觸發 Find My Size 按鈕點擊，因為雲端數據已更新到本地
-                    triggerFindMySize();
+                    showNotification('✅ 雲端資料已同步到本地', 'success');
                 } else {
                 }
             } else {
@@ -5587,7 +5586,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 使用者選擇使用雲端資料
                 const currentApiResponse = this.getApiResponse();
                 await this.downloadCloudDataToLocal(currentApiResponse);
-                triggerFindMySize(); // 觸發 Find My Size 按鈕點擊
             } else {
             }
         } catch (error) {
@@ -5620,7 +5618,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 * {
                     box-sizing: border-box;
                 }
-                2
+                
                 #data-version-overlay {
                     position: fixed !important;
                     top: 0 !important;
@@ -6101,9 +6099,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     }
                 }));
                 
-                // 觸發 Find My Size 按鈕點擊，因為雲端數據已更新到本地
-                triggerFindMySize();
-                
             } else {
             }
         } catch (error) {
@@ -6196,9 +6191,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                         keys: ['BodyID_size', 'Gender_Last']
                     }
                 }));
-                
-                // 觸發 Find My Size 按鈕點擊，因為雲端數據已更新到本地
-                triggerFindMySize();
                 
             } else {
             }
@@ -6406,6 +6398,18 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 清理資源
     cleanup() {}
+
+    // 觸發 Find My Size 功能
+    triggerFindMySize() {
+        console.error("triggerFindMySize", $("#findmysize"));
+        const $btn = $("#findmysize");
+        if ($btn.length > 0) {
+            $btn.trigger("click");
+            console.log("Find My Size button clicked.");
+        } else {
+            console.warn("Find My Size button not found.");
+        }
+    }
 
     // 公開方法：手動觸發登入
     signIn() {
@@ -8032,18 +8036,6 @@ function showNotification(message, type = 'info') {
             }
         }, 300);
     }, 3000);
-}
-
-// 觸發 Find My Size 按鈕點擊
-function triggerFindMySize() {
-    console.error("triggerFindMySize", $("#findmysize"));
-    const $btn = $("#findmysize");
-    if ($btn.length > 0) {
-        $btn.trigger("click");
-        console.log("Find My Size button clicked.");
-    } else {
-        console.warn("Find My Size button not found.");
-    }
 }
 
 // 全域自定義確認彈窗函數
