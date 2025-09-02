@@ -58,6 +58,9 @@ class InfGoogleLoginComponent extends HTMLElement {
         
         // 設置 token 自動刷新機制
         this.setupTokenRefresh();
+
+        // 檢查 URL 中是否有 Google 登入回調
+        this.checkGoogleLoginCallback();
     }
 
     // 檢測是否為無痕瀏覽器
@@ -86,6 +89,41 @@ class InfGoogleLoginComponent extends HTMLElement {
         } catch (error) {
             console.log('無痕瀏覽器檢測失敗，假設為無痕模式:', error);
             return true;
+        }
+    }
+
+    // 檢查 URL 中是否有 Google 登入回調
+    checkGoogleLoginCallback() {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const credential = urlParams.get('credential');
+            const error = urlParams.get('error');
+            
+            if (credential) {
+                console.log('🕵️ 檢測到 Google 登入回調，處理憑證:', credential);
+                // 處理 Google 登入成功
+                this.handleCredentialResponse({ credential: credential });
+                // 清除 URL 參數
+                this.clearUrlParams();
+            } else if (error) {
+                console.error('🕵️ Google 登入失敗:', error);
+                this.handleLoginFailure(`Google 登入失敗: ${error}`);
+                // 清除 URL 參數
+                this.clearUrlParams();
+            }
+        } catch (error) {
+            console.error('檢查 Google 登入回調失敗:', error);
+        }
+    }
+
+    // 清除 URL 參數
+    clearUrlParams() {
+        try {
+            const url = new URL(window.location);
+            url.search = '';
+            window.history.replaceState({}, document.title, url.pathname);
+        } catch (error) {
+            console.error('清除 URL 參數失敗:', error);
         }
     }
 
@@ -4091,10 +4129,10 @@ class InfGoogleLoginComponent extends HTMLElement {
     triggerGoogleSignIn() {
         if (window.google && window.google.accounts) {
 
-            // 在無痕瀏覽器中，直接使用彈出視窗登入
+            // 在無痕瀏覽器中，直接使用標準登入按鈕
             if (this.isIncognitoMode) {
-                console.log('🕵️ 無痕瀏覽器模式，使用彈出視窗登入');
-                this.fallbackGoogleSignIn();
+                console.log('🕵️ 無痕瀏覽器模式，使用標準登入按鈕');
+                this.createStandardGoogleSignInButton();
                 return;
             }
 
@@ -4284,7 +4322,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (this.isIncognitoMode) {
                     console.log('🕵️ 無痕瀏覽器模式，調整備用登入配置');
                     config.use_fedcm_for_prompt = false; // 禁用 FedCM
-                    config.ux_mode = 'popup'; // 保持彈出視窗模式
+                    config.ux_mode = 'redirect'; // 使用重定向避免彈出視窗問題
                     config.prompt = 'consent'; // 強制顯示同意頁面
                 }
 
@@ -4417,6 +4455,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             googleButton.setAttribute('data-callback', 'handleGoogleCredentialResponse');
             googleButton.setAttribute('data-auto_prompt', 'false');
             googleButton.setAttribute('data-context', 'signin');
+            googleButton.setAttribute('data-ux_mode', 'redirect'); // 使用重定向避免彈出視窗問題
             googleButton.style.cssText = `
                 margin: 20px 0;
             `;
@@ -4515,7 +4554,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 body: new URLSearchParams({
                     client_id: this.clientId,
-                    client_secret: 'YOUR_GOOGLE_CLIENT_SECRET', // 需要替換為實際的 client secret
+                    client_secret: '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com', // 需要替換為實際的 client secret
                     code: code,
                     grant_type: 'authorization_code',
                     redirect_uri: window.location.origin,
@@ -4654,7 +4693,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 body: new URLSearchParams({
                     client_id: this.clientId, // 使用組件的 client ID
-                    client_secret: 'YOUR_GOOGLE_CLIENT_SECRET', // 需要替換為實際的 client secret
+                    client_secret: '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com', // 需要替換為實際的 client secret
                     refresh_token: refreshToken,
                     grant_type: 'refresh_token',
                 }),
@@ -5360,6 +5399,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 config.auto_prompt = false; // 禁用自動提示
                 config.prompt = 'consent'; // 強制顯示同意頁面
                 config.select_account = false; // 不強制選擇帳戶
+                config.ux_mode = 'redirect'; // 使用重定向避免彈出視窗問題
             }
 
             window.google.accounts.id.initialize(config);
