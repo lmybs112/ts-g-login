@@ -5546,8 +5546,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 確保 BodyID_size 有 TS 字段
                     ensureBodyIDSizeHasTS();
                     
-                    // 觸發 Find My Size 功能
-                    this.triggerFindMySize();
+                    // 觸發 Find My Size 功能（檢查是否在個人資訊頁面）
+                    if (isOnPersonalInfoPage()) {
+                        // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
+                        this.setDelayedTriggerFindMySize();
+                    } else {
+                        // 不在編輯頁面，立即觸發
+                        this.triggerFindMySize();
+                    }
                     
                     showNotification('✅ 雲端資料已同步到本地', 'success');
                 } else {
@@ -6719,8 +6725,15 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             // 確保 BodyID_size 有 TS 字段
             ensureBodyIDSizeHasTS();
             
-            // 觸發 Find My Size 功能
-            triggerFindMySizeGlobal();
+            // 觸發 Find My Size 功能（檢查是否在個人資訊頁面）
+            if (isOnPersonalInfoPage()) {
+                // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
+                localStorage.setItem('delayed_trigger_findmysize', 'true');
+                console.log("設置延遲觸發 Find My Size 標記，等待離開個人資訊頁面");
+            } else {
+                // 不在編輯頁面，立即觸發
+                triggerFindMySizeGlobal();
+            }
         }
     } catch (error) {
     }
