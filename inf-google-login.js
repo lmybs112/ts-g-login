@@ -5553,6 +5553,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     } else {
                         // 不在編輯頁面，立即觸發
                         this.triggerFindMySize();
+                        // 登入時雲端有資料、本地無資料，觸發 Find My Size 後需要重新載入
+                        setTimeout(() => {
+                            console.log('登入時雲端資料同步完成，觸發 Find My Size 後重新載入頁面');
+                            window.location.reload();
+                        }, 1000); // 延遲1秒重新載入，確保 Find My Size 功能執行完成
                     }
                     
                     showNotification('✅ 雲端資料已同步到本地', 'success');
