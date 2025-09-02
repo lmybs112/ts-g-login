@@ -5474,15 +5474,21 @@ class InfGoogleLoginComponent extends HTMLElement {
     async selectCloudDataAndSync(apiResponse) {
         console.log('用戶選擇雲端資料，開始同步到本地:', apiResponse);
         
+        // 記錄同步前的本地資料
+        const beforeSync = localStorage.getItem('BodyID_size');
+        console.log('同步前的本地資料:', beforeSync);
+        
         try {
             // 調用原有的下載邏輯
             await this.downloadCloudDataToLocal(apiResponse);
             
             // 等待一下確保資料寫入完成
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200));
             
             // 驗證本地資料是否真的更新了
             const bodyIDSize = localStorage.getItem('BodyID_size');
+            console.log('同步後的本地資料:', bodyIDSize);
+            
             if (bodyIDSize) {
                 try {
                     const bodyData = JSON.parse(bodyIDSize);
@@ -5491,6 +5497,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 檢查關鍵資料是否存在
                     if (bodyData.HV && bodyData.WV && bodyData.TS === "01") {
                         console.log('✅ 雲端資料同步成功，設置延遲觸發 Find My Size 標記');
+                        
+                        // 監聽 localStorage 變化，防止被其他地方覆蓋
+                        this.startLocalStorageMonitoring();
+                        
                         this.setDelayedTriggerFindMySize();
                         
                         // 顯示成功通知
@@ -5520,6 +5530,49 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (typeof showNotification === 'function') {
                 showNotification('❌ 雲端資料同步失敗', 'error');
             }
+        }
+    }
+    
+    // 開始監聽 localStorage 變化
+    startLocalStorageMonitoring() {
+        console.log('開始監聽 localStorage 變化...');
+        
+        // 監聽 storage 事件（跨標籤頁）
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'BodyID_size') {
+                console.log('⚠️ 檢測到 BodyID_size 被其他地方修改:', {
+                    oldValue: e.oldValue,
+                    newValue: e.newValue,
+                    url: e.url
+                });
+            }
+        });
+        
+        // 監聽 localStorage 的直接修改
+        const originalSetItem = Storage.prototype.setItem;
+        Storage.prototype.setItem = function(key, value) {
+            if (key === 'BodyID_size') {
+                console.log('⚠️ 檢測到 BodyID_size 被直接修改:', {
+                    key: key,
+                    value: value,
+                    stack: new Error().stack
+                });
+            }
+            return originalSetItem.call(this, key, value);
+        };
+        
+        // 定期檢查資料是否被覆蓋
+        this.storageCheckInterval = setInterval(() => {
+            const currentData = localStorage.getItem('BodyID_size');
+            console.log('定期檢查 localStorage:', currentData);
+        }, 1000);
+    }
+    
+    // 停止監聽 localStorage 變化
+    stopLocalStorageMonitoring() {
+        if (this.storageCheckInterval) {
+            clearInterval(this.storageCheckInterval);
+            this.storageCheckInterval = null;
         }
     }
     
