@@ -4558,18 +4558,18 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 創建標準的 Google 登入按鈕（無痕瀏覽器兼容）
     createStandardGoogleSignInButton() {
         try {
-            // 找到現有的 Google 登入按鈕容器
-            const existingButton = document.querySelector('.g_id_signin') || document.querySelector('[data-g_id_signin]');
-            if (!existingButton) {
-                console.log('🕵️ 找不到現有的 Google 登入按鈕，使用備用方法');
+            // 找到現有的 Google 登入組件
+            const existingComponent = document.querySelector('inf-google-login');
+            if (!existingComponent) {
+                console.log('🕵️ 找不到現有的 Google 登入組件，使用備用方法');
                 this.fallbackGoogleSignIn();
                 return;
             }
 
-            console.log('🕵️ 找到現有登入按鈕，替換為無痕瀏覽器兼容版本');
+            console.log('🕵️ 找到現有登入組件，替換為無痕瀏覽器兼容版本');
 
-            // 清空現有按鈕內容
-            existingButton.innerHTML = '';
+            // 清空現有組件內容
+            existingComponent.innerHTML = '';
 
             // 創建 Google 登入按鈕
             const googleButton = document.createElement('div');
@@ -4590,9 +4590,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             googleButtonRender.setAttribute('data-shape', 'rectangular');
             googleButtonRender.setAttribute('data-logo_alignment', 'left');
 
-            // 添加到現有容器
-            existingButton.appendChild(googleButton);
-            existingButton.appendChild(googleButtonRender);
+            // 添加到現有組件
+            existingComponent.appendChild(googleButton);
+            existingComponent.appendChild(googleButtonRender);
 
             // 設置全局回調函數
             window.handleGoogleCredentialResponse = (response) => {
