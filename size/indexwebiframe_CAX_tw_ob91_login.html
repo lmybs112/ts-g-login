@@ -947,7 +947,7 @@
                 window.createGoogleLoginComponentsByType('size');
                 
                 // 為返回按鈕添加事件監聽器，當用戶點擊返回時觸發延遲的 Find My Size
-                const backArrows = document.querySelectorAll('.type_backarrow, .go-back-left-arrow-img');
+                const backArrows = document.querySelectorAll('.profile-modal__back-arrow, #modal-profile-back-arrow');
                 console.log('找到返回按鈕數量:', backArrows.length);
                 backArrows.forEach((arrow, index) => {
                     console.log(`綁定返回按鈕 ${index}:`, arrow);
