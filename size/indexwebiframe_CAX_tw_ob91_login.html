@@ -942,10 +942,14 @@
         // 立即設置 AWS Lambda 錯誤監聽器（不等待 DOM 載入）
         console.log('設置 AWS Lambda 錯誤監聽器...');
         
-        // 監聽 AWS Lambda 錯誤
+        // 調試：監聽所有錯誤
         window.addEventListener('error', function(event) {
+            console.log('🔍 捕獲到錯誤事件:', event);
+            console.log('🔍 錯誤對象:', event.error);
+            console.log('🔍 錯誤訊息:', event.error ? event.error.message : '無錯誤訊息');
+            
             if (event.error && event.error.message && event.error.message.includes('DP_CODE')) {
-                console.error('捕獲到 AWS Lambda DP_CODE 錯誤:', event.error);
+                console.error('✅ 捕獲到 AWS Lambda DP_CODE 錯誤:', event.error);
                 
                 // 找到 inf-google-login 組件並調用錯誤處理方法
                 const infGoogleLoginElement = document.querySelector('inf-google-login');
@@ -971,10 +975,14 @@
             }
         });
         
-        // 監聽未處理的 Promise 錯誤（AWS Lambda 可能使用 Promise）
+        // 調試：監聽所有 Promise 錯誤
         window.addEventListener('unhandledrejection', function(event) {
+            console.log('🔍 捕獲到 Promise 錯誤事件:', event);
+            console.log('🔍 錯誤原因:', event.reason);
+            console.log('🔍 錯誤訊息:', event.reason ? event.reason.message : '無錯誤訊息');
+            
             if (event.reason && event.reason.message && event.reason.message.includes('DP_CODE')) {
-                console.error('捕獲到未處理的 AWS Lambda DP_CODE 錯誤:', event.reason);
+                console.error('✅ 捕獲到未處理的 AWS Lambda DP_CODE 錯誤:', event.reason);
                 
                 // 找到 inf-google-login 組件並調用錯誤處理方法
                 const infGoogleLoginElement = document.querySelector('inf-google-login');
@@ -998,6 +1006,56 @@
                     }, 2000);
                 }
             }
+        });
+        
+        // 調試：監聽 console.error
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            console.log('🔍 捕獲到 console.error:', args);
+            
+            // 檢查是否包含 DP_CODE 錯誤
+            const errorString = args.join(' ');
+            if (errorString.includes('DP_CODE')) {
+                console.error('✅ 捕獲到 console.error 中的 DP_CODE 錯誤');
+                window.handleAWSLambdaErrorGlobal();
+            }
+            
+            // 調用原始方法
+            originalConsoleError.apply(console, args);
+        };
+        
+        // 調試：監聽網絡錯誤（AWS Lambda 400 錯誤）
+        window.addEventListener('load', function() {
+            // 監聽 XMLHttpRequest 錯誤
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const originalXHRSend = XMLHttpRequest.prototype.send;
+            
+            XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                this._url = url;
+                return originalXHROpen.apply(this, [method, url, ...args]);
+            };
+            
+            XMLHttpRequest.prototype.send = function(...args) {
+                this.addEventListener('error', function() {
+                    console.log('🔍 捕獲到 XHR 錯誤:', this._url);
+                    if (this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
+                        console.error('✅ 捕獲到 AWS Lambda 網絡錯誤');
+                        window.handleAWSLambdaErrorGlobal();
+                    }
+                });
+                
+                this.addEventListener('load', function() {
+                    if (this.status >= 400) {
+                        console.log('🔍 捕獲到 XHR 4xx/5xx 錯誤:', this._url, this.status);
+                        if (this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
+                            console.error('✅ 捕獲到 AWS Lambda HTTP 錯誤:', this.status);
+                            window.handleAWSLambdaErrorGlobal();
+                        }
+                    }
+                });
+                
+                return originalXHRSend.apply(this, args);
+            };
         });
         
         // 全局錯誤處理函數
