@@ -4361,29 +4361,65 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
-    // 替換現有的 Google 登入按鈕為無痕瀏覽器兼容版本
+    // 創建標準的 Google 登入按鈕（無痕瀏覽器兼容）
     createStandardGoogleSignInButton() {
         try {
-            // 找到現有的 Google 登入按鈕容器
-            const existingButton = document.querySelector('.g_id_signin') || document.querySelector('[data-g_id_signin]');
-            if (!existingButton) {
-                console.log('🕵️ 找不到現有的 Google 登入按鈕，使用備用方法');
-                this.fallbackGoogleSignIn();
-                return;
+            // 移除現有的登入按鈕
+            const existingButton = document.getElementById('google-signin-container');
+            if (existingButton) {
+                existingButton.remove();
             }
 
-            console.log('🕵️ 找到現有登入按鈕，替換為無痕瀏覽器兼容版本');
+            // 創建容器
+            const container = document.createElement('div');
+            container.id = 'google-signin-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 10001;
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                text-align: center;
+                font-family: 'Google Sans', Arial, sans-serif;
+                min-width: 300px;
+            `;
 
-            // 清空現有按鈕內容
-            existingButton.innerHTML = '';
+            // 添加標題
+            const title = document.createElement('h2');
+            title.textContent = 'Google 登入';
+            title.style.cssText = `
+                margin: 0 0 20px 0;
+                color: #202124;
+                font-size: 24px;
+                font-weight: 500;
+            `;
+            container.appendChild(title);
 
-            // 創建新的 Google 登入按鈕
+            // 添加說明文字
+            const description = document.createElement('p');
+            description.textContent = '請點擊下方按鈕進行 Google 登入';
+            description.style.cssText = `
+                margin: 0 0 25px 0;
+                color: #5f6368;
+                font-size: 14px;
+                line-height: 1.5;
+            `;
+            container.appendChild(description);
+
+            // 創建 Google 登入按鈕
             const googleButton = document.createElement('div');
             googleButton.id = 'g_id_onload';
             googleButton.setAttribute('data-client_id', this.clientId);
             googleButton.setAttribute('data-callback', 'handleGoogleCredentialResponse');
             googleButton.setAttribute('data-auto_prompt', 'false');
             googleButton.setAttribute('data-context', 'signin');
+            googleButton.style.cssText = `
+                margin: 20px 0;
+            `;
 
             // 創建 Google 登入按鈕的渲染元素
             const googleButtonRender = document.createElement('div');
@@ -4395,14 +4431,59 @@ class InfGoogleLoginComponent extends HTMLElement {
             googleButtonRender.setAttribute('data-shape', 'rectangular');
             googleButtonRender.setAttribute('data-logo_alignment', 'left');
 
-            // 添加到現有容器
-            existingButton.appendChild(googleButton);
-            existingButton.appendChild(googleButtonRender);
+            // 添加按鈕到容器
+            container.appendChild(googleButton);
+            container.appendChild(googleButtonRender);
+
+            // 添加關閉按鈕
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '✕';
+            closeButton.style.cssText = `
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: none;
+                border: none;
+                font-size: 20px;
+                color: #5f6368;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            closeButton.onclick = () => container.remove();
+            container.appendChild(closeButton);
+
+            // 添加背景遮罩
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10000;
+            `;
+            overlay.onclick = () => {
+                container.remove();
+                overlay.remove();
+            };
+
+            // 添加到頁面
+            document.body.appendChild(overlay);
+            document.body.appendChild(container);
 
             // 設置全局回調函數
             window.handleGoogleCredentialResponse = (response) => {
                 console.log('🕵️ 無痕瀏覽器 Google 登入成功:', response);
                 this.handleCredentialResponse(response);
+                container.remove();
+                overlay.remove();
             };
 
             // 觸發 Google 按鈕渲染
@@ -4418,7 +4499,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
         } catch (error) {
-            console.error('替換 Google 登入按鈕失敗:', error);
+            console.error('創建標準 Google 登入按鈕失敗:', error);
             // 如果失敗，回退到彈出視窗登入
             this.fallbackGoogleSignIn();
         }
