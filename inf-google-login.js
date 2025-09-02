@@ -8108,22 +8108,15 @@ function showCustomConfirm(title, message, onConfirm, onCancel) {
 
 // 檢查當前是否在個人資訊頁面
 function isOnPersonalInfoPage() {
-    // 簡化檢測：只要關鍵元素存在就認為在個人資訊頁面
-    const personalInfoElement = document.querySelector('#container_BF_mbinfo');
+    // 檢查是否有返回按鈕存在 - 如果有返回按鈕，說明還在個人資訊頁面
+    const backArrow = document.querySelector('#modal-profile-back-arrow');
     
-    if (personalInfoElement) {
-        console.log('檢測到個人資訊頁面元素:', personalInfoElement);
-        console.log('元素樣式:', {
-            display: personalInfoElement.style.display,
-            visibility: personalInfoElement.style.visibility,
-            offsetParent: personalInfoElement.offsetParent,
-            offsetWidth: personalInfoElement.offsetWidth,
-            offsetHeight: personalInfoElement.offsetHeight
-        });
+    if (backArrow) {
+        console.log('檢測到返回按鈕，仍在個人資訊頁面');
         return true;
     }
     
-    console.log('未檢測到個人資訊頁面元素');
+    console.log('未檢測到返回按鈕，已離開個人資訊頁面');
     return false;
 }
 
