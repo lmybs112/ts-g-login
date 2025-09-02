@@ -1041,18 +1041,29 @@
                                         console.log('找到返回按鈕，綁定點擊事件:', backArrow);
                                         backArrow.addEventListener('click', function() {
                                             console.log('返回按鈕被點擊!');
-                                            // 返回按鈕被點擊，檢查是否有延遲觸發標記
+                                            
+                                            // 檢查是否有延遲觸發 Find My Size 標記
                                             const shouldTrigger = localStorage.getItem('delayed_trigger_findmysize');
                                             if (shouldTrigger === 'true') {
                                                 localStorage.removeItem('delayed_trigger_findmysize');
-                                                console.log('有延遲觸發標記，直接重新整理頁面');
+                                                console.log('有延遲觸發 Find My Size 標記，延遲重新整理頁面');
                                                 
                                                 // 延遲重新整理頁面
                                                 setTimeout(() => {
                                                     window.location.reload();
-                                                }, 1000); // 延遲1秒重新整理
-                                            } else {
-                                                console.log('沒有延遲觸發標記');
+                                                }, 1000);
+                                            }
+                                            
+                                            // 檢查是否有雲端資料同步標記
+                                            const cloudDataSync = localStorage.getItem('cloud_data_sync');
+                                            if (cloudDataSync === 'true') {
+                                                localStorage.removeItem('cloud_data_sync');
+                                                console.log('有雲端資料同步標記，不需要重新整理');
+                                                // 雲端資料同步完成，不需要重新整理
+                                            }
+                                            
+                                            if (!shouldTrigger && !cloudDataSync) {
+                                                console.log('沒有相關標記');
                                             }
                                         });
                                     }

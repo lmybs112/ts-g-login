@@ -5546,10 +5546,16 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 確保 BodyID_size 有 TS 字段
                     ensureBodyIDSizeHasTS();
                     
-                    // 觸發 Find My Size 功能（檢查是否在個人資訊頁面）
+                    // 檢查是否需要觸發 Find My Size 功能
                     if (isOnPersonalInfoPage()) {
-                        // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
-                        this.setDelayedTriggerFindMySize();
+                        // 在編輯頁面，檢查是否只是資料同步還是需要觸發 Find My Size
+                        // 如果只是選擇雲端資料，設置雲端資料同步標記
+                        // 如果需要觸發 Find My Size，設置延遲觸發標記
+                        if (this.shouldTriggerFindMySize()) {
+                            this.setDelayedTriggerFindMySize();
+                        } else {
+                            this.setCloudDataSyncFlag();
+                        }
                     } else {
                         // 不在編輯頁面，立即觸發
                         this.triggerFindMySize();
@@ -6376,6 +6382,20 @@ class InfGoogleLoginComponent extends HTMLElement {
     setDelayedTriggerFindMySize() {
         localStorage.setItem('delayed_trigger_findmysize', 'true');
         console.log("設置延遲觸發 Find My Size 標記，等待離開個人資訊頁面");
+    }
+    
+    // 設置雲端資料同步標記（不需要觸發 Find My Size）
+    setCloudDataSyncFlag() {
+        localStorage.setItem('cloud_data_sync', 'true');
+        console.log("設置雲端資料同步標記");
+    }
+    
+    // 判斷是否需要觸發 Find My Size
+    shouldTriggerFindMySize() {
+        // 檢查是否只是資料同步還是需要觸發 Find My Size
+        // 這裡可以根據具體業務邏輯來判斷
+        // 暫時返回 false，表示只是資料同步，不需要觸發 Find My Size
+        return false;
     }
     
     // 公開方法：手動觸發登入
