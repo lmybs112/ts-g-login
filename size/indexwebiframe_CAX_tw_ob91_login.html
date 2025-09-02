@@ -946,10 +946,16 @@
             script.onload = () => {
                 window.createGoogleLoginComponentsByType('size');
                 
-                // 檢查並觸發延遲的 Find My Size
-                if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
-                    window.checkAndTriggerDelayedFindMySize();
-                }
+                // 為返回按鈕添加事件監聽器，當用戶點擊返回時觸發延遲的 Find My Size
+                const backArrows = document.querySelectorAll('.type_backarrow, .go-back-left-arrow-img');
+                backArrows.forEach(arrow => {
+                    arrow.addEventListener('click', function() {
+                        // 檢查是否有延遲觸發的 Find My Size
+                        if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
+                            window.checkAndTriggerDelayedFindMySize();
+                        }
+                    });
+                });
             };
             document.body.appendChild(script);
         });
