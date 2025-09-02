@@ -5478,15 +5478,48 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 調用原有的下載邏輯
             await this.downloadCloudDataToLocal(apiResponse);
             
-            // 如果同步成功，設置延遲觸發標記
+            // 等待一下確保資料寫入完成
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // 驗證本地資料是否真的更新了
             const bodyIDSize = localStorage.getItem('BodyID_size');
             if (bodyIDSize) {
-                console.log('雲端資料同步成功，設置延遲觸發 Find My Size 標記');
-                this.setDelayedTriggerFindMySize();
+                try {
+                    const bodyData = JSON.parse(bodyIDSize);
+                    console.log('驗證本地資料更新:', bodyData);
+                    
+                    // 檢查關鍵資料是否存在
+                    if (bodyData.HV && bodyData.WV && bodyData.TS === "01") {
+                        console.log('✅ 雲端資料同步成功，設置延遲觸發 Find My Size 標記');
+                        this.setDelayedTriggerFindMySize();
+                        
+                        // 顯示成功通知
+                        if (typeof showNotification === 'function') {
+                            showNotification('✅ 雲端資料已同步到本地', 'success');
+                        }
+                    } else {
+                        console.error('❌ 本地資料不完整，無法觸發 Find My Size');
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ 本地資料不完整，請重試', 'error');
+                        }
+                    }
+                } catch (parseError) {
+                    console.error('❌ 解析本地資料失敗:', parseError);
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 本地資料格式錯誤', 'error');
+                    }
+                }
+            } else {
+                console.error('❌ 本地資料未找到');
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 本地資料未找到，請重試', 'error');
+                }
             }
         } catch (error) {
             console.error('選擇雲端資料同步失敗:', error);
-            showNotification('❌ 雲端資料同步失敗', 'error');
+            if (typeof showNotification === 'function') {
+                showNotification('❌ 雲端資料同步失敗', 'error');
+            }
         }
     }
     
@@ -5570,6 +5603,19 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const updatedBodyIDSize = localStorage.getItem('BodyID_size');
                     console.log('本地資料已更新:', updatedBodyIDSize);
                     
+                    // 驗證資料完整性
+                    try {
+                        const bodyData = JSON.parse(updatedBodyIDSize);
+                        console.log('驗證資料完整性:', {
+                            HV: bodyData.HV,
+                            WV: bodyData.WV,
+                            TS: bodyData.TS,
+                            Gender: bodyData.Gender
+                        });
+                    } catch (e) {
+                        console.error('解析本地資料失敗:', e);
+                    }
+                    
                     // 檢查是否需要觸發 Find My Size 功能
                     if (isOnPersonalInfoPage()) {
                         console.log('在個人資訊頁面，設置延遲觸發 Find My Size 標記');
@@ -5586,7 +5632,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                         }, 1000); // 延遲1秒重新載入，確保 Find My Size 功能執行完成
                     }
                     
-                    showNotification('✅ 雲端資料已同步到本地', 'success');
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ 雲端資料已同步到本地', 'success');
+                    }
                 } else {
                     console.log('沒有資料需要同步');
                 }
