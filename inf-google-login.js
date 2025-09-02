@@ -6015,7 +6015,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 調用 update_bodydata API 的函數（供外部調用）
-    async updateBodyDataAPI(bodyData) {
+    async updateBodyDataAPI(bodyData, shouldTriggerFindMySize = true) {
         try {
             
             // 獲取憑證
@@ -6106,8 +6106,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 確保 BodyID_size 有 TS 字段
                 ensureBodyIDSizeHasTS();
                 
-                // 觸發 Find My Size 功能
-                this.triggerFindMySize();
+                // 根據參數決定是否觸發 Find My Size 功能
+                if (shouldTriggerFindMySize) {
+                    this.triggerFindMySize();
+                }
                 
             } else {
             }

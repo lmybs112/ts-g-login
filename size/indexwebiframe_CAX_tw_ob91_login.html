@@ -986,7 +986,8 @@ window.addEventListener("message",function(e){
             // 找到 inf-google-login 組件並調用其方法
             const infGoogleLoginElement = document.querySelector('inf-google-login');
             if (infGoogleLoginElement && infGoogleLoginElement.updateBodyDataAPI) {
-                infGoogleLoginElement.updateBodyDataAPI(messageData.value);
+                // FML_Done 事件不需要自動觸發 Find My Size，傳入 false 參數
+                infGoogleLoginElement.updateBodyDataAPI(messageData.value, false);
             } else {
                 console.error('❌ 找不到 inf-google-login 組件或 updateBodyDataAPI 方法');
             }
