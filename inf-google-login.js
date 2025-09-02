@@ -4316,10 +4316,10 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 直接觸發 Google 登入（最後手段）
     triggerDirectGoogleSignIn() {
         try {
-            // 在無痕瀏覽器中，直接使用 OAuth2 彈出視窗
+            // 在無痕瀏覽器中，使用標準的 Google 登入按鈕
             if (this.isIncognitoMode) {
-                console.log('🕵️ 無痕瀏覽器模式，直接使用 OAuth2 彈出視窗');
-                this.openOAuth2Popup();
+                console.log('🕵️ 無痕瀏覽器模式，使用標準 Google 登入按鈕');
+                this.createStandardGoogleSignInButton();
                 return;
             }
 
@@ -4361,63 +4361,68 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
-    // 打開 OAuth2 彈出視窗（無痕瀏覽器專用）
-    openOAuth2Popup() {
+    // 替換現有的 Google 登入按鈕為無痕瀏覽器兼容版本
+    createStandardGoogleSignInButton() {
         try {
-            console.log('🕵️ 打開 OAuth2 彈出視窗');
-            
-            // 構建 OAuth2 授權 URL
-            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-                `client_id=${encodeURIComponent(this.clientId)}` +
-                `&redirect_uri=${encodeURIComponent(window.location.origin)}` +
-                `&response_type=token` + // 使用 token 而不是 code，避免複雜的 token 交換
-                `&scope=${encodeURIComponent('openid email profile')}` +
-                `&state=${encodeURIComponent('google_signin')}` +
-                `&prompt=consent` +
-                `&access_type=online`; // 不請求 refresh token
-
-            // 在新視窗中打開授權頁面
-            const authWindow = window.open(authUrl, 'google_auth',
-                'width=500,height=600,scrollbars=yes,resizable=yes,location=yes');
-
-            if (!authWindow) {
-                console.error('❌ 彈出視窗被阻擋，請允許彈出視窗');
-                alert('請允許彈出視窗以進行 Google 登入');
+            // 找到現有的 Google 登入按鈕容器
+            const existingButton = document.querySelector('.g_id_signin') || document.querySelector('[data-g_id_signin]');
+            if (!existingButton) {
+                console.log('🕵️ 找不到現有的 Google 登入按鈕，使用備用方法');
+                this.fallbackGoogleSignIn();
                 return;
             }
 
-            // 監聽彈出視窗關閉
-            const checkWindowClosed = this.safeSetInterval(() => {
-                try {
-                    if (authWindow.closed) {
-                        clearInterval(checkWindowClosed);
-                        console.log('🕵️ OAuth2 彈出視窗已關閉');
-                        
-                        // 檢查 URL 中是否有 access token
-                        const urlParams = new URLSearchParams(window.location.hash.substring(1));
-                        const accessToken = urlParams.get('access_token');
-                        
-                        if (accessToken) {
-                            console.log('🕵️ 獲取到 access token，開始處理登入');
-                            // 創建 credential 格式
-                            const credential = `oauth2_${accessToken}`;
-                            this.handleCredentialResponse({ credential: credential });
-                        }
-                    }
-                } catch (error) {
-                    console.error('檢查彈出視窗狀態失敗:', error);
-                    clearInterval(checkWindowClosed);
-                }
-            }, 1000);
+            console.log('🕵️ 找到現有登入按鈕，替換為無痕瀏覽器兼容版本');
+
+            // 清空現有按鈕內容
+            existingButton.innerHTML = '';
+
+            // 創建新的 Google 登入按鈕
+            const googleButton = document.createElement('div');
+            googleButton.id = 'g_id_onload';
+            googleButton.setAttribute('data-client_id', this.clientId);
+            googleButton.setAttribute('data-callback', 'handleGoogleCredentialResponse');
+            googleButton.setAttribute('data-auto_prompt', 'false');
+            googleButton.setAttribute('data-context', 'signin');
+
+            // 創建 Google 登入按鈕的渲染元素
+            const googleButtonRender = document.createElement('div');
+            googleButtonRender.className = 'g_id_signin';
+            googleButtonRender.setAttribute('data-type', 'standard');
+            googleButtonRender.setAttribute('data-size', 'large');
+            googleButtonRender.setAttribute('data-theme', 'outline');
+            googleButtonRender.setAttribute('data-text', 'signin_with');
+            googleButtonRender.setAttribute('data-shape', 'rectangular');
+            googleButtonRender.setAttribute('data-logo_alignment', 'left');
+
+            // 添加到現有容器
+            existingButton.appendChild(googleButton);
+            existingButton.appendChild(googleButtonRender);
+
+            // 設置全局回調函數
+            window.handleGoogleCredentialResponse = (response) => {
+                console.log('🕵️ 無痕瀏覽器 Google 登入成功:', response);
+                this.handleCredentialResponse(response);
+            };
+
+            // 觸發 Google 按鈕渲染
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+                window.google.accounts.id.renderButton(googleButtonRender, {
+                    type: 'standard',
+                    size: 'large',
+                    theme: 'outline',
+                    text: 'signin_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'left'
+                });
+            }
 
         } catch (error) {
-            console.error('打開 OAuth2 彈出視窗失敗:', error);
-            // 如果失敗，回退到標準登入
+            console.error('替換 Google 登入按鈕失敗:', error);
+            // 如果失敗，回退到彈出視窗登入
             this.fallbackGoogleSignIn();
         }
     }
-
-
 
     // 使用 authorization code 交換 tokens
     async exchangeCodeForTokens(code) {
