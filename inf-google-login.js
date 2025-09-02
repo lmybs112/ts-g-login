@@ -4322,8 +4322,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (this.isIncognitoMode) {
                     console.log('🕵️ 無痕瀏覽器模式，調整備用登入配置');
                     config.use_fedcm_for_prompt = false; // 禁用 FedCM
-                    config.ux_mode = 'redirect'; // 使用重定向避免彈出視窗問題
+                    config.ux_mode = 'popup'; // 使用彈出視窗模式
                     config.prompt = 'consent'; // 強制顯示同意頁面
+                    config.auto_select = false; // 禁用自動選擇
                 }
 
                 // 重新初始化
@@ -4455,7 +4456,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             googleButton.setAttribute('data-callback', 'handleGoogleCredentialResponse');
             googleButton.setAttribute('data-auto_prompt', 'false');
             googleButton.setAttribute('data-context', 'signin');
-            googleButton.setAttribute('data-ux_mode', 'redirect'); // 使用重定向避免彈出視窗問題
+            googleButton.setAttribute('data-ux_mode', 'popup'); // 改回彈出視窗模式
             googleButton.style.cssText = `
                 margin: 20px 0;
             `;
@@ -4535,6 +4536,21 @@ class InfGoogleLoginComponent extends HTMLElement {
                     shape: 'rectangular',
                     logo_alignment: 'left'
                 });
+                
+                // 延遲一下再觸發登入，確保按鈕渲染完成
+                setTimeout(() => {
+                    try {
+                        window.google.accounts.id.prompt((notification) => {
+                            if (notification.isNotDisplayed()) {
+                                console.log('🕵️ Google One Tap 無法顯示，使用備用方法');
+                                this.fallbackGoogleSignIn();
+                            }
+                        });
+                    } catch (error) {
+                        console.error('🕵️ 觸發 Google 登入失敗:', error);
+                        this.fallbackGoogleSignIn();
+                    }
+                }, 500);
             }
 
         } catch (error) {
@@ -5399,7 +5415,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 config.auto_prompt = false; // 禁用自動提示
                 config.prompt = 'consent'; // 強制顯示同意頁面
                 config.select_account = false; // 不強制選擇帳戶
-                config.ux_mode = 'redirect'; // 使用重定向避免彈出視窗問題
+                config.ux_mode = 'popup'; // 使用彈出視窗模式
             }
 
             window.google.accounts.id.initialize(config);
