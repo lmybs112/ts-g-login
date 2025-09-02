@@ -6359,7 +6359,11 @@ class InfGoogleLoginComponent extends HTMLElement {
             localStorage.removeItem('BodyID_size');
             
             // 顯示錯誤通知
-            showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
+            if (typeof showNotification === 'function') {
+                showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
+            } else {
+                alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
+            }
             
             // 延遲重新整理頁面
             setTimeout(() => {

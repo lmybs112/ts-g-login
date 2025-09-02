@@ -939,14 +939,7 @@
     <script src="https://inffits.com/webDesign/HTML/js/components/jquery-mousewheel.min.js"></script>
     <script src="https://inffits.com/webDesign/HTML/js/iframe/inf_main_CAX.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const script = document.createElement('script');
-            script.src = '/inf-google-login.js';
-            script.sync = true;
-            script.onload = () => {
-                window.createGoogleLoginComponentsByType('size');
-                
-                        // 監聽 AWS Lambda 錯誤
+        // 立即設置 AWS Lambda 錯誤監聽器（不等待 DOM 載入）
         console.log('設置 AWS Lambda 錯誤監聽器...');
         
         // 監聽 AWS Lambda 錯誤
@@ -978,11 +971,63 @@
             }
         });
         
-        // 監聽返回按鈕的點擊事件
-        console.log('設置返回按鈕點擊監聽器...');
+        // 監聽未處理的 Promise 錯誤（AWS Lambda 可能使用 Promise）
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && event.reason.message && event.reason.message.includes('DP_CODE')) {
+                console.error('捕獲到未處理的 AWS Lambda DP_CODE 錯誤:', event.reason);
+                
+                // 找到 inf-google-login 組件並調用錯誤處理方法
+                const infGoogleLoginElement = document.querySelector('inf-google-login');
+                if (infGoogleLoginElement && infGoogleLoginElement.handleAWSLambdaError) {
+                    infGoogleLoginElement.handleAWSLambdaError();
+                } else {
+                    // 如果找不到組件，直接處理錯誤
+                    console.error('AWS Lambda 錯誤，清除本地 BodyID_size 並重新整理頁面');
+                    localStorage.removeItem('BodyID_size');
+                    
+                    // 檢查 showNotification 函數是否存在
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
+                    } else {
+                        // 如果沒有通知函數，使用 alert
+                        alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
+                    }
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+        });
         
-        // 使用 MutationObserver 監聽 DOM 變化，當返回按鈕出現時綁定事件
-        const observer = new MutationObserver((mutations) => {
+        // 全局錯誤處理函數
+        window.handleAWSLambdaErrorGlobal = function() {
+            console.error('全局處理 AWS Lambda 錯誤');
+            localStorage.removeItem('BodyID_size');
+            
+            if (typeof showNotification === 'function') {
+                showNotification('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面', 'error');
+            } else {
+                alert('❌ AWS Lambda 錯誤，已清除本地資料並重新整理頁面');
+            }
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const script = document.createElement('script');
+            script.src = '/inf-google-login.js';
+            script.sync = true;
+            script.onload = () => {
+                window.createGoogleLoginComponentsByType('size');
+                
+                // 監聽返回按鈕的點擊事件
+                console.log('設置返回按鈕點擊監聽器...');
+                
+                // 使用 MutationObserver 監聽 DOM 變化，當返回按鈕出現時綁定事件
+                const observer = new MutationObserver((mutations) => {
                     mutations.forEach((mutation) => {
                         if (mutation.type === 'childList') {
                             mutation.addedNodes.forEach((node) => {
