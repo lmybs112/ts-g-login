@@ -946,28 +946,17 @@
             script.onload = () => {
                 window.createGoogleLoginComponentsByType('size');
                 
-                // 使用事件委託監聽整個頁面的點擊事件，當點擊返回按鈕時觸發延遲的 Find My Size
-                document.addEventListener('click', function(event) {
-                    // 檢查點擊的元素是否是返回按鈕
-                    const target = event.target;
-                    const isBackButton = target.closest('.profile-modal__back-arrow') || 
-                                       target.closest('#modal-profile-back-arrow') ||
-                                       target.closest('[class*="back"]') ||
-                                       target.closest('[id*="back"]') ||
-                                       target.closest('[class*="arrow"]') ||
-                                       target.closest('[id*="arrow"]');
-                    
-                    if (isBackButton) {
-                        console.log('檢測到返回按鈕點擊:', isBackButton);
-                        // 檢查是否有延遲觸發的 Find My Size
-                        if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
-                            console.log('調用 checkAndTriggerDelayedFindMySize');
-                            window.checkAndTriggerDelayedFindMySize();
-                        } else {
-                            console.log('checkAndTriggerDelayedFindMySize 函數不存在');
-                        }
-                    }
-                });
+                // 檢查是否有延遲觸發的 Find My Size 標記
+                console.log('頁面加載完成，檢查延遲觸發標記...');
+                if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
+                    // 延遲檢查，確保所有組件都已加載
+                    setTimeout(() => {
+                        console.log('延遲檢查延遲觸發標記...');
+                        window.checkAndTriggerDelayedFindMySize();
+                    }, 3000); // 延遲3秒檢查
+                } else {
+                    console.log('checkAndTriggerDelayedFindMySize 函數不存在');
+                }
             };
             document.body.appendChild(script);
         });
