@@ -127,6 +127,112 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
+    // 無痕瀏覽器專用的憑證檢查方法（更寬鬆的檢查）
+    async checkStoredCredentialIncognito(shouldRefreshApi = false) {
+        try {
+            console.log('🕵️ 開始無痕瀏覽器憑證檢查...');
+            
+            // 嘗試讀取 localStorage，但使用 try-catch 處理可能的錯誤
+            let jwtCredential = null;
+            let accessToken = null;
+            
+            try {
+                jwtCredential = localStorage.getItem('google_auth_credential');
+                console.log('🕵️ 讀取到 JWT 憑證:', jwtCredential ? '存在' : '不存在');
+            } catch (error) {
+                console.log('🕵️ 讀取 JWT 憑證失敗:', error.message);
+            }
+            
+            try {
+                accessToken = await this.getValidAccessToken();
+                console.log('🕵️ 讀取到 Access Token:', accessToken ? '存在' : '不存在');
+            } catch (error) {
+                console.log('🕵️ 讀取 Access Token 失敗:', error.message);
+            }
+            
+            // 如果有任何一種憑證，就認為已登入
+            if (jwtCredential) {
+                console.log('🕵️ 使用 JWT 憑證登入');
+                this.credential = jwtCredential;
+                this.isAuthenticated = true;
+                
+                try {
+                    this.getUserInfo(); // 嘗試載入用戶資訊
+                } catch (error) {
+                    console.log('🕵️ 載入用戶資訊失敗:', error.message);
+                }
+                
+                if (shouldRefreshApi) {
+                    try {
+                        this.refreshApiData();
+                    } catch (error) {
+                        console.log('🕵️ 刷新 API 資料失敗:', error.message);
+                    }
+                }
+                return;
+            }
+            
+            if (accessToken) {
+                console.log('🕵️ 使用 Access Token 登入');
+                this.credential = `oauth2_${accessToken}`;
+                this.isAuthenticated = true;
+                
+                try {
+                    this.getUserInfo(); // 嘗試載入用戶資訊
+                } catch (error) {
+                    console.log('🕵️ 載入用戶資訊失敗:', error.message);
+                }
+                
+                if (shouldRefreshApi) {
+                    try {
+                        this.refreshApiData();
+                    } catch (error) {
+                        console.log('🕵️ 刷新 API 資料失敗:', error.message);
+                    }
+                }
+                return;
+            }
+            
+            // 如果沒有憑證，檢查是否有其他登入標記
+            try {
+                const apiResponse = localStorage.getItem('inffits_api_response');
+                const userInfo = localStorage.getItem('google_user_info');
+                
+                if (apiResponse || userInfo) {
+                    console.log('🕵️ 發現其他登入標記，嘗試恢復登入狀態');
+                    // 嘗試從現有資料恢復登入狀態
+                    this.isAuthenticated = true;
+                    
+                    try {
+                        this.getUserInfo();
+                    } catch (error) {
+                        console.log('🕵️ 恢復用戶資訊失敗:', error.message);
+                    }
+                    
+                    try {
+                        this.getApiResponse();
+                    } catch (error) {
+                        console.log('🕵️ 恢復 API 回應失敗:', error.message);
+                    }
+                    
+                    return;
+                }
+            } catch (error) {
+                console.log('🕵️ 檢查其他登入標記失敗:', error.message);
+            }
+            
+            // 如果都沒有，則未登入
+            console.log('🕵️ 無痕瀏覽器中未發現有效登入狀態');
+            this.credential = null;
+            this.isAuthenticated = false;
+            
+        } catch (error) {
+            console.error('🕵️ 無痕瀏覽器憑證檢查失敗:', error);
+            this.credential = null;
+            this.isAuthenticated = false;
+        }
+    }
+
     // 安全的 timeout 包裝器
     safeSetTimeout(callback, delay) {
         const timeoutId = setTimeout(() => {
@@ -243,9 +349,10 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 設置 token 自動刷新機制
     setupTokenRefresh() {
-        // 在無痕瀏覽器中，跳過 token 自動刷新
+        // 在無痕瀏覽器中，使用更寬鬆的 token 刷新
         if (this.isIncognitoMode) {
-            console.log('🕵️ 無痕瀏覽器模式，跳過 token 自動刷新');
+            console.log('🕵️ 無痕瀏覽器模式，使用寬鬆的 token 刷新');
+            this.setupTokenRefreshIncognito();
             return;
         }
 
@@ -259,6 +366,56 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 保存 interval ID 以便清理
         this.activeIntervals.add(refreshInterval);
         
+    }
+
+    // 無痕瀏覽器專用的 token 刷新機制（更寬鬆的檢查）
+    setupTokenRefreshIncognito() {
+        try {
+            // 每 30 分鐘檢查一次 token 狀態（無痕瀏覽器中更頻繁檢查）
+            const refreshInterval = this.safeSetInterval(() => {
+                if (this.isAuthenticated) {
+                    this.checkAndRefreshTokenIncognito();
+                }
+            }, 30 * 60 * 1000); // 30 分鐘
+            
+            // 保存 interval ID 以便清理
+            this.activeIntervals.add(refreshInterval);
+            
+        } catch (error) {
+            console.error('🕵️ 設置無痕瀏覽器 token 刷新失敗:', error);
+        }
+    }
+
+    // 無痕瀏覽器專用的 token 檢查和刷新
+    async checkAndRefreshTokenIncognito() {
+        try {
+            console.log('🕵️ 檢查無痕瀏覽器 token 狀態...');
+            
+            // 嘗試檢查憑證，但使用更寬鬆的方式
+            let credential = null;
+            try {
+                credential = localStorage.getItem('google_auth_credential');
+            } catch (error) {
+                console.log('🕵️ 讀取憑證失敗:', error.message);
+                return;
+            }
+            
+            if (!credential) {
+                console.log('🕵️ 無痕瀏覽器中沒有憑證');
+                return;
+            }
+            
+            // 嘗試刷新 API 資料
+            try {
+                await this.refreshApiData();
+                console.log('🕵️ 無痕瀏覽器 API 資料刷新成功');
+            } catch (error) {
+                console.log('🕵️ 無痕瀏覽器 API 資料刷新失敗:', error.message);
+            }
+            
+        } catch (error) {
+            console.error('🕵️ 無痕瀏覽器 token 檢查失敗:', error);
+        }
     }
 
     // 檢查並刷新 token
@@ -393,11 +550,10 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查存儲的憑證
     async checkStoredCredential(shouldRefreshApi = false) {
-        // 在無痕瀏覽器中，跳過本地憑證檢查
+        // 在無痕瀏覽器中，仍然檢查本地憑證，但使用更寬鬆的檢查
         if (this.isIncognitoMode) {
-            console.log('🕵️ 無痕瀏覽器模式，跳過本地憑證檢查');
-            this.credential = null;
-            this.isAuthenticated = false;
+            console.log('🕵️ 無痕瀏覽器模式，使用寬鬆的本地憑證檢查');
+            await this.checkStoredCredentialIncognito(shouldRefreshApi);
             return;
         }
 
@@ -1231,11 +1387,10 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 檢查存儲的憑證
     async checkStoredCredential(shouldRefreshApi = false) {
-        // 在無痕瀏覽器中，跳過本地憑證檢查
+        // 在無痕瀏覽器中，仍然檢查本地憑證，但使用更寬鬆的檢查
         if (this.isIncognitoMode) {
-            console.log('🕵️ 無痕瀏覽器模式，跳過本地憑證檢查');
-            this.credential = null;
-            this.isAuthenticated = false;
+            console.log('🕵️ 無痕瀏覽器模式，使用寬鬆的本地憑證檢查');
+            await this.checkStoredCredentialIncognito(shouldRefreshApi);
             return;
         }
 
