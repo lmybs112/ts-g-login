@@ -6346,8 +6346,47 @@ class InfGoogleLoginComponent extends HTMLElement {
             if ($btn.length > 0) {
                 $btn.trigger("click");
                 console.log("Find My Size button clicked.");
+                
+                // 延遲檢查頁面狀態，確保 Find My Size 功能執行完成
+                setTimeout(() => {
+                    this.checkAndRestorePageState();
+                }, 1000);
             } else {
                 console.warn("Find My Size button not found.");
+            }
+        }
+        
+        // 檢查並恢復頁面狀態
+        checkAndRestorePageState() {
+            // 檢查個人資訊容器是否被隱藏
+            const personalInfoContainer = $("#container_BF_mbinfo");
+            if (personalInfoContainer.is(":hidden")) {
+                console.log("個人資訊容器被隱藏，檢查是否需要顯示結果頁面");
+                
+                // 檢查是否有尺寸推薦結果
+                const recomSize = $("#recomSize");
+                if (recomSize.length > 0 && recomSize.text().trim()) {
+                    console.log("找到尺寸推薦結果，顯示結果頁面");
+                    // 顯示結果頁面（這裡可能需要根據實際的頁面結構來調整）
+                    this.showSizeRecommendationPage();
+                } else {
+                    console.log("沒有找到尺寸推薦結果，恢復個人資訊頁面");
+                    // 如果沒有結果，恢復個人資訊頁面
+                    personalInfoContainer.show();
+                }
+            }
+        }
+        
+        // 顯示尺寸推薦頁面
+        showSizeRecommendationPage() {
+            // 這裡應該顯示尺寸推薦結果
+            // 具體實現需要根據頁面的實際結構來調整
+            console.log("顯示尺寸推薦頁面");
+            
+            // 檢查是否有結果容器
+            const resultContainer = $("#Sizebox_cart");
+            if (resultContainer.length > 0) {
+                resultContainer.show();
             }
         }
         
