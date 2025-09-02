@@ -8108,23 +8108,23 @@ function showCustomConfirm(title, message, onConfirm, onCancel) {
 
 // 檢查當前是否在個人資訊頁面
 function isOnPersonalInfoPage() {
-    // 檢查是否有個人資訊相關的元素存在
-    const personalInfoElements = [
-        '#container_BF_mbinfo',           // 個人資訊容器
-        '.mbinfo-container',              // 個人資訊容器類
-        '[data-page="personal-info"]',    // 個人資訊頁面標記
-        '.personal-info-page'             // 個人資訊頁面類
-    ];
+    // 簡化檢測：只要關鍵元素存在就認為在個人資訊頁面
+    const personalInfoElement = document.querySelector('#container_BF_mbinfo');
     
-    const result = personalInfoElements.some(selector => {
-        const element = document.querySelector(selector);
-        const isVisible = element && element.style.display !== 'none' && element.offsetParent !== null;
-        console.log(`檢查元素 ${selector}:`, element, '是否可見:', isVisible);
-        return isVisible;
-    });
+    if (personalInfoElement) {
+        console.log('檢測到個人資訊頁面元素:', personalInfoElement);
+        console.log('元素樣式:', {
+            display: personalInfoElement.style.display,
+            visibility: personalInfoElement.style.visibility,
+            offsetParent: personalInfoElement.offsetParent,
+            offsetWidth: personalInfoElement.offsetWidth,
+            offsetHeight: personalInfoElement.offsetHeight
+        });
+        return true;
+    }
     
-    console.log('isOnPersonalInfoPage 結果:', result);
-    return result;
+    console.log('未檢測到個人資訊頁面元素');
+    return false;
 }
 
 // 檢查並觸發延遲的 Find My Size
