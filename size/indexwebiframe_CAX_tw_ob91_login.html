@@ -1041,30 +1041,18 @@
                                         console.log('找到返回按鈕，綁定點擊事件:', backArrow);
                                         backArrow.addEventListener('click', function() {
                                             console.log('返回按鈕被點擊!');
-                                            // 返回按鈕被點擊，直接觸發延遲的 Find My Size
-                                            if (typeof window.checkAndTriggerDelayedFindMySize === 'function') {
-                                                console.log('返回按鈕被點擊，直接觸發延遲的 Find My Size');
-                                                // 強制觸發，不檢查頁面狀態
-                                                const shouldTrigger = localStorage.getItem('delayed_trigger_findmysize');
-                                                if (shouldTrigger === 'true') {
-                                                    localStorage.removeItem('delayed_trigger_findmysize');
-                                                    console.log('觸發延遲的 Find My Size 功能');
-                                                    
-                                                    // 找到 inf-google-login 組件並觸發
-                                                    const infGoogleLoginElement = document.querySelector('inf-google-login');
-                                                    if (infGoogleLoginElement && infGoogleLoginElement.triggerFindMySize) {
-                                                        infGoogleLoginElement.triggerFindMySize();
-                                                    } else {
-                                                        // 如果找不到組件，使用全局函數
-                                                        if (typeof triggerFindMySizeGlobal === 'function') {
-                                                            triggerFindMySizeGlobal();
-                                                        }
-                                                    }
-                                                } else {
-                                                    console.log('沒有延遲觸發標記');
-                                                }
+                                            // 返回按鈕被點擊，檢查是否有延遲觸發標記
+                                            const shouldTrigger = localStorage.getItem('delayed_trigger_findmysize');
+                                            if (shouldTrigger === 'true') {
+                                                localStorage.removeItem('delayed_trigger_findmysize');
+                                                console.log('有延遲觸發標記，直接重新整理頁面');
+                                                
+                                                // 延遲重新整理頁面
+                                                setTimeout(() => {
+                                                    window.location.reload();
+                                                }, 1000); // 延遲1秒重新整理
                                             } else {
-                                                console.log('checkAndTriggerDelayedFindMySize 函數不存在');
+                                                console.log('沒有延遲觸發標記');
                                             }
                                         });
                                     }
