@@ -5507,17 +5507,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 將雲端資料保存到本地 BodyID_size
                 if (targetKey === 'bodyF' || targetKey === 'bodyM') {
                     // bodyF/bodyM 整包資料都保存到 BodyID_size
-
                     bodyInfo.TS = "01";
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
-                    // 其他資料源只保存 HV, WV
+                    // 其他資料源保存所有可用字段，並添加 TS
                     const localSizeData = {
-                        HV: bodyInfo.HV,
-                        WV: bodyInfo.WV
+                        ...bodyInfo,  // 保留所有原始字段
+                        TS: "01"      // 添加 TS 字段
                     };
-                    localSizeData.TS = "01";
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
                 }
@@ -5544,6 +5542,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                             keys: ['BodyID_size', 'Gender_Last']
                         }
                     }));
+                    
+                    // 確保 BodyID_size 有 TS 字段
+                    ensureBodyIDSizeHasTS();
                     
                     // 觸發 Find My Size 功能
                     this.triggerFindMySize();
@@ -6102,6 +6103,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                     }
                 }));
                 
+                // 確保 BodyID_size 有 TS 字段
+                ensureBodyIDSizeHasTS();
+                
                 // 觸發 Find My Size 功能
                 this.triggerFindMySize();
                 
@@ -6631,6 +6635,23 @@ function triggerFindMySizeGlobal() {
     }
 }
 
+// 確保 BodyID_size 有 TS 字段的輔助函數
+function ensureBodyIDSizeHasTS() {
+    try {
+        const bodyIDSize = localStorage.getItem('BodyID_size');
+        if (bodyIDSize) {
+            const sizeData = JSON.parse(bodyIDSize);
+            if (!sizeData.TS) {
+                sizeData.TS = "01";
+                localStorage.setItem('BodyID_size', JSON.stringify(sizeData));
+                console.log("Added TS field to BodyID_size");
+            }
+        }
+    } catch (error) {
+        console.warn("Error ensuring TS field in BodyID_size:", error);
+    }
+}
+
 // 同步更新本地 localStorage 資料
 function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
     try {
@@ -6679,6 +6700,9 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                     source: 'field-edit'
                 }
             }));
+            
+            // 確保 BodyID_size 有 TS 字段
+            ensureBodyIDSizeHasTS();
             
             // 觸發 Find My Size 功能
             triggerFindMySizeGlobal();
@@ -7283,6 +7307,9 @@ function createGoogleLoginComponents(configs = [{
     } else {
         initComponents();
     }
+    
+    // 頁面加載時確保 BodyID_size 有 TS 字段
+    ensureBodyIDSizeHasTS();
 
     // 簡化的 DOM 變化監聽器
     const observer = new MutationObserver((mutations) => {
