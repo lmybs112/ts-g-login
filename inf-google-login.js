@@ -4316,9 +4316,10 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 直接觸發 Google 登入（最後手段）
     triggerDirectGoogleSignIn() {
         try {
-            // 在無痕瀏覽器中，直接使用現有的登入按鈕
+            // 在無痕瀏覽器中，直接使用 OAuth2 彈出視窗
             if (this.isIncognitoMode) {
-                console.log('🕵️ 無痕瀏覽器模式，直接使用現有登入按鈕');
+                console.log('🕵️ 無痕瀏覽器模式，直接使用 OAuth2 彈出視窗');
+                this.openOAuth2Popup();
                 return;
             }
 
@@ -4357,6 +4358,62 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         } catch (error) {
             // 顯示錯誤訊息給用戶
+        }
+    }
+
+    // 打開 OAuth2 彈出視窗（無痕瀏覽器專用）
+    openOAuth2Popup() {
+        try {
+            console.log('🕵️ 打開 OAuth2 彈出視窗');
+            
+            // 構建 OAuth2 授權 URL
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+                `client_id=${encodeURIComponent(this.clientId)}` +
+                `&redirect_uri=${encodeURIComponent(window.location.origin)}` +
+                `&response_type=token` + // 使用 token 而不是 code，避免複雜的 token 交換
+                `&scope=${encodeURIComponent('openid email profile')}` +
+                `&state=${encodeURIComponent('google_signin')}` +
+                `&prompt=consent` +
+                `&access_type=online`; // 不請求 refresh token
+
+            // 在新視窗中打開授權頁面
+            const authWindow = window.open(authUrl, 'google_auth',
+                'width=500,height=600,scrollbars=yes,resizable=yes,location=yes');
+
+            if (!authWindow) {
+                console.error('❌ 彈出視窗被阻擋，請允許彈出視窗');
+                alert('請允許彈出視窗以進行 Google 登入');
+                return;
+            }
+
+            // 監聽彈出視窗關閉
+            const checkWindowClosed = this.safeSetInterval(() => {
+                try {
+                    if (authWindow.closed) {
+                        clearInterval(checkWindowClosed);
+                        console.log('🕵️ OAuth2 彈出視窗已關閉');
+                        
+                        // 檢查 URL 中是否有 access token
+                        const urlParams = new URLSearchParams(window.location.hash.substring(1));
+                        const accessToken = urlParams.get('access_token');
+                        
+                        if (accessToken) {
+                            console.log('🕵️ 獲取到 access token，開始處理登入');
+                            // 創建 credential 格式
+                            const credential = `oauth2_${accessToken}`;
+                            this.handleCredentialResponse({ credential: credential });
+                        }
+                    }
+                } catch (error) {
+                    console.error('檢查彈出視窗狀態失敗:', error);
+                    clearInterval(checkWindowClosed);
+                }
+            }, 1000);
+
+        } catch (error) {
+            console.error('打開 OAuth2 彈出視窗失敗:', error);
+            // 如果失敗，回退到標準登入
+            this.fallbackGoogleSignIn();
         }
     }
 
