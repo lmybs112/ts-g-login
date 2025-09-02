@@ -5004,7 +5004,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     <div class="info-label">姓名</div>
                                     <div class="info-value" id="profile-name">尚未提供</div>
                                 </div>
-                              
                             </div>
                             
                             <div class="info-item">
@@ -6078,10 +6077,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 同時更新本地的 BodyID_size 和 Gender_Last
                 if (genderFromUrl === 'F') {
                     // 女性：整包 bodyData 保存到 BodyID_size
+                    bodyData.TS = "01";
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'F');
                 } else if (genderFromUrl === 'M') {
                     // 男性：整包 bodyData 保存到 BodyID_size
+                    bodyData.TS = "01";
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
                 }
@@ -6101,98 +6102,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     }
                 }));
                 
-            } else {
-            }
-        } catch (error) {
-        }
-    }
-
-    // 調用 update_bodydata API 的函數（供外部調用）
-    async updateBodyDataAPI(bodyData) {
-        try {
-            
-            // 獲取憑證
-            const credential = localStorage.getItem('google_auth_credential');
-            if (!credential) {
-                    return;
-                }
-                
-            // 獲取用戶 sub
-            const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
-            const sub = userInfo.sub;
-            if (!sub) {
-                return;
-            }
-
-            // 從 URL 參數獲取性別
-            const urlParams = new URLSearchParams(window.location.search);
-            const genderFromUrl = urlParams.toString().split('&')[0]; // 取得第一個參數，例如 'F'
-            
-            // 根據 URL 參數設置 BodyData 格式和 BodyData_ptr
-            let formattedBodyData, bodyDataPtr;
-            if (genderFromUrl === 'F') {
-                formattedBodyData = { bodyF: bodyData };
-                bodyDataPtr = 'bodyF';
-            } else if (genderFromUrl === 'M') {
-                formattedBodyData = { bodyM: bodyData };
-                bodyDataPtr = 'bodyM';
-            } else {
-                // 預設為女性
-                formattedBodyData = { bodyF: bodyData };
-                bodyDataPtr = 'bodyF';
-            }
-            
-            
-            // 構建 API 請求
-            const payload = {
-                BodyData: formattedBodyData,
-                BodyData_ptr: bodyDataPtr,
-                update_bodydata: true,
-                credential: credential,
-                sub: sub,
-                IDTYPE: 'Google'
-            };
-
-
-            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                
-                // 更新本地儲存的 API 回應
-                localStorage.setItem('inffits_api_response', JSON.stringify(result));
-                
-                // 同時更新本地的 BodyID_size 和 Gender_Last
-                if (genderFromUrl === 'F') {
-                    // 女性：整包 bodyData 保存到 BodyID_size
-                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
-                    localStorage.setItem('Gender_Last', 'F');
-                } else if (genderFromUrl === 'M') {
-                    // 男性：整包 bodyData 保存到 BodyID_size
-                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
-                    localStorage.setItem('Gender_Last', 'M');
-                }
-                
-                // 觸發更新事件
-                window.dispatchEvent(new StorageEvent('storage', {
-                    key: 'inffits_api_response',
-                    newValue: JSON.stringify(result),
-                    oldValue: null,
-                    storageArea: localStorage
-                }));
-                
-                // 觸發本地資料更新事件
-                window.dispatchEvent(new CustomEvent('localStorage-updated', {
-                    detail: {
-                        keys: ['BodyID_size', 'Gender_Last']
-                    }
-                }));
+                // 觸發 Find My Size 功能
+                this.triggerFindMySize();
                 
             } else {
             }
@@ -6709,6 +6620,17 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
     }
 }
 
+// 全局觸發 Find My Size 功能
+function triggerFindMySizeGlobal() {
+    const $btn = $("#findmysize");
+    if ($btn.length > 0) {
+        $btn.trigger("click");
+        console.log("Find My Size button clicked (global).");
+    } else {
+        console.warn("Find My Size button not found (global).");
+    }
+}
+
 // 同步更新本地 localStorage 資料
 function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
     try {
@@ -6724,6 +6646,7 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             
             // 對於 bodyF/bodyM，整包資料保存到 BodyID_size
             if (userKey === 'bodyF' || userKey === 'bodyM') {
+                userData.TS = "01";
                 localStorage.setItem('BodyID_size', JSON.stringify(userData));
                 
                 // 更新性別資料
@@ -6737,7 +6660,8 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 if (bodyInfo.HV && bodyInfo.WV) {
                     const localSizeData = {
                         HV: bodyInfo.HV,
-                        WV: bodyInfo.WV
+                        WV: bodyInfo.WV,
+                        TS: "01"
                     };
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                 }
@@ -6755,6 +6679,9 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                     source: 'field-edit'
                 }
             }));
+            
+            // 觸發 Find My Size 功能
+            triggerFindMySizeGlobal();
         }
     } catch (error) {
     }
