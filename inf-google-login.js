@@ -5508,6 +5508,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 將雲端資料保存到本地 BodyID_size
                 if (targetKey === 'bodyF' || targetKey === 'bodyM') {
                     // bodyF/bodyM 整包資料都保存到 BodyID_size
+
+                    bodyInfo.TS = "01";
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
@@ -5516,7 +5518,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         HV: bodyInfo.HV,
                         WV: bodyInfo.WV
                     };
-                    
+                    localSizeData.TS = "01";
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
                 }
