@@ -41,7 +41,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 檢查是否為無痕瀏覽器
         this.isIncognitoMode = this.detectIncognitoMode();
-        console.log('無痕瀏覽器檢測結果:', this.isIncognitoMode);
 
         // 監聽 localStorage 變化（僅在非無痕模式下）
         if (!this.isIncognitoMode) {
@@ -87,7 +86,6 @@ class InfGoogleLoginComponent extends HTMLElement {
             
             return false;
         } catch (error) {
-            console.log('無痕瀏覽器檢測失敗，假設為無痕模式:', error);
             return true;
         }
     }
@@ -130,64 +128,58 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 無痕瀏覽器專用的憑證檢查方法（更寬鬆的檢查）
     async checkStoredCredentialIncognito(shouldRefreshApi = false) {
         try {
-            console.log('🕵️ 開始無痕瀏覽器憑證檢查...');
-            
             // 嘗試讀取 localStorage，但使用 try-catch 處理可能的錯誤
             let jwtCredential = null;
             let accessToken = null;
             
             try {
                 jwtCredential = localStorage.getItem('google_auth_credential');
-                console.log('🕵️ 讀取到 JWT 憑證:', jwtCredential ? '存在' : '不存在');
             } catch (error) {
-                console.log('🕵️ 讀取 JWT 憑證失敗:', error.message);
+                // 靜默處理錯誤
             }
             
             try {
                 accessToken = await this.getValidAccessToken();
-                console.log('🕵️ 讀取到 Access Token:', accessToken ? '存在' : '不存在');
             } catch (error) {
-                console.log('🕵️ 讀取 Access Token 失敗:', error.message);
+                // 靜默處理錯誤
             }
             
             // 如果有任何一種憑證，就認為已登入
             if (jwtCredential) {
-                console.log('🕵️ 使用 JWT 憑證登入');
                 this.credential = jwtCredential;
                 this.isAuthenticated = true;
                 
                 try {
                     this.getUserInfo(); // 嘗試載入用戶資訊
                 } catch (error) {
-                    console.log('🕵️ 載入用戶資訊失敗:', error.message);
+                    // 靜默處理錯誤
                 }
                 
                 if (shouldRefreshApi) {
                     try {
                         this.refreshApiData();
                     } catch (error) {
-                        console.log('🕵️ 刷新 API 資料失敗:', error.message);
+                        // 靜默處理錯誤
                     }
                 }
                 return;
             }
             
             if (accessToken) {
-                console.log('🕵️ 使用 Access Token 登入');
                 this.credential = `oauth2_${accessToken}`;
                 this.isAuthenticated = true;
                 
                 try {
                     this.getUserInfo(); // 嘗試載入用戶資訊
                 } catch (error) {
-                    console.log('🕵️ 載入用戶資訊失敗:', error.message);
+                    // 靜默處理錯誤
                 }
                 
                 if (shouldRefreshApi) {
                     try {
                         this.refreshApiData();
                     } catch (error) {
-                        console.log('🕵️ 刷新 API 資料失敗:', error.message);
+                        // 靜默處理錯誤
                     }
                 }
                 return;
@@ -199,35 +191,32 @@ class InfGoogleLoginComponent extends HTMLElement {
                 const userInfo = localStorage.getItem('google_user_info');
                 
                 if (apiResponse || userInfo) {
-                    console.log('🕵️ 發現其他登入標記，嘗試恢復登入狀態');
                     // 嘗試從現有資料恢復登入狀態
                     this.isAuthenticated = true;
                     
                     try {
                         this.getUserInfo();
                     } catch (error) {
-                        console.log('🕵️ 恢復用戶資訊失敗:', error.message);
+                        // 靜默處理錯誤
                     }
                     
                     try {
                         this.getApiResponse();
                     } catch (error) {
-                        console.log('🕵️ 恢復 API 回應失敗:', error.message);
+                        // 靜默處理錯誤
                     }
                     
                     return;
                 }
             } catch (error) {
-                console.log('🕵️ 檢查其他登入標記失敗:', error.message);
+                // 靜默處理錯誤
             }
             
             // 如果都沒有，則未登入
-            console.log('🕵️ 無痕瀏覽器中未發現有效登入狀態');
             this.credential = null;
             this.isAuthenticated = false;
             
         } catch (error) {
-            console.error('🕵️ 無痕瀏覽器憑證檢查失敗:', error);
             this.credential = null;
             this.isAuthenticated = false;
         }
@@ -351,7 +340,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     setupTokenRefresh() {
         // 在無痕瀏覽器中，使用更寬鬆的 token 刷新
         if (this.isIncognitoMode) {
-            console.log('🕵️ 無痕瀏覽器模式，使用寬鬆的 token 刷新');
             this.setupTokenRefreshIncognito();
             return;
         }
@@ -382,39 +370,34 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.activeIntervals.add(refreshInterval);
             
         } catch (error) {
-            console.error('🕵️ 設置無痕瀏覽器 token 刷新失敗:', error);
+            // 靜默處理錯誤
         }
     }
 
     // 無痕瀏覽器專用的 token 檢查和刷新
     async checkAndRefreshTokenIncognito() {
         try {
-            console.log('🕵️ 檢查無痕瀏覽器 token 狀態...');
-            
             // 嘗試檢查憑證，但使用更寬鬆的方式
             let credential = null;
             try {
                 credential = localStorage.getItem('google_auth_credential');
             } catch (error) {
-                console.log('🕵️ 讀取憑證失敗:', error.message);
                 return;
             }
             
             if (!credential) {
-                console.log('🕵️ 無痕瀏覽器中沒有憑證');
                 return;
             }
             
             // 嘗試刷新 API 資料
             try {
                 await this.refreshApiData();
-                console.log('🕵️ 無痕瀏覽器 API 資料刷新成功');
             } catch (error) {
-                console.log('🕵️ 無痕瀏覽器 API 資料刷新失敗:', error.message);
+                // 靜默處理錯誤
             }
             
         } catch (error) {
-            console.error('🕵️ 無痕瀏覽器 token 檢查失敗:', error);
+            // 靜默處理錯誤
         }
     }
 
@@ -552,7 +535,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     async checkStoredCredential(shouldRefreshApi = false) {
         // 在無痕瀏覽器中，仍然檢查本地憑證，但使用更寬鬆的檢查
         if (this.isIncognitoMode) {
-            console.log('🕵️ 無痕瀏覽器模式，使用寬鬆的本地憑證檢查');
             await this.checkStoredCredentialIncognito(shouldRefreshApi);
             return;
         }
@@ -1090,6 +1072,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         #SizeBox_cart:has(.inf-google-login-modal-container) {
                 overflow: hidden !important;
         }
+            #container_BF_mbinfo:has(.inf-google-login-modal-container),
             #SizeBox_cart .inf-google-login-modal-container {
                 max-width: 95% !important;
                 margin: 0 auto !important;
@@ -1389,7 +1372,6 @@ class InfGoogleLoginComponent extends HTMLElement {
     async checkStoredCredential(shouldRefreshApi = false) {
         // 在無痕瀏覽器中，仍然檢查本地憑證，但使用更寬鬆的檢查
         if (this.isIncognitoMode) {
-            console.log('🕵️ 無痕瀏覽器模式，使用寬鬆的本地憑證檢查');
             await this.checkStoredCredentialIncognito(shouldRefreshApi);
             return;
         }
@@ -1902,10 +1884,10 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         existingStyle.textContent = `
-        #container_BF_mbinfo:has(.inf-google-login-modal-container),
         #SizeBox_cart:has(.inf-google-login-modal-container) {
                 overflow: hidden !important;
         }
+            #container_BF_mbinfo .inf-google-login-modal-container,
             #SizeBox_cart .inf-google-login-modal-container {
                 max-width: 95% !important;
                 margin: 0 auto !important;
@@ -4286,7 +4268,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 在無痕瀏覽器中，直接使用標準登入按鈕
             if (this.isIncognitoMode) {
-                console.log('🕵️ 無痕瀏覽器模式，使用標準登入按鈕');
                 this.createStandardGoogleSignInButton();
                 return;
             }
@@ -4475,7 +4456,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
                 // 在無痕瀏覽器中調整配置
                 if (this.isIncognitoMode) {
-                    console.log('🕵️ 無痕瀏覽器模式，調整備用登入配置');
                     config.use_fedcm_for_prompt = false; // 禁用 FedCM
                     config.ux_mode = 'popup'; // 使用彈出視窗模式
                     config.prompt = 'consent'; // 強制顯示同意頁面
@@ -4566,7 +4546,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 return;
             }
 
-            console.log('🕵️ 找到現有登入組件，替換為無痕瀏覽器兼容版本');
+            // 找到現有登入組件，替換為無痕瀏覽器兼容版本
 
             // 清空現有組件內容
             existingComponent.innerHTML = '';
@@ -4596,7 +4576,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 設置全局回調函數
             window.handleGoogleCredentialResponse = (response) => {
-                console.log('🕵️ 無痕瀏覽器 Google 登入成功:', response);
                 this.handleCredentialResponse(response);
             };
 
@@ -4616,12 +4595,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                     try {
                         window.google.accounts.id.prompt((notification) => {
                             if (notification.isNotDisplayed()) {
-                                console.log('🕵️ Google One Tap 無法顯示，使用備用方法');
                                 this.fallbackGoogleSignIn();
                             }
                         });
                     } catch (error) {
-                        console.error('🕵️ 觸發 Google 登入失敗:', error);
                         this.fallbackGoogleSignIn();
                     }
                 }, 500);
@@ -5485,7 +5462,6 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 在無痕瀏覽器中調整配置
             if (this.isIncognitoMode) {
-                console.log('🕵️ 無痕瀏覽器模式，調整 Google 登入配置');
                 config.auto_prompt = false; // 禁用自動提示
                 config.prompt = 'consent'; // 強制顯示同意頁面
                 config.select_account = false; // 不強制選擇帳戶
@@ -5857,19 +5833,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     
                     // 檢查關鍵資料是否存在
                     if (bodyData.HV && bodyData.WV && bodyData.TS === "01") {
-                        console.log('✅ 雲端資料同步成功，設置延遲觸發 Find My Size 標記');
-                        
-                        // 監聽 localStorage 變化，防止被其他地方覆蓋
-                        this.startLocalStorageMonitoring();
-                        
-                        this.setDelayedTriggerFindMySize();
-                        
                         // 顯示成功通知
                         if (typeof showNotification === 'function') {
                             showNotification('✅ 雲端資料已同步到本地', 'success');
                         }
                     } else {
-                        console.error('❌ 本地資料不完整，無法觸發 Find My Size');
                         if (typeof showNotification === 'function') {
                             showNotification('❌ 本地資料不完整，請重試', 'error');
                         }
@@ -5975,6 +5943,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (targetKey === 'bodyF' || targetKey === 'bodyM') {
                     // bodyF/bodyM 整包資料都保存到 BodyID_size
                     bodyInfo.TS = "01";
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (bodyInfo.CC === "null_null") {
+                        bodyInfo.CC = "";
+                    }
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
@@ -5983,6 +5955,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                         ...bodyInfo,  // 保留所有原始字段
                         TS: "01"      // 添加 TS 字段
                     };
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (localSizeData.CC === "null_null") {
+                        localSizeData.CC = "";
+                    }
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
                 }
@@ -6003,6 +5979,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }
                 
                 if (hasData) {
+                    // 設置資料修改標記，表示有資料被修改
+                    localStorage.setItem('data_modified_flag', 'true');
+                    console.log('設置資料修改標記');
+                    
                     // 觸發 localStorage 更新事件
                     window.dispatchEvent(new CustomEvent('localStorage-updated', {
                         detail: {
@@ -6030,16 +6010,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         console.error('解析本地資料失敗:', e);
                     }
                     
-                    // 檢查是否需要觸發 Find My Size 功能
-                    if (isOnPersonalInfoPage()) {
-                        console.log('在個人資訊頁面，設置延遲觸發 Find My Size 標記');
-                        // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
-                        this.setDelayedTriggerFindMySize();
-                    } else {
-                        console.log('不在個人資訊頁面，立即觸發 Find My Size');
-                        // 不在編輯頁面，立即觸發
-                        this.triggerFindMySize();
-                    }
+                    // 完全移除 Find My Size 觸發邏輯，避免畫面變空
                     
                     if (typeof showNotification === 'function') {
                         showNotification('✅ 雲端資料已同步到本地', 'success');
@@ -6584,13 +6555,29 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (genderFromUrl === 'F') {
                     // 女性：整包 bodyData 保存到 BodyID_size
                     bodyData.TS = "01";
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (bodyData.CC === "null_null") {
+                        bodyData.CC = "";
+                    }
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'F');
+                    
+                    // 設置資料修改標記
+                    localStorage.setItem('data_modified_flag', 'true');
+                    console.log('設置資料修改標記 (updateBodyDataAPI - F)');
                 } else if (genderFromUrl === 'M') {
                     // 男性：整包 bodyData 保存到 BodyID_size
                     bodyData.TS = "01";
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (bodyData.CC === "null_null") {
+                        bodyData.CC = "";
+                    }
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
+                    
+                    // 設置資料修改標記
+                    localStorage.setItem('data_modified_flag', 'true');
+                    console.log('設置資料修改標記 (updateBodyDataAPI - M)');
                 }
                 
                 // 觸發更新事件
@@ -6611,20 +6598,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 確保 BodyID_size 有 TS 字段
                 ensureBodyIDSizeHasTS();
                 
-                // 根據參數決定是否觸發 Find My Size 功能
-                if (shouldTriggerFindMySize) {
-                    console.log('updateBodyDataAPI: 需要觸發 Find My Size，檢查頁面狀態...');
-                    // 檢查是否在個人資訊頁面，如果是則延遲觸發，否則立即觸發
-                    if (isOnPersonalInfoPage()) {
-                        console.log('updateBodyDataAPI: 在編輯頁面，設置延遲觸發標記');
-                        // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
-                        this.setDelayedTriggerFindMySize();
-                    } else {
-                        console.log('updateBodyDataAPI: 不在編輯頁面，立即觸發');
-                        // 不在編輯頁面，立即觸發
-                        this.triggerFindMySize();
-                    }
-                }
+                // 完全移除 Find My Size 觸發邏輯，避免畫面變空
                 
             } else {
             }
@@ -6856,24 +6830,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }, 2000);
         }
     
-    // 設置延遲觸發 Find My Size 的標記
-    setDelayedTriggerFindMySize() {
-        localStorage.setItem('delayed_trigger_findmysize', 'true');
-        console.log("設置延遲觸發 Find My Size 標記，等待離開個人資訊頁面");
-    }
-    
-    // 設置雲端資料同步標記（不需要觸發 Find My Size）
-    setCloudDataSyncFlag() {
-        localStorage.setItem('cloud_data_sync', 'true');
-        console.log("設置雲端資料同步標記");
-    }
-    
-    // 判斷是否需要觸發 Find My Size
-    shouldTriggerFindMySize() {
-        // 根據用戶需求：選完雲端 -> 更新本地 -> 關閉彈窗 -> trigger find my size
-        // 所以當在個人資訊頁面時，應該要觸發 Find My Size
-        return true;
-    }
+    // 這些方法已移除，不再需要延遲觸發 Find My Size 功能
     
     // 公開方法：手動觸發登入
     signIn() {
@@ -7182,16 +7139,29 @@ function triggerFindMySizeGlobal() {
     }
 }
 
-// 確保 BodyID_size 有 TS 字段的輔助函數
+// 確保 BodyID_size 有 TS 字段和正確的 CC 欄位的輔助函數
 function ensureBodyIDSizeHasTS() {
     try {
         const bodyIDSize = localStorage.getItem('BodyID_size');
         if (bodyIDSize) {
             const sizeData = JSON.parse(bodyIDSize);
+            let needsUpdate = false;
+            
+            // 檢查並添加 TS 欄位
             if (!sizeData.TS) {
                 sizeData.TS = "01";
+                needsUpdate = true;
+            }
+            
+            // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+            if (sizeData.CC === "null_null") {
+                sizeData.CC = "";
+                needsUpdate = true;
+            }
+            
+            // 如果有更新，重新保存到 localStorage
+            if (needsUpdate) {
                 localStorage.setItem('BodyID_size', JSON.stringify(sizeData));
-                console.log("Added TS field to BodyID_size");
             }
         }
     } catch (error) {
@@ -7215,6 +7185,10 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             // 對於 bodyF/bodyM，整包資料保存到 BodyID_size
             if (userKey === 'bodyF' || userKey === 'bodyM') {
                 userData.TS = "01";
+                // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                if (userData.CC === "null_null") {
+                    userData.CC = "";
+                }
                 localStorage.setItem('BodyID_size', JSON.stringify(userData));
                 
                 // 更新性別資料
@@ -7223,6 +7197,10 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 } else if (userKey === 'bodyM') {
                     localStorage.setItem('Gender_Last', 'M');
                 }
+                
+                // 設置資料修改標記
+                localStorage.setItem('data_modified_flag', 'true');
+                console.log('設置資料修改標記 (updateLocalStorageFromAPI)');
             } else {
                 // 對於其他用戶，只保存 HV 和 WV
                 if (bodyInfo.HV && bodyInfo.WV) {
@@ -7232,6 +7210,10 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                         TS: "01"
                     };
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
+                    
+                    // 設置資料修改標記
+                    localStorage.setItem('data_modified_flag', 'true');
+                    console.log('設置資料修改標記 (updateLocalStorageFromAPI - other)');
                 }
                 
                 // 更新性別資料
@@ -7251,15 +7233,7 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             // 確保 BodyID_size 有 TS 字段
             ensureBodyIDSizeHasTS();
             
-            // 觸發 Find My Size 功能（檢查是否在個人資訊頁面）
-            if (isOnPersonalInfoPage()) {
-                // 在編輯頁面，設置延遲觸發標記，等待用戶離開後觸發
-                localStorage.setItem('delayed_trigger_findmysize', 'true');
-                console.log("設置延遲觸發 Find My Size 標記，等待離開個人資訊頁面");
-            } else {
-                // 不在編輯頁面，立即觸發
-                triggerFindMySizeGlobal();
-            }
+            // 完全移除 Find My Size 觸發邏輯，避免畫面變空
         }
     } catch (error) {
     }
