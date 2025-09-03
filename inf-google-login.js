@@ -5838,11 +5838,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                             showNotification('✅ 雲端資料已同步到本地', 'success');
                         }
                         
-                        // 延遲一下確保通知顯示完成，然後觸發 Find My Size
+                        // 延遲一下確保通知顯示完成，然後重新整理頁面
                         setTimeout(() => {
-                            console.log('雲端資料同步完成，觸發 Find My Size');
-                            this.triggerFindMySize();
-                        }, 500);
+                            console.log('雲端資料同步完成，重新整理頁面');
+                            window.location.reload();
+                        }, 1000);
                     } else {
                         if (typeof showNotification === 'function') {
                             showNotification('❌ 本地資料不完整，請重試', 'error');
