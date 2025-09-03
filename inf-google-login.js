@@ -5839,13 +5839,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                             showNotification('✅ 雲端資料已同步到本地', 'success');
                         }
                         
-                        // 延遲一下確保通知顯示完成，然後重新整理頁面
-                        setTimeout(() => {
-                            console.log('雲端資料同步完成，準備重新整理頁面');
-                            console.log('當前頁面 URL:', window.location.href);
-                            console.log('執行 window.location.reload()');
-                            window.location.reload();
-                        }, 1000);
+                        // 等待並驗證資料確實已更新到本地，然後重新整理頁面
+                        this.waitForDataUpdateAndReload();
                     } else {
                         if (typeof showNotification === 'function') {
                             showNotification('❌ 本地資料不完整，請重試', 'error');
@@ -6027,13 +6022,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     if (typeof showNotification === 'function') {
                         showNotification('✅ 雲端資料已同步到本地', 'success');
                         
-                        // 延遲一下確保通知顯示完成，然後重新整理頁面
-                        setTimeout(() => {
-                            console.log('downloadCloudDataToLocal: 雲端資料同步完成，準備重新整理頁面');
-                            console.log('當前頁面 URL:', window.location.href);
-                            console.log('執行 window.location.reload()');
-                            window.location.reload();
-                        }, 1000);
+                        // 等待並驗證資料確實已更新到本地，然後重新整理頁面
+                        this.waitForDataUpdateAndReload();
                     }
                 } else {
                     console.log('沒有資料需要同步');
@@ -6046,6 +6036,61 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
         
         console.log('=== downloadCloudDataToLocal 方法執行完成 ===');
+    }
+    
+    // 等待資料更新完成後再重新整理頁面
+    async waitForDataUpdateAndReload() {
+        console.log('開始等待資料更新完成...');
+        
+        // 記錄更新前的資料狀態
+        const initialData = localStorage.getItem('BodyID_size');
+        console.log('更新前的資料狀態:', initialData);
+        
+        // 等待並驗證資料確實已更新
+        let retryCount = 0;
+        const maxRetries = 10; // 最多等待 10 次
+        const checkInterval = 200; // 每 200ms 檢查一次
+        
+        const checkDataUpdate = () => {
+            retryCount++;
+            const currentData = localStorage.getItem('BodyID_size');
+            console.log(`第 ${retryCount} 次檢查資料更新狀態:`, currentData);
+            
+            if (currentData && currentData !== initialData) {
+                // 資料已更新，驗證資料完整性
+                try {
+                    const parsedData = JSON.parse(currentData);
+                    if (parsedData.HV && parsedData.WV && parsedData.TS === "01") {
+                        console.log('✅ 資料更新完成且完整，準備重新整理頁面');
+                        console.log('最終資料狀態:', parsedData);
+                        
+                        // 延遲一下確保所有操作完成，然後重新整理
+                        setTimeout(() => {
+                            console.log('執行 window.location.reload()');
+                            window.location.reload();
+                        }, 500);
+                        return;
+                    } else {
+                        console.log('⚠️ 資料已更新但格式不完整，繼續等待...');
+                    }
+                } catch (parseError) {
+                    console.error('❌ 解析更新後的資料失敗:', parseError);
+                }
+            } else {
+                console.log('⏳ 資料尚未更新，繼續等待...');
+            }
+            
+            // 如果還沒達到最大重試次數，繼續等待
+            if (retryCount < maxRetries) {
+                setTimeout(checkDataUpdate, checkInterval);
+            } else {
+                console.log('❌ 等待資料更新超時，強制重新整理頁面');
+                window.location.reload();
+            }
+        };
+        
+        // 開始檢查
+        setTimeout(checkDataUpdate, checkInterval);
     }
 
         // 顯示資料衝突對話框
