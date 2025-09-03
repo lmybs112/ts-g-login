@@ -5954,6 +5954,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     if (bodyInfo.CC === "null_null") {
                         bodyInfo.CC = "";
                     }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (bodyInfo.Pattern_Prefer !== undefined) {
+                        bodyInfo.FitP = bodyInfo.Pattern_Prefer;
+                        console.log('將 FitP 欄位值改為 Pattern_Prefer:', bodyInfo.Pattern_Prefer);
+                    }
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
@@ -5965,6 +5970,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (localSizeData.CC === "null_null") {
                         localSizeData.CC = "";
+                    }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (localSizeData.Pattern_Prefer !== undefined) {
+                        localSizeData.FitP = localSizeData.Pattern_Prefer;
+                        console.log('將 FitP 欄位值改為 Pattern_Prefer:', localSizeData.Pattern_Prefer);
                     }
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
@@ -6626,6 +6636,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     if (bodyData.CC === "null_null") {
                         bodyData.CC = "";
                     }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (bodyData.Pattern_Prefer !== undefined) {
+                        bodyData.FitP = bodyData.Pattern_Prefer;
+                        console.log('updateBodyDataAPI - F: 將 FitP 欄位值改為 Pattern_Prefer:', bodyData.Pattern_Prefer);
+                    }
                     if(shouldTriggerFindMySize){
                         localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                         localStorage.setItem('Gender_Last', 'F');
@@ -6640,6 +6655,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (bodyData.CC === "null_null") {
                         bodyData.CC = "";
+                    }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (bodyData.Pattern_Prefer !== undefined) {
+                        bodyData.FitP = bodyData.Pattern_Prefer;
+                        console.log('updateBodyDataAPI - M: 將 FitP 欄位值改為 Pattern_Prefer:', bodyData.Pattern_Prefer);
                     }
                     if(shouldTriggerFindMySize){
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
@@ -7260,6 +7280,11 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                 if (userData.CC === "null_null") {
                     userData.CC = "";
+                }
+                // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                if (userData.Pattern_Prefer !== undefined) {
+                    userData.FitP = userData.Pattern_Prefer;
+                    console.log('updateLocalStorageFromAPI: 將 FitP 欄位值改為 Pattern_Prefer:', userData.Pattern_Prefer);
                 }
                 localStorage.setItem('BodyID_size', JSON.stringify(userData));
                 
