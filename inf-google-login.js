@@ -6626,9 +6626,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                     if (bodyData.CC === "null_null") {
                         bodyData.CC = "";
                     }
-                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
-                    localStorage.setItem('Gender_Last', 'F');
-                    
+                    if(shouldTriggerFindMySize){
+                        localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
+                        localStorage.setItem('Gender_Last', 'F');
+                    }
+
                     // 設置資料修改標記
                     localStorage.setItem('data_modified_flag', 'true');
                     console.log('設置資料修改標記 (updateBodyDataAPI - F)');
@@ -6639,9 +6641,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                     if (bodyData.CC === "null_null") {
                         bodyData.CC = "";
                     }
+                    if(shouldTriggerFindMySize){
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
                     localStorage.setItem('Gender_Last', 'M');
-                    
+                    }
                     // 設置資料修改標記
                     localStorage.setItem('data_modified_flag', 'true');
                     console.log('設置資料修改標記 (updateBodyDataAPI - M)');
@@ -6656,11 +6659,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                 }));
                 
                 // 觸發本地資料更新事件
+                if(shouldTriggerFindMySize){
                 window.dispatchEvent(new CustomEvent('localStorage-updated', {
                     detail: {
                         keys: ['BodyID_size', 'Gender_Last']
                     }
                 }));
+            }
                 
                 // 確保 BodyID_size 有 TS 字段
                 ensureBodyIDSizeHasTS();
