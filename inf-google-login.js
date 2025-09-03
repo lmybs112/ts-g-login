@@ -5809,6 +5809,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 用戶主動選擇雲端資料並同步到本地
     async selectCloudDataAndSync(apiResponse) {
+        console.log('=== selectCloudDataAndSync 方法開始執行 ===');
         console.log('用戶選擇雲端資料，開始同步到本地:', apiResponse);
         
         // 記錄同步前的本地資料
@@ -5840,7 +5841,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                         
                         // 延遲一下確保通知顯示完成，然後重新整理頁面
                         setTimeout(() => {
-                            console.log('雲端資料同步完成，重新整理頁面');
+                            console.log('雲端資料同步完成，準備重新整理頁面');
+                            console.log('當前頁面 URL:', window.location.href);
+                            console.log('執行 window.location.reload()');
                             window.location.reload();
                         }, 1000);
                     } else {
@@ -5866,6 +5869,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 showNotification('❌ 雲端資料同步失敗', 'error');
             }
         }
+        
+        console.log('=== selectCloudDataAndSync 方法執行完成 ===');
     }
     
     // 開始監聽 localStorage 變化
@@ -5913,6 +5918,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     
     // 下載雲端資料到本地
     async downloadCloudDataToLocal(apiResponse) {
+        console.log('=== downloadCloudDataToLocal 方法開始執行 ===');
         try {
             
             const bodyData = apiResponse?.BodyData || {};
@@ -6030,6 +6036,8 @@ class InfGoogleLoginComponent extends HTMLElement {
         } catch (error) {
             showNotification('❌ 下載資料失敗，請稍後再試', 'error');
         }
+        
+        console.log('=== downloadCloudDataToLocal 方法執行完成 ===');
     }
 
         // 顯示資料衝突對話框
