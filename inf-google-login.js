@@ -6026,6 +6026,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                     
                     if (typeof showNotification === 'function') {
                         showNotification('✅ 雲端資料已同步到本地', 'success');
+                        
+                        // 延遲一下確保通知顯示完成，然後重新整理頁面
+                        setTimeout(() => {
+                            console.log('downloadCloudDataToLocal: 雲端資料同步完成，準備重新整理頁面');
+                            console.log('當前頁面 URL:', window.location.href);
+                            console.log('執行 window.location.reload()');
+                            window.location.reload();
+                        }, 1000);
                     }
                 } else {
                     console.log('沒有資料需要同步');
