@@ -1025,10 +1025,7 @@
             script.sync = true;
             script.onload = () => {
                 window.createGoogleLoginComponentsByType('size');
-                
                 // 監聽返回按鈕的點擊事件
-                console.log('設置返回按鈕點擊監聽器...');
-                
                 // 使用 MutationObserver 監聽 DOM 變化，當返回按鈕出現時綁定事件
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach((mutation) => {
@@ -1038,20 +1035,15 @@
                                     // 檢查新增的節點是否是返回按鈕
                                     const backArrow = node.querySelector('#modal-profile-back-arrow');
                                     if (backArrow) {
-                                        console.log('找到返回按鈕，綁定點擊事件:', backArrow);
                                         backArrow.addEventListener('click', function() {
                                             // 檢查是否有資料修改標記
                                             const hasDataModified = localStorage.getItem('data_modified_flag');
-                                            console.log('返回按鈕被點擊，檢查資料修改狀態:', hasDataModified);
-                                            
                                             if (hasDataModified === 'true') {
                                                 // 有修改資料，執行頁面重新整理
-                                                console.log('檢測到資料修改，執行頁面重新整理');
                                                 localStorage.removeItem('data_modified_flag'); // 清除標記
                                                 window.location.reload();
                                             } else {
                                                 // 沒有修改資料，不執行重新整理
-                                                console.log('沒有檢測到資料修改，不執行重新整理');
                                             }
                                         });
                                     }
@@ -1067,7 +1059,6 @@
                     subtree: true
                 });
                 
-                console.log('MutationObserver 已啟動，監聽返回按鈕...');
             };
             document.body.appendChild(script);
         });
