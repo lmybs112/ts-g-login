@@ -404,15 +404,18 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 檢查並刷新 token
     async checkAndRefreshToken() {
         try {
+            console.log('檢查 token 狀態...');
             
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
+                console.log('沒有找到憑證，跳過 token 檢查');
                 return;
             }
             
             // 優先檢查是否有 refresh token
             const refreshToken = localStorage.getItem('google_refresh_token');
             if (refreshToken) {
+                console.log('找到 refresh token，檢查過期時間...');
                 
                 // 檢查 access token 是否即將過期
                 const expiresAt = localStorage.getItem('google_token_expires_at');
@@ -421,17 +424,24 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const expiresAtTime = parseInt(expiresAt);
                     const timeUntilExpiry = expiresAtTime - now;
                     
+                    console.log(`Token 過期時間: ${new Date(expiresAtTime).toLocaleString()}`);
+                    console.log(`距離過期還有: ${Math.round(timeUntilExpiry / 1000 / 60)} 分鐘`);
+                    
                     // 如果 token 將在 10 分鐘內過期，提前刷新
                     if (timeUntilExpiry < 10 * 60 * 1000) {
+                        console.log('Token 即將過期，開始刷新...');
                         try {
                             const newAccessToken = await this.refreshAccessToken(refreshToken);
                             if (newAccessToken) {
                                 const newCredential = `oauth2_${newAccessToken}`;
                                 this.saveCredential(newCredential);
+                                console.log('Token 刷新成功！');
                                 return;
+                            } else {
+                                console.log('Token 刷新失敗：沒有返回新的 access token');
                             }
                         } catch (error) {
-                            // 靜默處理錯誤
+                            console.error('Token 刷新失敗：', error);
                         }
                     } else {
                         return;
@@ -654,7 +664,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             const tokenInfo = {
                 credential: credential,
                 created_at: Date.now(),
-                expires_in: 2592000000 // 1 個月（毫秒）
+                expires_in: 3600000 // 1 小時（毫秒）
             };
             localStorage.setItem('google_token_info', JSON.stringify(tokenInfo));
             
@@ -662,7 +672,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (credential && credential.startsWith('oauth2_')) {
                 const accessToken = credential.replace('oauth2_', '');
                 localStorage.setItem('google_access_token', accessToken);
-                localStorage.setItem('google_token_expires_at', (Date.now() + 2592000000).toString());
+                localStorage.setItem('google_token_expires_at', (Date.now() + 3600000).toString());
             }
 
             // 觸發 localStorage 更新事件
@@ -855,7 +865,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 組件掛載到 DOM 時
     connectedCallback() {
         // 讀取屬性值
-        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id');
+        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id') || process.env.GOOGLE_CLIENT_ID;
         this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
         this.loginUri = this.getAttribute('data-login-uri');
         this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
@@ -1671,7 +1681,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 組件掛載到 DOM 時
     connectedCallback() {
         // 讀取屬性值
-        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id');
+        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id') || process.env.GOOGLE_CLIENT_ID;
         this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
         this.loginUri = this.getAttribute('data-login-uri');
         this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
@@ -4643,7 +4653,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 body: new URLSearchParams({
                     client_id: this.clientId,
-                    client_secret: '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com', // 需要替換為實際的 client secret
+                    client_secret: process.env.GOOGLE_CLIENT_SECRET, // 從環境變量讀取
                     code: code,
                     grant_type: 'authorization_code',
                     redirect_uri: window.location.origin,
@@ -4735,8 +4745,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 localStorage.setItem('google_refresh_token', refreshToken);
             }
             
-            // 保存 token 過期時間（預設一個月後）
-            const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 一個月
+            // 保存 token 過期時間（預設一小時後）
+            const expiresAt = Date.now() + (60 * 60 * 1000); // 一小時
             localStorage.setItem('google_token_expires_at', expiresAt.toString());
         }
     }
@@ -4774,6 +4784,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 access token
     async refreshAccessToken(refreshToken) {
         try {
+            console.log('嘗試刷新 access token...');
             
             const response = await fetch('https://oauth2.googleapis.com/token', {
                 method: 'POST',
@@ -4782,7 +4793,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 body: new URLSearchParams({
                     client_id: this.clientId, // 使用組件的 client ID
-                    client_secret: '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com', // 需要替換為實際的 client secret
+                    client_secret: process.env.GOOGLE_CLIENT_SECRET, // 從環境變量讀取
                     refresh_token: refreshToken,
                     grant_type: 'refresh_token',
                 }),

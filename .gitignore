@@ -6,6 +6,7 @@
 
 # misc
 .DS_Store
+.env
 .vscode/settings.json
 test.rest
 size/indexwebiframe_CAX_tw_ob91_login_bk.html
