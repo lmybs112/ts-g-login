@@ -44,7 +44,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 監聽 localStorage 變化（僅在非無痕模式下）
         if (!this.isIncognitoMode) {
-            window.addEventListener('storage', this.handleStorageChange.bind(this));
+        window.addEventListener('storage', this.handleStorageChange.bind(this));
         }
 
         // 綁定方法到 this 上下文
@@ -1072,7 +1072,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         #SizeBox_cart:has(.inf-google-login-modal-container) {
                 overflow: hidden !important;
         }
-            #container_BF_mbinfo:has(.inf-google-login-modal-container),
+            #container_BF_mbinfo .inf-google-login-modal-container,
             #SizeBox_cart .inf-google-login-modal-container {
                 max-width: 95% !important;
                 margin: 0 auto !important;
@@ -1884,6 +1884,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         existingStyle.textContent = `
+        #container_BF_mbinfo:has(.inf-google-login-modal-container),
         #SizeBox_cart:has(.inf-google-login-modal-container) {
                 overflow: hidden !important;
         }
@@ -3184,10 +3185,11 @@ class InfGoogleLoginComponent extends HTMLElement {
             return;
         }
 
-        // 檢查 API 回應中是否有 BodyData
-        if (apiResponse.BodyData && typeof apiResponse.BodyData === 'object') {
+        // 總是從最新的 localStorage 讀取數據
+        const latestApiResponse = this.getApiResponse();
+        if (latestApiResponse && latestApiResponse.BodyData && typeof latestApiResponse.BodyData === 'object') {
             // 整理 BodyData 資料，傳遞 BodyData_ptr 參數
-            const bodyDataHtml = this.formatBodyData(apiResponse.BodyData, apiResponse.BodyData_ptr);
+            const bodyDataHtml = this.formatBodyData(latestApiResponse, latestApiResponse.BodyData_ptr);
 
             if (bodyDataHtml) {
                 bodyDataContent.innerHTML = bodyDataHtml;
@@ -3201,8 +3203,20 @@ class InfGoogleLoginComponent extends HTMLElement {
     }
 
     // 格式化 BodyData 資料
-    formatBodyData(bodyData, bodyDataPtr) {
-        if (!bodyData || typeof bodyData !== 'object') {
+    formatBodyData(apiResponse, bodyDataPtr) {
+        if (!apiResponse || typeof apiResponse !== 'object') {
+            return '';
+        }
+
+        // 根據 BodyData_ptr 選擇正確的數據源
+        let bodyData;
+        if (bodyDataPtr && apiResponse[bodyDataPtr]) {
+            // 如果 BodyData_ptr 指向頂層屬性（如 bodyF），直接使用
+            bodyData = { [bodyDataPtr]: apiResponse[bodyDataPtr] };
+        } else if (apiResponse.BodyData && typeof apiResponse.BodyData === 'object') {
+            // 否則使用 BodyData
+            bodyData = apiResponse.BodyData;
+        } else {
             return '';
         }
 
@@ -3617,7 +3631,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                 `;
 
                 // 胸圍資料 - 始終顯示，沒有值就顯示「尚未提供」
-                const ccValue = bodyInfo.CC && bodyInfo.CC.trim() !== '' ? `${bodyInfo.CC} cm` : '尚未提供';
+                let ccValue = '尚未提供';
+                if (bodyInfo.CC && bodyInfo.CC.trim() !== '') {
+                    // 如果是數字+字母格式（如28A），不顯示cm單位
+                    if (/^\d+[A-G]$/.test(bodyInfo.CC)) {
+                        ccValue = bodyInfo.CC;
+                    } else {
+                        ccValue = `${bodyInfo.CC} cm`;
+                    }
+                }
                 const ccValueColor = bodyInfo.CC && bodyInfo.CC.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
                 formattedHtml += `
@@ -3637,7 +3659,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     data-field="CC"
                     data-user="${userKey}"
                     data-type="body"
-                    onclick="editField(this, 'CC', '${userKey}', 'body', '${bodyInfo.CC || ''}', '胸圍', 'cm')"
+                    onclick="editField(this, 'CC', '${userKey}', 'body', '${bodyInfo.CC || ''}', '胸圍', '${/^\d+[A-G]$/.test(bodyInfo.CC || '') ? '' : 'cm'}')"
                     onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
                     onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
@@ -5809,12 +5831,10 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 用戶主動選擇雲端資料並同步到本地
     async selectCloudDataAndSync(apiResponse) {
-        console.log('=== selectCloudDataAndSync 方法開始執行 ===');
-        console.log('用戶選擇雲端資料，開始同步到本地:', apiResponse);
+        // 用戶選擇雲端資料，開始同步到本地
         
         // 記錄同步前的本地資料
         const beforeSync = localStorage.getItem('BodyID_size');
-        console.log('同步前的本地資料:', beforeSync);
         
         try {
             // 調用原有的下載邏輯
@@ -5825,12 +5845,10 @@ class InfGoogleLoginComponent extends HTMLElement {
             
             // 驗證本地資料是否真的更新了
             const bodyIDSize = localStorage.getItem('BodyID_size');
-            console.log('同步後的本地資料:', bodyIDSize);
             
             if (bodyIDSize) {
                 try {
                     const bodyData = JSON.parse(bodyIDSize);
-                    console.log('驗證本地資料更新:', bodyData);
                     
                     // 檢查關鍵資料是否存在
                     if (bodyData.HV && bodyData.WV && bodyData.TS === "01") {
@@ -5847,25 +5865,20 @@ class InfGoogleLoginComponent extends HTMLElement {
                         }
                     }
                 } catch (parseError) {
-                    console.error('❌ 解析本地資料失敗:', parseError);
                     if (typeof showNotification === 'function') {
                         showNotification('❌ 本地資料格式錯誤', 'error');
                     }
                 }
             } else {
-                console.error('❌ 本地資料未找到');
                 if (typeof showNotification === 'function') {
                     showNotification('❌ 本地資料未找到，請重試', 'error');
                 }
             }
         } catch (error) {
-            console.error('選擇雲端資料同步失敗:', error);
             if (typeof showNotification === 'function') {
                 showNotification('❌ 雲端資料同步失敗', 'error');
             }
         }
-        
-        console.log('=== selectCloudDataAndSync 方法執行完成 ===');
     }
     
     // 開始監聽 localStorage 變化
@@ -5910,10 +5923,9 @@ class InfGoogleLoginComponent extends HTMLElement {
             this.storageCheckInterval = null;
         }
     }
-    
+
     // 下載雲端資料到本地
     async downloadCloudDataToLocal(apiResponse) {
-        console.log('=== downloadCloudDataToLocal 方法開始執行 ===');
         try {
             
             const bodyData = apiResponse?.BodyData || {};
@@ -5957,7 +5969,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
                     if (bodyInfo.Pattern_Prefer !== undefined) {
                         bodyInfo.FitP = bodyInfo.Pattern_Prefer;
-                        console.log('將 FitP 欄位值改為 Pattern_Prefer:', bodyInfo.Pattern_Prefer);
                     }
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
@@ -5974,7 +5985,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
                     if (localSizeData.Pattern_Prefer !== undefined) {
                         localSizeData.FitP = localSizeData.Pattern_Prefer;
-                        console.log('將 FitP 欄位值改為 Pattern_Prefer:', localSizeData.Pattern_Prefer);
                     }
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
@@ -5998,7 +6008,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (hasData) {
                     // 設置資料修改標記，表示有資料被修改
                     localStorage.setItem('data_modified_flag', 'true');
-                    console.log('設置資料修改標記');
                     
                     // 觸發 localStorage 更新事件
                     window.dispatchEvent(new CustomEvent('localStorage-updated', {
@@ -6010,33 +6019,22 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 確保 BodyID_size 有 TS 字段
                     ensureBodyIDSizeHasTS();
                     
-                    // 調試：檢查本地資料是否已更新
-                    const updatedBodyIDSize = localStorage.getItem('BodyID_size');
-                    console.log('本地資料已更新:', updatedBodyIDSize);
-                    
                     // 驗證資料完整性
                     try {
+                        const updatedBodyIDSize = localStorage.getItem('BodyID_size');
                         const bodyData = JSON.parse(updatedBodyIDSize);
-                        console.log('驗證資料完整性:', {
-                            HV: bodyData.HV,
-                            WV: bodyData.WV,
-                            TS: bodyData.TS,
-                            Gender: bodyData.Gender
-                        });
                     } catch (e) {
-                        console.error('解析本地資料失敗:', e);
+                        // 解析失敗，忽略
                     }
                     
                     // 完全移除 Find My Size 觸發邏輯，避免畫面變空
                     
                     if (typeof showNotification === 'function') {
-                        showNotification('✅ 雲端資料已同步到本地', 'success');
+                    showNotification('✅ 雲端資料已同步到本地', 'success');
                         
                         // 等待並驗證資料確實已更新到本地，然後重新整理頁面
                         this.waitForDataUpdateAndReload();
                     }
-                } else {
-                    console.log('沒有資料需要同步');
                 }
             } else {
             }
@@ -6045,16 +6043,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             showNotification('❌ 下載資料失敗，請稍後再試', 'error');
         }
         
-        console.log('=== downloadCloudDataToLocal 方法執行完成 ===');
     }
     
     // 等待資料更新完成後再重新整理頁面
     async waitForDataUpdateAndReload() {
-        console.log('開始等待資料更新完成...');
-        
         // 記錄更新前的資料狀態
         const initialData = localStorage.getItem('BodyID_size');
-        console.log('更新前的資料狀態:', initialData);
         
         // 等待並驗證資料確實已更新
         let retryCount = 0;
@@ -6064,37 +6058,28 @@ class InfGoogleLoginComponent extends HTMLElement {
         const checkDataUpdate = () => {
             retryCount++;
             const currentData = localStorage.getItem('BodyID_size');
-            console.log(`第 ${retryCount} 次檢查資料更新狀態:`, currentData);
             
             if (currentData && currentData !== initialData) {
                 // 資料已更新，驗證資料完整性
                 try {
                     const parsedData = JSON.parse(currentData);
                     if (parsedData.HV && parsedData.WV && parsedData.TS === "01") {
-                        console.log('✅ 資料更新完成且完整，準備重新整理頁面');
-                        console.log('最終資料狀態:', parsedData);
-                        
                         // 延遲一下確保所有操作完成，然後重新整理
                         setTimeout(() => {
-                            console.log('執行 window.location.reload()');
                             window.location.reload();
                         }, 500);
                         return;
-                    } else {
-                        console.log('⚠️ 資料已更新但格式不完整，繼續等待...');
                     }
                 } catch (parseError) {
-                    console.error('❌ 解析更新後的資料失敗:', parseError);
+                    // 解析失敗，繼續等待
                 }
-            } else {
-                console.log('⏳ 資料尚未更新，繼續等待...');
             }
             
             // 如果還沒達到最大重試次數，繼續等待
             if (retryCount < maxRetries) {
                 setTimeout(checkDataUpdate, checkInterval);
             } else {
-                console.log('❌ 等待資料更新超時，強制重新整理頁面');
+                // 等待超時，強制重新整理頁面
                 window.location.reload();
             }
         };
@@ -6139,7 +6124,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 } else {
                     console.log('不在個人資訊頁面，調用 downloadCloudDataToLocal');
                     // 不在個人資訊頁面，使用原有的下載邏輯
-                    await this.downloadCloudDataToLocal(currentApiResponse);
+                await this.downloadCloudDataToLocal(currentApiResponse);
                 }
             } else {
             }
@@ -6639,16 +6624,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
                     if (bodyData.Pattern_Prefer !== undefined) {
                         bodyData.FitP = bodyData.Pattern_Prefer;
-                        console.log('updateBodyDataAPI - F: 將 FitP 欄位值改為 Pattern_Prefer:', bodyData.Pattern_Prefer);
                     }
                     if(shouldTriggerFindMySize){
-                        localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
-                        localStorage.setItem('Gender_Last', 'F');
+                    localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
+                    localStorage.setItem('Gender_Last', 'F');
                     }
 
                     // 設置資料修改標記
                     localStorage.setItem('data_modified_flag', 'true');
-                    console.log('設置資料修改標記 (updateBodyDataAPI - F)');
                 } else if (genderFromUrl === 'M') {
                     // 男性：整包 bodyData 保存到 BodyID_size
                     bodyData.TS = "01";
@@ -6659,7 +6642,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
                     if (bodyData.Pattern_Prefer !== undefined) {
                         bodyData.FitP = bodyData.Pattern_Prefer;
-                        console.log('updateBodyDataAPI - M: 將 FitP 欄位值改為 Pattern_Prefer:', bodyData.Pattern_Prefer);
                     }
                     if(shouldTriggerFindMySize){
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyData));
@@ -6667,7 +6649,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     }
                     // 設置資料修改標記
                     localStorage.setItem('data_modified_flag', 'true');
-                    console.log('設置資料修改標記 (updateBodyDataAPI - M)');
                 }
                 
                 // 觸發更新事件
@@ -6923,7 +6904,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     
     // 這些方法已移除，不再需要延遲觸發 Find My Size 功能
-    
+
     // 公開方法：手動觸發登入
     signIn() {
         this.triggerGoogleSignIn();
@@ -7205,7 +7186,8 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
     } else if (fieldName === 'Gender') {
         newOnclick = `editField(this, 'Gender', '${userKey}', 'body', '${newValue}', '性別', '')`;
     } else if (fieldName === 'CC') {
-        newOnclick = `editField(this, 'CC', '${userKey}', 'body', '${newValue}', '胸圍', 'cm')`;
+        const unit = /^\d+[A-G]$/.test(newValue) ? '' : 'cm';
+        newOnclick = `editField(this, 'CC', '${userKey}', 'body', '${newValue}', '胸圍', '${unit}')`;
     }
     
     if (newOnclick) {
@@ -7284,7 +7266,6 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
                 if (userData.Pattern_Prefer !== undefined) {
                     userData.FitP = userData.Pattern_Prefer;
-                    console.log('updateLocalStorageFromAPI: 將 FitP 欄位值改為 Pattern_Prefer:', userData.Pattern_Prefer);
                 }
                 localStorage.setItem('BodyID_size', JSON.stringify(userData));
                 
@@ -7297,7 +7278,6 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 
                 // 設置資料修改標記
                 localStorage.setItem('data_modified_flag', 'true');
-                console.log('設置資料修改標記 (updateLocalStorageFromAPI)');
             } else {
                 // 對於其他用戶，只保存 HV 和 WV
                 if (bodyInfo.HV && bodyInfo.WV) {
@@ -7310,7 +7290,6 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                     
                     // 設置資料修改標記
                     localStorage.setItem('data_modified_flag', 'true');
-                    console.log('設置資料修改標記 (updateLocalStorageFromAPI - other)');
                 }
                 
                 // 更新性別資料
@@ -7938,7 +7917,7 @@ function createGoogleLoginComponents(configs = [{
     
     // 檢查並觸發延遲的 Find My Size
     checkAndTriggerDelayedFindMySize();
-    
+
     // 簡化的 DOM 變化監聽器
     const observer = new MutationObserver((mutations) => {
         let shouldInit = false;
@@ -8123,6 +8102,21 @@ function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLa
             }
             inputElement.appendChild(optionElement);
         });
+        
+    } else if (fieldName === 'CC') {
+        // 胸圍欄位使用特殊的選擇界面
+        createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        return;
+        
+    } else if (fieldName === 'HV') {
+        // 身高欄位使用下拉選擇器
+        createHeightSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        return;
+        
+    } else if (fieldName === 'WV') {
+        // 體重欄位使用下拉選擇器
+        createWeightSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        return;
         
     } else {
         // 其他欄位使用輸入框
@@ -8391,12 +8385,14 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
             composed: true
         }));
 
-        // 如果更新的是身高、體重或性別，則更新 BMI 和本地資料
-        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
+        // 如果更新的是身高、體重、性別或胸圍，則更新 BMI 和本地資料
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC') {
             
             // 延遲執行 BMI 更新，確保 DOM 完全更新
         setTimeout(() => {
+                if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
                 updateBMI(userKey);
+                }
                 
                 // 同步更新本地 localStorage
                 updateLocalStorageFromAPI(userKey, fieldName, newValue);
@@ -8404,7 +8400,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
         
         // 更新編輯圖標的 onclick 屬性，使其使用新的值
-        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender') {
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC') {
             updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit);
         }
 
@@ -8496,8 +8492,8 @@ function validateFieldValue(fieldName, value) {
         const weight = parseFloat(value);
         return !isNaN(weight) && weight >= 20 && weight <= 200;
     } else if (fieldName === 'CC') {
-        // 胸圍格式：數字_數字 或 純數字
-        return /^(\d+(\.\d+)?)(_\d+(\.\d+)?)?$/.test(value);
+        // 胸圍格式：數字+字母 (如 28A, 32B) 或 數字_數字 (舊格式)
+        return /^(\d+[A-G])$|^(\d+(\.\d+)?)(_\d+(\.\d+)?)?$/.test(value);
     }
     
     return true;
@@ -8940,5 +8936,808 @@ async function deleteUser(userKey) {
     } catch (error) {
         showNotification(`❌ 刪除使用者失敗: ${error.message}`, 'error');
     }
+}
+
+// 創建身高選擇器
+function createHeightSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 創建選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'height-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+    `;
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = '選擇身高';
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    // 創建身高選擇區域
+    const heightSection = document.createElement('div');
+    heightSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    const heightTitle = document.createElement('div');
+    heightTitle.textContent = '身高';
+    heightTitle.style.cssText = `
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    `;
+    heightSection.appendChild(heightTitle);
+    
+    // 創建下拉選擇器
+    const selectElement = document.createElement('select');
+    selectElement.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    
+    // 添加預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '請選擇身高';
+    selectElement.appendChild(defaultOption);
+    
+    // 生成身高選項 (145-195)
+    for (let height = 145; height <= 195; height++) {
+        const option = document.createElement('option');
+        option.value = height.toString();
+        option.textContent = `${height} cm`;
+        if (currentValue === height.toString()) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    }
+    
+    heightSection.appendChild(selectElement);
+    selectorContainer.appendChild(heightSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確認';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('身高選擇器取消按鈕被點擊');
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+    });
+    
+        // 確認按鈕事件
+    confirmBtn.addEventListener('click', async () => {
+        const selectedHeight = selectElement.value;
+        if (selectedHeight) {
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = selectedHeight;
+            
+            try {
+                await saveFieldValue(tempInput, 'HV', userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+                
+                // 關閉選擇器
+                selectorContainer.remove();
+                valueElement.style.display = 'block';
+                fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            } catch (error) {
+                console.error('保存身高失敗:', error);
+                showNotification('保存失敗，請重試', 'error');
+            }
+  } else {
+            showNotification('請選擇身高', 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 排除按鈕點擊
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            console.log('身高選擇器外部點擊，關閉選擇器');
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
+// 創建體重選擇器
+function createWeightSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 創建選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'weight-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+    `;
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = '選擇體重';
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    // 創建體重選擇區域
+    const weightSection = document.createElement('div');
+    weightSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    const weightTitle = document.createElement('div');
+    weightTitle.textContent = '體重';
+    weightTitle.style.cssText = `
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    `;
+    weightSection.appendChild(weightTitle);
+    
+    // 創建下拉選擇器
+    const selectElement = document.createElement('select');
+    selectElement.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    
+    // 添加預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '請選擇體重';
+    selectElement.appendChild(defaultOption);
+    
+    // 生成體重選項 (35-120)
+    for (let weight = 35; weight <= 120; weight++) {
+        const option = document.createElement('option');
+        option.value = weight.toString();
+        option.textContent = `${weight} kg`;
+        if (currentValue === weight.toString()) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    }
+    
+    weightSection.appendChild(selectElement);
+    selectorContainer.appendChild(weightSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確認';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('體重選擇器取消按鈕被點擊');
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+    });
+    
+    // 確認按鈕事件
+    confirmBtn.addEventListener('click', async () => {
+        const selectedWeight = selectElement.value;
+        if (selectedWeight) {
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = selectedWeight;
+            
+            try {
+                await saveFieldValue(tempInput, 'WV', userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+                
+                // 關閉選擇器
+                selectorContainer.remove();
+                valueElement.style.display = 'block';
+                fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            } catch (error) {
+                console.error('保存體重失敗:', error);
+                showNotification('保存失敗，請重試', 'error');
+            }
+        } else {
+            showNotification('請選擇體重', 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 排除按鈕點擊
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            console.log('體重選擇器外部點擊，關閉選擇器');
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
+// 創建胸圍尺寸選擇器
+function createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    console.log('createBraSizeSelector invoked. Initial currentValue:', currentValue);
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 創建胸圍選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'bra-size-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        // top: 100%;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        // margin-top: 4px;
+    `;
+    
+        // 解析當前值
+    let currentBand = '';
+    let currentCup = '';
+    let currentSystem = 'european'; // 預設歐規
+    
+    if (currentValue) {
+        // 處理格式如 "28A" 或 "28_A"
+        if (currentValue.includes('_')) {
+            const parts = currentValue.split('_');
+            if (parts.length >= 2) {
+                currentBand = parts[0];
+                currentCup = parts[1];
+            }
+  } else {
+            // 處理格式如 "28A"
+            const match = currentValue.match(/^(\d+)([A-G])$/);
+            if (match) {
+                currentBand = match[1];
+                currentCup = match[2];
+            }
+        }
+        
+        // 根據胸圍數字判斷是歐規還是日規
+        if (currentBand) {
+            const bandNum = parseInt(currentBand);
+            // 歐規範圍：28-54，日規範圍：60-125
+            if (bandNum >= 60 && bandNum <= 125) {
+                currentSystem = 'japanese';
+            } else if (bandNum >= 28 && bandNum <= 54) {
+                currentSystem = 'european';
+            }
+        }
+    }
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = '選擇胸圍尺寸';
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    
+    // 創建胸圍選擇區域
+    const bandSection = document.createElement('div');
+    bandSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    // 創建胸圍標題和切換器的容器
+    const bandHeader = document.createElement('div');
+    bandHeader.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    `;
+    
+    const bandTitle = document.createElement('div');
+    bandTitle.textContent = '胸圍';
+    bandTitle.style.cssText = `
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+    `;
+    
+    // 移動歐規/日規切換器到胸圍區域
+    const systemToggle = document.createElement('div');
+    systemToggle.style.cssText = `
+        display: flex;
+        gap: 0;
+        border: 1px solid #E5E7EB;
+        border-radius: 20px;
+        padding: 2px;
+        background: white;
+        width: fit-content;
+    `;
+    
+    const europeanBtn = document.createElement('button');
+    europeanBtn.textContent = '歐規';
+    europeanBtn.type = 'button';
+    europeanBtn.style.cssText = `
+        padding: 6px 16px;
+        border: none;
+        border-radius: 18px;
+        background: ${currentSystem === 'european' ? 'white' : 'transparent'};
+        color: ${currentSystem === 'european' ? '#374151' : '#9CA3AF'};
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        box-shadow: ${currentSystem === 'european' ? '0 0 0 1px #E5E7EB' : 'none'};
+    `;
+    
+    const japaneseBtn = document.createElement('button');
+    japaneseBtn.textContent = '日規';
+    japaneseBtn.type = 'button';
+    japaneseBtn.style.cssText = `
+        padding: 6px 16px;
+        border: none;
+        border-radius: 18px;
+        background: ${currentSystem === 'japanese' ? 'white' : 'transparent'};
+        color: ${currentSystem === 'japanese' ? '#374151' : '#9CA3AF'};
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        box-shadow: ${currentSystem === 'japanese' ? '0 0 0 1px #E5E7EB' : 'none'};
+    `;
+    
+    systemToggle.appendChild(europeanBtn);
+    systemToggle.appendChild(japaneseBtn);
+    
+    bandHeader.appendChild(bandTitle);
+    bandHeader.appendChild(systemToggle);
+    bandSection.appendChild(bandHeader);
+    
+    const bandGrid = document.createElement('div');
+    bandGrid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+    `;
+    
+    // 歐規和日規的胸圍尺寸對應
+    const bandSizes = {
+        european: [28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54],
+        japanese: [60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125]
+    };
+    
+    let selectedBand = currentBand;
+    let selectedCup = currentCup || '';
+    
+    console.log('createBraSizeSelector: selectedBand initialized to', selectedBand, 'selectedCup initialized to', selectedCup);
+    
+    function createBandButtons() {
+        console.log('createBandButtons called, selectedBand:', selectedBand);
+        bandGrid.innerHTML = '';
+        const sizes = bandSizes[currentSystem];
+        
+        sizes.forEach(size => {
+            const button = document.createElement('button');
+            button.textContent = size;
+                       button.style.cssText = `
+               width: 32px;
+               height: 32px;
+               border: 1px solid #E5E7EB;
+               border-radius: 50%;
+               background: ${selectedBand === size.toString() ? '#000000' : 'white'};
+               color: ${selectedBand === size.toString() ? 'white' : '#374151'};
+               font-size: 12px;
+               font-weight: 500;
+               cursor: pointer;
+               transition: all 0.2s ease;
+               outline: none;
+               user-select: none;
+               -webkit-user-select: none;
+               -moz-user-select: none;
+               -ms-user-select: none;
+               pointer-events: auto;
+               z-index: 10;
+               position: relative;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+           `;
+            
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectedBand = size.toString();
+                createBandButtons();
+        createCupButtons();
+            });
+            
+            // 添加 mousedown 事件作為備用
+            button.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectedBand = size.toString();
+                createBandButtons();
+        createCupButtons();
+            });
+            
+            bandGrid.appendChild(button);
+        });
+    }
+    
+    createBandButtons();
+    bandSection.appendChild(bandGrid);
+    selectorContainer.appendChild(bandSection);
+    
+    // 創建罩杯選擇區域
+    const cupSection = document.createElement('div');
+    cupSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    const cupTitle = document.createElement('div');
+    cupTitle.textContent = '罩杯';
+    cupTitle.style.cssText = `
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    `;
+    cupSection.appendChild(cupTitle);
+    
+    const cupGrid = document.createElement('div');
+    cupGrid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+    `;
+    
+    const cupSizes = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    
+    function createCupButtons() {
+        console.log('createCupButtons called, selectedCup:', selectedCup);
+        cupGrid.innerHTML = '';
+        
+        cupSizes.forEach(cup => {
+            const button = document.createElement('button');
+            button.textContent = cup;
+                       button.style.cssText = `
+               width: 32px;
+               height: 32px;
+               border: 1px solid #E5E7EB;
+               border-radius: 50%;
+               background: ${selectedCup === cup ? '#000000' : 'white'};
+               color: ${selectedCup === cup ? 'white' : '#374151'};
+               font-size: 12px;
+               font-weight: 500;
+               cursor: pointer;
+               transition: all 0.2s ease;
+               outline: none;
+               user-select: none;
+               -webkit-user-select: none;
+               -moz-user-select: none;
+               -ms-user-select: none;
+               pointer-events: auto;
+               z-index: 10;
+               position: relative;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+           `;
+            
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectedCup = cup;
+                createCupButtons();
+            });
+            
+            // 添加 mousedown 事件作為備用
+            button.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectedCup = cup;
+                createCupButtons();
+            });
+            
+            cupGrid.appendChild(button);
+        });
+    }
+    
+    createCupButtons();
+    cupSection.appendChild(cupGrid);
+    selectorContainer.appendChild(cupSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #D1D5DB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確認';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 在 selectorContainer 上添加點擊事件監聽器並阻止冒泡
+    selectorContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('Click inside selectorContainer, stopped propagation.');
+    });
+    
+    // 規格切換事件
+    europeanBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        currentSystem = 'european';
+        // 清除選中的胸圍
+        selectedBand = '';
+        // 強制更新樣式
+        europeanBtn.style.setProperty('background', 'white', 'important');
+        europeanBtn.style.setProperty('color', '#374151', 'important');
+        europeanBtn.style.setProperty('box-shadow', '0 0 0 1px #E5E7EB', 'important');
+        japaneseBtn.style.setProperty('background', 'transparent', 'important');
+        japaneseBtn.style.setProperty('color', '#9CA3AF', 'important');
+        japaneseBtn.style.setProperty('box-shadow', 'none', 'important');
+        createBandButtons();
+        createCupButtons();
+    });
+    
+    japaneseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        currentSystem = 'japanese';
+        // 清除選中的胸圍
+        selectedBand = '';
+        // 強制更新樣式
+        japaneseBtn.style.setProperty('background', 'white', 'important');
+        japaneseBtn.style.setProperty('color', '#374151', 'important');
+        japaneseBtn.style.setProperty('box-shadow', '0 0 0 1px #E5E7EB', 'important');
+        europeanBtn.style.setProperty('background', 'transparent', 'important');
+        europeanBtn.style.setProperty('color', '#9CA3AF', 'important');
+        europeanBtn.style.setProperty('box-shadow', 'none', 'important');
+        createBandButtons();
+        createCupButtons();
+    });
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', () => {
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+    });
+    
+        // 確認按鈕事件
+    confirmBtn.addEventListener('click', () => {
+        if (selectedBand && selectedCup) {
+            const newValue = `${selectedBand}${selectedCup}`;
+            
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = newValue;
+            
+            saveFieldValue(tempInput, 'CC', userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+            
+            // 關閉選擇器
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+  } else {
+            showNotification('請選擇胸圍和罩杯', 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 檢查點擊的目標是否在選擇器內部
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    // 延遲添加事件監聽器，避免立即觸發
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
 }
 
