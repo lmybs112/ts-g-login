@@ -8991,16 +8991,6 @@ function createHeightSelector(fieldContainer, valueElement, currentValue, userKe
         margin-bottom: 16px;
     `;
     
-    const heightTitle = document.createElement('div');
-    heightTitle.textContent = '身高';
-    heightTitle.style.cssText = `
-        font-size: 14px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 8px;
-    `;
-    heightSection.appendChild(heightTitle);
-    
     // 創建下拉選擇器
     const selectElement = document.createElement('select');
     selectElement.style.cssText = `
@@ -9173,16 +9163,6 @@ function createWeightSelector(fieldContainer, valueElement, currentValue, userKe
     weightSection.style.cssText = `
         margin-bottom: 16px;
     `;
-    
-    const weightTitle = document.createElement('div');
-    weightTitle.textContent = '體重';
-    weightTitle.style.cssText = `
-        font-size: 14px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 8px;
-    `;
-    weightSection.appendChild(weightTitle);
     
     // 創建下拉選擇器
     const selectElement = document.createElement('select');
@@ -9361,19 +9341,10 @@ function createChestSelector(fieldContainer, valueElement, currentValue, userKey
     const titleUnitContainer = document.createElement('div');
     titleUnitContainer.style.cssText = `
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: center;
         margin-bottom: 12px;
     `;
-    
-    const chestTitle = document.createElement('div');
-    chestTitle.textContent = fieldLabel;
-    chestTitle.style.cssText = `
-        font-size: 14px;
-        font-weight: 600;
-        color: #374151;
-    `;
-    titleUnitContainer.appendChild(chestTitle);
     
     // 創建單位切換器（參考歐規/日規樣式）
     const unitToggle = document.createElement('div');
