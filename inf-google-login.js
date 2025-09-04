@@ -654,7 +654,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             const tokenInfo = {
                 credential: credential,
                 created_at: Date.now(),
-                expires_in: 3600000 // 1 小時（毫秒）
+                expires_in: 2592000000 // 1 個月（毫秒）
             };
             localStorage.setItem('google_token_info', JSON.stringify(tokenInfo));
             
@@ -662,7 +662,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (credential && credential.startsWith('oauth2_')) {
                 const accessToken = credential.replace('oauth2_', '');
                 localStorage.setItem('google_access_token', accessToken);
-                localStorage.setItem('google_token_expires_at', (Date.now() + 3600000).toString());
+                localStorage.setItem('google_token_expires_at', (Date.now() + 2592000000).toString());
             }
 
             // 觸發 localStorage 更新事件
@@ -4735,8 +4735,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 localStorage.setItem('google_refresh_token', refreshToken);
             }
             
-            // 保存 token 過期時間（預設一小時後）
-            const expiresAt = Date.now() + (60 * 60 * 1000); // 一小時
+            // 保存 token 過期時間（預設一個月後）
+            const expiresAt = Date.now() + (30 * 24 * 60 * 60 * 1000); // 一個月
             localStorage.setItem('google_token_expires_at', expiresAt.toString());
         }
     }
@@ -7188,6 +7188,10 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
     } else if (fieldName === 'CC') {
         const unit = /^\d+[A-G]$/.test(newValue) ? '' : 'cm';
         newOnclick = `editField(this, 'CC', '${userKey}', 'body', '${newValue}', '胸圍', '${unit}')`;
+    } else if (fieldName === 'UpChest') {
+        newOnclick = `editField(this, 'UpChest', '${userKey}', 'body', '${newValue}', '上胸圍', '${unit}')`;
+    } else if (fieldName === 'DnChest') {
+        newOnclick = `editField(this, 'DnChest', '${userKey}', 'body', '${newValue}', '下胸圍', '${unit}')`;
     }
     
     if (newOnclick) {
@@ -8118,6 +8122,16 @@ function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLa
         createWeightSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
         return;
         
+    } else if (fieldName === 'UpChest') {
+        // 上胸圍欄位使用下拉選擇器
+        createChestSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit, 'up');
+        return;
+        
+    } else if (fieldName === 'DnChest') {
+        // 下胸圍欄位使用下拉選擇器
+        createChestSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit, 'down');
+        return;
+        
     } else {
         // 其他欄位使用輸入框
         inputElement = document.createElement('input');
@@ -8386,7 +8400,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }));
 
         // 如果更新的是身高、體重、性別或胸圍，則更新 BMI 和本地資料
-        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC') {
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC' || fieldName === 'UpChest' || fieldName === 'DnChest') {
             
             // 延遲執行 BMI 更新，確保 DOM 完全更新
         setTimeout(() => {
@@ -8400,7 +8414,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
         
         // 更新編輯圖標的 onclick 屬性，使其使用新的值
-        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC') {
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC' || fieldName === 'UpChest' || fieldName === 'DnChest') {
             updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit);
         }
 
@@ -9292,6 +9306,387 @@ function createWeightSelector(fieldContainer, valueElement, currentValue, userKe
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
             console.log('體重選擇器外部點擊，關閉選擇器');
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
+// 創建胸圍選擇器（上胸圍/下胸圍）
+function createChestSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit, chestType) {
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 創建選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'chest-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+    `;
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = `選擇${fieldLabel}`;
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    // 創建胸圍選擇區域
+    const chestSection = document.createElement('div');
+    chestSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    // 創建標題和單位切換器的容器
+    const titleUnitContainer = document.createElement('div');
+    titleUnitContainer.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    `;
+    
+    const chestTitle = document.createElement('div');
+    chestTitle.textContent = fieldLabel;
+    chestTitle.style.cssText = `
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+    `;
+    titleUnitContainer.appendChild(chestTitle);
+    
+    // 創建單位切換器（參考歐規/日規樣式）
+    const unitToggle = document.createElement('div');
+    unitToggle.style.cssText = `
+        display: flex;
+        gap: 0;
+        border: 1px solid #E5E7EB;
+        border-radius: 20px;
+        padding: 2px;
+        background: white;
+        width: fit-content;
+    `;
+    
+    const cmBtn = document.createElement('button');
+    cmBtn.textContent = '公分';
+    cmBtn.type = 'button';
+    cmBtn.style.cssText = `
+        padding: 6px 16px;
+        border: none;
+        border-radius: 18px;
+        background: white;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        box-shadow: 0 0 0 1px #E5E7EB;
+    `;
+    
+    const inchBtn = document.createElement('button');
+    inchBtn.textContent = '英吋';
+    inchBtn.type = 'button';
+    inchBtn.style.cssText = `
+        padding: 6px 16px;
+        border: none;
+        border-radius: 18px;
+        background: transparent;
+        color: #9CA3AF;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        box-shadow: none;
+    `;
+    
+    unitToggle.appendChild(cmBtn);
+    unitToggle.appendChild(inchBtn);
+    titleUnitContainer.appendChild(unitToggle);
+    chestSection.appendChild(titleUnitContainer);
+    
+    // 創建數值選擇器
+    const valueSection = document.createElement('div');
+    valueSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    const valueLabel = document.createElement('div');
+    valueLabel.textContent = '數值';
+    valueLabel.style.cssText = `
+        font-size: 12px;
+        font-weight: 500;
+        color: #6B7280;
+        margin-bottom: 6px;
+    `;
+    valueSection.appendChild(valueLabel);
+    
+    const selectElement = document.createElement('select');
+    selectElement.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    
+    // 當前選中的單位和數值（在創建按鈕之前定義）
+    let currentUnit = 'cm';
+    let currentValueNum = parseFloat(currentValue) || 0;
+    
+    // 如果當前值存在，判斷單位
+    if (currentValue && currentValueNum > 0) {
+        // 根據數值範圍判斷單位
+        // 公分範圍：50-120 (上胸圍), 50-110 (下胸圍)
+        // 英吋範圍：20-48 (上胸圍), 20-44 (下胸圍)
+        if (currentValueNum >= 50) {
+            currentUnit = 'cm';
+        } else if (currentValueNum >= 20) {
+            currentUnit = 'inch';
+        } else {
+            currentUnit = 'cm'; // 預設為公分
+        }
+    }
+    
+    // 添加預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = `請選擇${fieldLabel}`;
+    selectElement.appendChild(defaultOption);
+    
+    // 更新單位按鈕狀態
+    function updateUnitButtons() {
+        if (currentUnit === 'cm') {
+            cmBtn.style.background = 'white';
+            cmBtn.style.color = '#374151';
+            cmBtn.style.boxShadow = '0 0 0 1px #E5E7EB';
+            inchBtn.style.background = 'transparent';
+            inchBtn.style.color = '#9CA3AF';
+            inchBtn.style.boxShadow = 'none';
+        } else {
+            cmBtn.style.background = 'transparent';
+            cmBtn.style.color = '#9CA3AF';
+            cmBtn.style.boxShadow = 'none';
+            inchBtn.style.background = 'white';
+            inchBtn.style.color = '#374151';
+            inchBtn.style.boxShadow = '0 0 0 1px #E5E7EB';
+        }
+    }
+    
+    // 更新數值選項
+    function updateValueOptions() {
+        selectElement.innerHTML = '';
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = `請選擇${fieldLabel}`;
+        selectElement.appendChild(defaultOpt);
+        
+        // 根據胸圍類型和單位生成選項
+        let minValue, maxValue;
+        if (chestType === 'up') {
+            // 上胸圍：50~120 (cm) / 20~48 (inch)
+            minValue = currentUnit === 'cm' ? 50 : 20;
+            maxValue = currentUnit === 'cm' ? 120 : 48;
+        } else {
+            // 下胸圍：50~110 (cm) / 20~44 (inch)
+            minValue = currentUnit === 'cm' ? 50 : 20;
+            maxValue = currentUnit === 'cm' ? 110 : 44;
+        }
+        
+        // 間隔0.5
+        const step = 0.5; // 統一使用0.5間隔
+        
+        for (let value = minValue; value <= maxValue; value += step) {
+            const option = document.createElement('option');
+            const roundedValue = Math.round(value * 10) / 10; // 保留一位小數
+            option.value = roundedValue.toString();
+            option.textContent = `${roundedValue} ${currentUnit === 'cm' ? 'cm' : 'inch'}`;
+            
+            // 檢查是否為當前選中值
+            if (currentValueNum > 0) {
+                let shouldSelect = false;
+                
+                // 根據當前值的範圍判斷原始單位
+                if (currentValueNum >= 50) {
+                    // 原始值是公分
+                    if (currentUnit === 'cm') {
+                        // 當前也是公分，直接比較
+                        shouldSelect = Math.abs(roundedValue - currentValueNum) < 0.1;
+                    } else {
+                        // 當前是英吋，需要轉換公分到英吋
+                        const inchValue = currentValueNum / 2.54;
+                        shouldSelect = Math.abs(roundedValue - inchValue) < 0.1;
+                    }
+                } else if (currentValueNum >= 20) {
+                    // 原始值是英吋
+                    if (currentUnit === 'inch') {
+                        // 當前也是英吋，直接比較
+                        shouldSelect = Math.abs(roundedValue - currentValueNum) < 0.1;
+                    } else {
+                        // 當前是公分，需要轉換英吋到公分
+                        const cmValue = currentValueNum * 2.54;
+                        shouldSelect = Math.abs(roundedValue - cmValue) < 0.1;
+                    }
+                }
+                
+                if (shouldSelect) {
+                    option.selected = true;
+                }
+            }
+            
+            selectElement.appendChild(option);
+        }
+    }
+    
+    // 單位切換事件
+    cmBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        currentUnit = 'cm';
+        updateUnitButtons();
+        updateValueOptions();
+    });
+    
+    inchBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        currentUnit = 'inch';
+        updateUnitButtons();
+        updateValueOptions();
+    });
+    
+    // 初始化
+    updateUnitButtons();
+    updateValueOptions();
+    
+    valueSection.appendChild(selectElement);
+    chestSection.appendChild(valueSection);
+    selectorContainer.appendChild(chestSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確認';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log(`${fieldLabel}選擇器取消按鈕被點擊`);
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+    });
+    
+    // 確認按鈕事件
+    confirmBtn.addEventListener('click', async () => {
+        const selectedValue = selectElement.value;
+        if (selectedValue) {
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = selectedValue;
+            
+            try {
+                const actualFieldName = chestType === 'up' ? 'UpChest' : 'DnChest';
+                await saveFieldValue(tempInput, actualFieldName, userKey, dataType, fieldLabel, currentUnit === 'cm' ? 'cm' : 'inch', valueElement, fieldContainer);
+                
+                // 關閉選擇器
+                selectorContainer.remove();
+                valueElement.style.display = 'block';
+                fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            } catch (error) {
+                console.error(`保存${fieldLabel}失敗:`, error);
+                showNotification('保存失敗，請重試', 'error');
+            }
+        } else {
+            showNotification(`請選擇${fieldLabel}`, 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 排除按鈕點擊
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target) ||
+            e.target === cmBtn || e.target === inchBtn ||
+            cmBtn.contains(e.target) || inchBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            console.log(`${fieldLabel}選擇器外部點擊，關閉選擇器`);
             selectorContainer.remove();
             valueElement.style.display = 'block';
             fieldContainer.querySelector('.edit-icon').style.display = 'flex';
