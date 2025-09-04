@@ -5862,7 +5862,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const bodyData = JSON.parse(bodyIDSize);
                     
                     // 檢查關鍵資料是否存在
-                    if (bodyData.HV && bodyData.WV && bodyData.TS === "01") {
+                    if (bodyData.HV && bodyData.WV) {
                         // 顯示成功通知
                         if (typeof showNotification === 'function') {
                             showNotification('✅ 雲端資料已同步到本地', 'success');
@@ -5972,7 +5972,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 將雲端資料保存到本地 BodyID_size
                 if (targetKey === 'bodyF' || targetKey === 'bodyM') {
                     // bodyF/bodyM 整包資料都保存到 BodyID_size
-                    bodyInfo.TS = "01";
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (bodyInfo.CC === "null_null") {
                         bodyInfo.CC = "";
@@ -5987,7 +5986,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     // 其他資料源保存所有可用字段，並添加 TS
                     const localSizeData = {
                         ...bodyInfo,  // 保留所有原始字段
-                        TS: "01"      // 添加 TS 字段
                     };
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (localSizeData.CC === "null_null") {
@@ -6074,7 +6072,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 資料已更新，驗證資料完整性
                 try {
                     const parsedData = JSON.parse(currentData);
-                    if (parsedData.HV && parsedData.WV && parsedData.TS === "01") {
+                    if (parsedData.HV && parsedData.WV) {
                         // 延遲一下確保所有操作完成，然後重新整理
                         setTimeout(() => {
                             window.location.reload();
@@ -6627,7 +6625,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 同時更新本地的 BodyID_size 和 Gender_Last
                 if (genderFromUrl === 'F') {
                     // 女性：整包 bodyData 保存到 BodyID_size
-                    bodyData.TS = "01";
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (bodyData.CC === "null_null") {
                         bodyData.CC = "";
@@ -6645,7 +6642,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     localStorage.setItem('data_modified_flag', 'true');
                 } else if (genderFromUrl === 'M') {
                     // 男性：整包 bodyData 保存到 BodyID_size
-                    bodyData.TS = "01";
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (bodyData.CC === "null_null") {
                         bodyData.CC = "";
@@ -7235,13 +7231,6 @@ function ensureBodyIDSizeHasTS() {
         if (bodyIDSize) {
             const sizeData = JSON.parse(bodyIDSize);
             let needsUpdate = false;
-            
-            // 檢查並添加 TS 欄位
-            if (!sizeData.TS) {
-                sizeData.TS = "01";
-                needsUpdate = true;
-            }
-            
             // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
             if (sizeData.CC === "null_null") {
                 sizeData.CC = "";
@@ -7273,7 +7262,6 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             
             // 對於 bodyF/bodyM，整包資料保存到 BodyID_size
             if (userKey === 'bodyF' || userKey === 'bodyM') {
-                userData.TS = "01";
                 // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                 if (userData.CC === "null_null") {
                     userData.CC = "";
@@ -7299,7 +7287,6 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                     const localSizeData = {
                         HV: bodyInfo.HV,
                         WV: bodyInfo.WV,
-                        TS: "01"
                     };
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     
