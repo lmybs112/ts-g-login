@@ -427,8 +427,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     console.log(`Token 過期時間: ${new Date(expiresAtTime).toLocaleString()}`);
                     console.log(`距離過期還有: ${Math.round(timeUntilExpiry / 1000 / 60)} 分鐘`);
                     
-                    // 如果 token 將在 10 分鐘內過期，提前刷新
-                    if (timeUntilExpiry < 10 * 60 * 1000) {
+                    // 如果 token 將在 30 分鐘內過期，提前刷新
+                    if (timeUntilExpiry < 30 * 60 * 1000) {
                         console.log('Token 即將過期，開始刷新...');
                         try {
                             const newAccessToken = await this.refreshAccessToken(refreshToken);
@@ -457,8 +457,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const now = Date.now();
                     const timeUntilExpiry = (tokenInfo.created_at + tokenInfo.expires_in) - now;
                     
-                    // 如果 token 將在 10 分鐘內過期，提前刷新
-                    if (timeUntilExpiry < 10 * 60 * 1000) {
+                    // 如果 token 將在 30 分鐘內過期，提前刷新
+                    if (timeUntilExpiry < 30 * 60 * 1000) {
                         await this.refreshGoogleToken();
                         return;
                     }
@@ -664,7 +664,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             const tokenInfo = {
                 credential: credential,
                 created_at: Date.now(),
-                expires_in: 3600000 // 1 小時（毫秒）
+                expires_in: 28800000 // 8 小時（毫秒）
             };
             localStorage.setItem('google_token_info', JSON.stringify(tokenInfo));
             
@@ -672,7 +672,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             if (credential && credential.startsWith('oauth2_')) {
                 const accessToken = credential.replace('oauth2_', '');
                 localStorage.setItem('google_access_token', accessToken);
-                localStorage.setItem('google_token_expires_at', (Date.now() + 3600000).toString());
+                localStorage.setItem('google_token_expires_at', (Date.now() + 28800000).toString());
             }
 
             // 觸發 localStorage 更新事件
@@ -3604,38 +3604,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                         justify-content: space-between;
                         grid-column: 1 / -1;
                         position: relative;
-                        transition: all 0.2s ease;
-                        cursor: pointer;
                     " 
-                    class="editable-field"
-                    data-field="Gender"
-                    data-user="${userKey}"
-                    data-type="body"
-                    onclick="editField(this, 'Gender', '${userKey}', 'body', '${bodyInfo.Gender || ''}', '性別', '')"
-                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
                     >
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: #475569; font-size: 13px; font-weight: 500;">性別</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span style="color: ${genderColor}; font-size: 14px; font-weight: 600;" class="field-value">${genderValue}</span>
-                            <div class="edit-icon" style="
+                            <div style="
+                                width: 20px;
+                                height: 20px;
                                 opacity: 0;
-                                transition: all 0.2s ease;
-                                cursor: pointer;
-                                padding: 4px;
-                                border-radius: 4px;
-                                background: rgba(107, 114, 128, 0.1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
+                            "></div>
                         </div>
                     </div>
                 `;
@@ -3643,11 +3623,20 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 胸圍資料 - 始終顯示，沒有值就顯示「尚未提供」
                 let ccValue = '尚未提供';
                 if (bodyInfo.CC && bodyInfo.CC.trim() !== '') {
-                    // 如果是數字+字母格式（如28A），不顯示cm單位
+                    // 如果是數字+字母格式（如28A），保持原樣
                     if (/^\d+[A-G]$/.test(bodyInfo.CC)) {
                         ccValue = bodyInfo.CC;
+                    } else if (bodyInfo.CC.includes('_')) {
+                        // 如果是上胸圍_下胸圍格式（如66_60），格式化為統一顯示
+                        const parts = bodyInfo.CC.split('_');
+                        if (parts.length >= 2) {
+                            ccValue = `上胸圍 ${parts[0]} cm / 下胸圍 ${parts[1]} cm`;
+                        } else {
+                            ccValue = `${bodyInfo.CC} cm`;
+                        }
                     } else {
-                        ccValue = `${bodyInfo.CC} cm`;
+                        // 單一數值，格式化為上胸圍格式
+                        ccValue = `上胸圍 ${bodyInfo.CC} cm`;
                     }
                 }
                 const ccValueColor = bodyInfo.CC && bodyInfo.CC.trim() !== '' ? '#1E293B' : '#9CA3AF';
@@ -3747,103 +3736,103 @@ class InfGoogleLoginComponent extends HTMLElement {
                     </div>
                 `;
 
-                // 上胸圍資料 - 始終顯示
-                const upChestValue = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? `${bodyInfo.UpChest} cm` : '尚未提供';
-                const upChestColor = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                // 上胸圍資料 - 隱藏此欄位，因為已整合到胸圍欄位
+                // const upChestValue = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? `${bodyInfo.UpChest} cm` : '尚未提供';
+                // const upChestColor = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
-                formattedHtml += `
-                    <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        position: relative;
-                        transition: all 0.2s ease;
-                        cursor: pointer;
-                    " 
-                    class="editable-field"
-                    data-field="UpChest"
-                    data-user="${userKey}"
-                    data-type="body"
-                    onclick="editField(this, 'UpChest', '${userKey}', 'body', '${bodyInfo.UpChest || ''}', '上胸圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
-                    >
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #475569; font-size: 13px; font-weight: 500;">上胸圍</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${upChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${upChestValue}</span>
-                            <div class="edit-icon" style="
-                                opacity: 0;
-                                transition: all 0.2s ease;
-                                cursor: pointer;
-                                padding: 4px;
-                                border-radius: 4px;
-                                background: rgba(107, 114, 128, 0.1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // formattedHtml += `
+                //     <div style="
+                //         background: #F1F5F9;
+                //         border-radius: 8px;
+                //         padding: 12px;
+                //         display: flex;
+                //         align-items: center;
+                //         justify-content: space-between;
+                //         position: relative;
+                //         transition: all 0.2s ease;
+                //         cursor: pointer;
+                //     " 
+                //     class="editable-field"
+                //     data-field="UpChest"
+                //     data-user="${userKey}"
+                //     data-type="body"
+                //     onclick="editField(this, 'UpChest', '${userKey}', 'body', '${bodyInfo.UpChest || ''}', '上胸圍', 'cm')"
+                //     onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                //     onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                //     >
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: #475569; font-size: 13px; font-weight: 500;">上胸圍</span>
+                //         </div>
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: ${upChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${upChestValue}</span>
+                //             <div class="edit-icon" style="
+                //                 opacity: 0;
+                //                 transition: all 0.2s ease;
+                //                 cursor: pointer;
+                //                 padding: 4px;
+                //                 border-radius: 4px;
+                //                 background: rgba(107, 114, 128, 0.1);
+                //                 display: flex;
+                //                 align-items: center;
+                //                 justify-content: center;
+                //             ">
+                //                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                //                     <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                     <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                 </svg>
+                //             </div>
+                //         </div>
+                //     </div>
+                // `;
 
-                // 下胸圍資料 - 始終顯示
-                const dnChestValue = bodyInfo.DnChest && bodyInfo.DnChest.trim() !== '' ? `${bodyInfo.DnChest} cm` : '尚未提供';
-                const dnChestColor = bodyInfo.DnChest && bodyInfo.DnChest.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                // 下胸圍資料 - 隱藏此欄位，因為已整合到胸圍欄位
+                // const dnChestValue = bodyInfo.DnChest && bodyInfo.DnChest.trim() !== '' ? `${bodyInfo.DnChest} cm` : '尚未提供';
+                // const dnChestColor = bodyInfo.DnChest && bodyInfo.DnChest.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
-                formattedHtml += `
-                    <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        position: relative;
-                        transition: all 0.2s ease;
-                        cursor: pointer;
-                    " 
-                    class="editable-field"
-                    data-field="DnChest"
-                    data-user="${userKey}"
-                    data-type="body"
-                    onclick="editField(this, 'DnChest', '${userKey}', 'body', '${bodyInfo.DnChest || ''}', '下胸圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
-                    >
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #475569; font-size: 13px; font-weight: 500;">下胸圍</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${dnChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${dnChestValue}</span>
-                            <div class="edit-icon" style="
-                                opacity: 0;
-                                transition: all 0.2s ease;
-                                cursor: pointer;
-                                padding: 4px;
-                                border-radius: 4px;
-                                background: rgba(107, 114, 128, 0.1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // formattedHtml += `
+                //     <div style="
+                //         background: #F1F5F9;
+                //         border-radius: 8px;
+                //         padding: 12px;
+                //         display: flex;
+                //         align-items: center;
+                //         justify-content: space-between;
+                //         position: relative;
+                //         transition: all 0.2s ease;
+                //         cursor: pointer;
+                //     " 
+                //     class="editable-field"
+                //     data-field="DnChest"
+                //     data-user="${userKey}"
+                //     data-type="body"
+                //     onclick="editField(this, 'DnChest', '${userKey}', 'body', '${bodyInfo.DnChest || ''}', '下胸圍', 'cm')"
+                //     onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                //     onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                //     >
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: #475569; font-size: 13px; font-weight: 500;">下胸圍</span>
+                //         </div>
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: ${dnChestColor}; font-size: 14px; font-weight: 600;" class="field-value">${dnChestValue}</span>
+                //             <div class="edit-icon" style="
+                //                 opacity: 0;
+                //                 transition: all 0.2s ease;
+                //                 cursor: pointer;
+                //                 padding: 4px;
+                //                 border-radius: 4px;
+                //                 background: rgba(107, 114, 128, 0.1);
+                //                 display: flex;
+                //                 align-items: center;
+                //                 justify-content: center;
+                //             ">
+                //                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                //                     <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                     <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                 </svg>
+                //             </div>
+                //         </div>
+                //     </div>
+                // `;
 
                 // 腰圍資料 - 始終顯示
                 const waistValue = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? `${bodyInfo.Waist} cm` : '尚未提供';
@@ -4529,15 +4518,14 @@ class InfGoogleLoginComponent extends HTMLElement {
                 return;
             }
 
-            // 構建 OAuth2 授權 URL，請求 refresh token
+            // 構建 OAuth2 授權 URL（前端無法安全使用 refresh token，使用更長的 access token）
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
                 `client_id=${encodeURIComponent(this.clientId)}` +
                 `&redirect_uri=${encodeURIComponent(window.location.origin)}` +
-                `&response_type=code` + // 使用 code 而不是 token，這樣可以獲取 refresh token
+                `&response_type=token` + // 使用 token 直接獲取 access token
                 `&scope=${encodeURIComponent('openid email profile')}` +
                 `&state=${encodeURIComponent('google_signin')}` +
-                `&prompt=select_account` +
-                `&access_type=offline`; // 請求 refresh token
+                `&prompt=select_account`;
 
             // 在新視窗中打開授權頁面
             const authWindow = window.open(authUrl, 'google_auth',
@@ -4548,12 +4536,15 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     if (authWindow.closed) {
                         clearInterval(checkAuthResult);
-                        // 檢查 URL 中是否有 authorization code
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const code = urlParams.get('code');
-                        if (code) {
-                            // 使用 authorization code 交換 access token 和 refresh token
-                            this.exchangeCodeForTokens(code);
+                        // 檢查 URL hash 中的 access token（使用 response_type=token 時）
+                        const urlHash = window.location.hash;
+                        if (urlHash.includes('access_token=')) {
+                            const params = new URLSearchParams(urlHash.substring(1));
+                            const accessToken = params.get('access_token');
+                            if (accessToken) {
+                                // 直接使用 access token 處理登入成功
+                                this.handleAuthSuccess(accessToken);
+                            }
                         }
                     }
                 } catch (error) {
@@ -4745,8 +4736,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                 localStorage.setItem('google_refresh_token', refreshToken);
             }
             
-            // 保存 token 過期時間（預設一小時後）
-            const expiresAt = Date.now() + (60 * 60 * 1000); // 一小時
+            // 保存 token 過期時間（預設八小時後）
+            const expiresAt = Date.now() + (8 * 60 * 60 * 1000); // 八小時
             localStorage.setItem('google_token_expires_at', expiresAt.toString());
         }
     }
@@ -4762,12 +4753,12 @@ class InfGoogleLoginComponent extends HTMLElement {
             return null;
         }
 
-        // 檢查 token 是否即將過期（提前 5 分鐘刷新）
+        // 檢查 token 是否即將過期（提前 30 分鐘刷新）
         const now = Date.now();
         const expiresAtTime = parseInt(expiresAt || '0');
-        const shouldRefresh = now >= (expiresAtTime - (5 * 60 * 1000)); // 提前 5 分鐘
+        const shouldRefresh = now >= (expiresAtTime - (30 * 60 * 1000)); // 提前 30 分鐘
 
-        if (shouldRefresh && refreshToken) {
+        if (shouldRefresh && refreshToken && !this.isIncognitoMode) {
             try {
                 const newAccessToken = await this.refreshAccessToken(refreshToken);
                 return newAccessToken;
@@ -4776,6 +4767,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                 this.clearTokens();
                 return null;
             }
+        } else if (shouldRefresh && this.isIncognitoMode) {
+            // 無痕模式下直接觸發重新登入，不嘗試刷新
+            console.log('🕵️ 無痕模式 token 即將過期，觸發重新登入');
+            this.handleTokenExpiration();
+            return null;
         }
 
         return accessToken;
@@ -4784,33 +4780,16 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 access token
     async refreshAccessToken(refreshToken) {
         try {
-            console.log('嘗試刷新 access token...');
+            console.log('⚠️ 前端無法使用 client_secret 刷新 token，嘗試重新驗證...');
             
-            const response = await fetch('https://oauth2.googleapis.com/token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    client_id: this.clientId, // 使用組件的 client ID
-                    client_secret: process.env.GOOGLE_CLIENT_SECRET, // 從環境變量讀取
-                    refresh_token: refreshToken,
-                    grant_type: 'refresh_token',
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`刷新 token 失敗: ${response.status} - ${errorText}`);
-            }
-
-            const data = await response.json();
+            // 在前端環境中，我們無法使用 client_secret 來刷新 token
+            // 改為觸發重新登入流程
+            await this.handleTokenExpiration();
             
-            // 保存新的 access token
-            this.saveTokens(data.access_token, refreshToken);
-            
-            return data.access_token;
+            // 返回 null 表示刷新失敗，需要重新登入
+            return null;
         } catch (error) {
+            console.error('Token 刷新失敗，將觸發重新登入:', error);
             throw error;
         }
     }
@@ -6109,7 +6088,8 @@ class InfGoogleLoginComponent extends HTMLElement {
             const isSameData = (
                 localData.height === cloudData.height &&
                 localData.weight === cloudData.weight &&
-                localData.gender === cloudData.gender
+                localData.gender === cloudData.gender &&
+                localData.cc === cloudData.cc
             );
             
             if (isSameData) {
@@ -6390,6 +6370,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     <div>身高：${cloudData.height}</div>
                                     <div>體重：${cloudData.weight}</div>
                                     <div>性別：${cloudData.gender}</div>
+                                    <div>胸圍：${cloudData.cc}</div>
                                 </div>
                             </div>
                             
@@ -6399,6 +6380,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     <div>身高：${localData.height}</div>
                                     <div>體重：${localData.weight}</div>
                                     <div>性別：${localData.gender}</div>
+                                    <div>胸圍：${localData.cc}</div>
                                 </div>
                             </div>
                         </div>
@@ -6486,17 +6468,39 @@ class InfGoogleLoginComponent extends HTMLElement {
             const genderLast = localStorage.getItem('Gender_Last');
             
             if (!bodyIdSizeLast || !genderLast) {
-                return { height: '未設定', weight: '未設定', gender: '未設定' };
+                return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
             }
             
-                const sizeData = JSON.parse(bodyIdSizeLast);
+            const sizeData = JSON.parse(bodyIdSizeLast);
+            
+            // 處理 CC 資料格式
+            let ccValue = '未設定';
+            if (sizeData.CC && sizeData.CC.trim() !== '') {
+                // 如果是數字+字母格式（如28A），保持原樣
+                if (/^\d+[A-G]$/.test(sizeData.CC)) {
+                    ccValue = sizeData.CC;
+                } else if (sizeData.CC.includes('_')) {
+                    // 如果是上胸圍_下胸圍格式（如66_60），格式化為統一顯示
+                    const parts = sizeData.CC.split('_');
+                    if (parts.length >= 2) {
+                        ccValue = `上胸圍 ${parts[0]} cm / 下胸圍 ${parts[1]} cm`;
+                    } else {
+                        ccValue = `${sizeData.CC} cm`;
+                    }
+                } else {
+                    // 單一數值，格式化為上胸圍格式
+                    ccValue = `上胸圍 ${sizeData.CC} cm`;
+                }
+            }
+            
             return {
                 height: sizeData.HV ? `${sizeData.HV} cm` : '未設定',
                 weight: sizeData.WV ? `${sizeData.WV} kg` : '未設定',
-                gender: genderLast === 'M' ? '男性' : genderLast === 'F' ? '女性' : '未設定'
+                gender: genderLast === 'M' ? '男性' : genderLast === 'F' ? '女性' : '未設定',
+                cc: ccValue
             };
         } catch (error) {
-            return { height: '未設定', weight: '未設定', gender: '未設定' };
+            return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
         }
     }
 
@@ -6547,17 +6551,38 @@ class InfGoogleLoginComponent extends HTMLElement {
                     genderDisplay = bodyInfo.Gender === 'M' ? '男性' : bodyInfo.Gender === 'F' ? '女性' : '未設定';
                 }
                 
+                // 處理 CC 資料格式
+                let ccValue = '未設定';
+                if (bodyInfo.CC && bodyInfo.CC.trim() !== '') {
+                    // 如果是數字+字母格式（如28A），保持原樣
+                    if (/^\d+[A-G]$/.test(bodyInfo.CC)) {
+                        ccValue = bodyInfo.CC;
+                    } else if (bodyInfo.CC.includes('_')) {
+                        // 如果是上胸圍_下胸圍格式（如66_60），格式化為統一顯示
+                        const parts = bodyInfo.CC.split('_');
+                        if (parts.length >= 2) {
+                            ccValue = `上胸圍 ${parts[0]} cm / 下胸圍 ${parts[1]} cm`;
+                        } else {
+                            ccValue = `${bodyInfo.CC} cm`;
+                        }
+                    } else {
+                        // 單一數值，格式化為上胸圍格式
+                        ccValue = `上胸圍 ${bodyInfo.CC} cm`;
+                    }
+                }
+                
                 const result = {
                     height: bodyInfo.HV ? `${bodyInfo.HV} cm` : '未設定',
                     weight: bodyInfo.WV ? `${bodyInfo.WV} kg` : '未設定',
-                    gender: genderDisplay
+                    gender: genderDisplay,
+                    cc: ccValue
                 };
                 return result;
             }
             
-            return { height: '未設定', weight: '未設定', gender: '未設定' };
+            return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
         } catch (error) {
-            return { height: '未設定', weight: '未設定', gender: '未設定' };
+            return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
         }
     }
 
@@ -7250,10 +7275,18 @@ function ensureBodyIDSizeHasTS() {
 // 同步更新本地 localStorage 資料
 function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
     try {
+        console.log('updateLocalStorageFromAPI 調用:', {
+            userKey: userKey,
+            fieldName: fieldName,
+            newValue: newValue
+        });
         
         // 獲取當前 API 回應
         const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
         const bodyData = currentApiResponse.BodyData || {};
+        
+        console.log('當前 API 回應:', currentApiResponse);
+        console.log('BodyData:', bodyData);
         
         // 統一處理所有用戶類型
         const userData = bodyData[userKey];
@@ -7270,7 +7303,13 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 if (userData.Pattern_Prefer !== undefined) {
                     userData.FitP = userData.Pattern_Prefer;
                 }
+                
+                console.log('準備保存到 BodyID_size:', userData);
                 localStorage.setItem('BodyID_size', JSON.stringify(userData));
+                
+                // 驗證保存結果
+                const savedData = JSON.parse(localStorage.getItem('BodyID_size') || '{}');
+                console.log('保存後的 BodyID_size:', savedData);
                 
                 // 更新性別資料
                 if (userKey === 'bodyF') {
@@ -8056,6 +8095,26 @@ function createGoogleLoginComponents(configs = [{
 // 不自動執行，等待外層指定目標 ID
 
 // 編輯欄位功能
+// 檢測胸圍編輯模式（根據格式判斷）
+function detectChestEditMode(currentValue) {
+    if (!currentValue || currentValue.trim() === '') {
+        return false; // 空值預設使用胸圍/罩杯模式
+    }
+    
+    // 檢查是否包含下底線 (例如: "33_33")
+    if (currentValue.includes('_')) {
+        return true; // 使用上胸圍/下胸圍模式
+    }
+    
+    // 檢查是否是純數字格式 (例如: "85", "90")
+    if (/^\d+(\.\d+)?$/.test(currentValue.trim())) {
+        return true; // 使用上胸圍/下胸圍模式
+    }
+    
+    // 其他情況（如 "28A", "32B" 等）使用胸圍/罩杯模式
+    return false;
+}
+
 function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLabel, unit) {
     // 獲取欄位容器
     const fieldContainer = editIcon.closest('.editable-field');
@@ -8106,8 +8165,14 @@ function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLa
         });
         
     } else if (fieldName === 'CC') {
-        // 胸圍欄位使用特殊的選擇界面
-        createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        // 胸圍欄位根據格式判斷使用不同的編輯方式
+        if (detectChestEditMode(currentValue)) {
+            // 格式為 "33_33" 或包含下底線，使用上胸圍/下胸圍編輯器
+            createChestMeasurementSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        } else {
+            // 格式為 "28A" 或空值，使用胸圍/罩杯編輯器
+            createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        }
         return;
         
     } else if (fieldName === 'HV') {
@@ -8315,9 +8380,44 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
     }
     
+    // 胸圍測量的特殊處理：從顯示文字提取實際值進行比較
+    if (fieldName === 'CC') {
+        console.log('CC 欄位比較:', {
+            originalText: valueElement.textContent,
+            originalValue: originalValue,
+            newValue: newValue
+        });
+        
+        // 如果原始文字包含 "上胸圍" 和 "下胸圍"，提取數值
+        const originalText = valueElement.textContent;
+        if (originalText.includes('上胸圍') && originalText.includes('下胸圍')) {
+            // 提取 "上胸圍 66 cm / 下胸圍 60 cm" 中的數值
+            const matches = originalText.match(/上胸圍\s+(\d+(?:\.\d+)?)\s+\w+\s*\/\s*下胸圍\s+(\d+(?:\.\d+)?)\s+\w+/);
+            if (matches && matches.length >= 3) {
+                originalValue = `${matches[1]}_${matches[2]}`;
+            }
+        } else if (originalText.includes('胸圍')) {
+            // 提取 "胸圍 66 cm" 中的數值
+            const match = originalText.match(/胸圍\s+(\d+(?:\.\d+)?)\s+\w+/);
+            if (match && match[1]) {
+                originalValue = match[1];
+            }
+        }
+        
+        console.log('CC 欄位提取後的值:', {
+            originalValue: originalValue,
+            newValue: newValue
+        });
+    }
     
     // 如果值沒有改變，直接取消編輯
     if (newValue === originalValue || (newValue === '' && originalValue === '')) {
+        console.log('值沒有改變，取消編輯');
+        // 對於胸圍測量選擇器，不調用 cancelEdit，因為它有自己的 UI 邏輯
+        if (fieldName === 'CC' && input.value !== undefined && !input.parentNode) {
+            console.log('胸圍測量值沒有改變，直接返回');
+            return;
+        }
         cancelEdit(input, valueElement);
         return;
     }
@@ -8437,9 +8537,22 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
         
         // 恢復顯示
-        cancelEdit(input, valueElement);
+        // 對於胸圍測量選擇器，不調用 cancelEdit，因為它有自己的 UI 邏輯
+        if (fieldName === 'CC' && input.value !== undefined && !input.parentNode) {
+            console.log('胸圍測量成功，跳過 cancelEdit');
+        } else {
+            cancelEdit(input, valueElement);
+        }
         
     } catch (error) {
+        console.error('saveFieldValue 捕獲到錯誤:', {
+            error: error,
+            message: error.message,
+            stack: error.stack,
+            fieldName: fieldName,
+            newValue: newValue,
+            fieldLabel: fieldLabel
+        });
         
         // 檢查是否為憑證問題
         if (error.message.includes('401') || error.message.includes('憑證') || error.message.includes('認證')) {
@@ -9726,17 +9839,63 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
         }
     }
     
-    // 創建標題
+    // 創建標題區域（包含標題和切換按鈕）
+    const titleContainer = document.createElement('div');
+    titleContainer.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    `;
+    
     const title = document.createElement('div');
     title.textContent = '選擇胸圍尺寸';
     title.style.cssText = `
         font-size: 16px;
         font-weight: 600;
         color: #1E293B;
-        margin-bottom: 16px;
+        flex: 1;
         text-align: center;
     `;
-    selectorContainer.appendChild(title);
+    
+    // 創建切換模式按鈕
+    const toggleModeBtn = document.createElement('div');
+    toggleModeBtn.style.cssText = `
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 6px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    `;
+    toggleModeBtn.title = '切換到上胸圍/下胸圍編輯模式';
+    toggleModeBtn.innerHTML = `
+        <img src="data:image/png;base64,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" width="16" height="16" alt="+">
+    `;
+    
+    // 切換按鈕事件
+    toggleModeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // 移除當前選擇器
+        valueElement.style.display = '';
+        selectorContainer.remove();
+        // 切換到上胸圍/下胸圍模式
+        createChestMeasurementSelector(fieldContainer, valueElement, '', userKey, dataType, fieldLabel, 'cm');
+    });
+    
+    toggleModeBtn.addEventListener('mouseenter', () => {
+        toggleModeBtn.style.background = 'transparent';
+    });
+    
+    toggleModeBtn.addEventListener('mouseleave', () => {
+        toggleModeBtn.style.background = 'transparent';
+    });
+    
+    titleContainer.appendChild(title);
+    titleContainer.appendChild(toggleModeBtn);
+    selectorContainer.appendChild(titleContainer);
     
     
     // 創建胸圍選擇區域
@@ -10104,4 +10263,562 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
         document.addEventListener('click', clickOutsideHandler);
     }, 200);
 }
+
+// 創建胸圍測量選擇器（上胸圍/下胸圍模式）
+function createChestMeasurementSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    console.log('createChestMeasurementSelector invoked. Initial currentValue:', currentValue);
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 解析當前值
+    let currentUpChest = '';
+    let currentDownChest = '';
+    
+    if (currentValue) {
+        if (currentValue.includes('_')) {
+            const parts = currentValue.split('_');
+            if (parts.length >= 2) {
+                currentUpChest = parts[0];
+                currentDownChest = parts[1];
+            }
+        } else if (/^\d+(\.\d+)?$/.test(currentValue.trim())) {
+            // 如果是純數字，同時設定為上胸圍和下胸圍
+            currentUpChest = currentValue.trim();
+            currentDownChest = currentValue.trim();
+        }
+    }
+    
+    // 創建胸圍測量選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'chest-measurement-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+    `;
+    
+    // 創建標題區域（包含標題和切換按鈕）
+    const titleContainer = document.createElement('div');
+    titleContainer.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    `;
+    
+    const titleElement = document.createElement('div');
+    titleElement.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        flex: 1;
+        text-align: center;
+    `;
+    titleElement.textContent = '胸圍測量';
+    
+    // 創建切換模式按鈕
+    const toggleModeBtn = document.createElement('div');
+    toggleModeBtn.style.cssText = `
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 6px;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    `;
+    toggleModeBtn.title = '切換到胸圍/罩杯編輯模式';
+    toggleModeBtn.innerHTML = `
+        <img src="data:image/png;base64,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" width="16" height="16" alt="+">
+    `;
+    
+    // 切換按鈕事件
+    toggleModeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // 移除當前選擇器
+        valueElement.style.display = '';
+        selectorContainer.remove();
+        // 切換到胸圍/罩杯模式
+        createBraSizeSelector(fieldContainer, valueElement, '', userKey, dataType, fieldLabel, '');
+    });
+    
+    toggleModeBtn.addEventListener('mouseenter', () => {
+        toggleModeBtn.style.background = 'transparent';
+    });
+    
+    toggleModeBtn.addEventListener('mouseleave', () => {
+        toggleModeBtn.style.background = 'transparent';
+    });
+    
+    titleContainer.appendChild(titleElement);
+    titleContainer.appendChild(toggleModeBtn);
+    selectorContainer.appendChild(titleContainer);
+    
+    // 當前選中的單位 - 從 localStorage 讀取上次的選擇，預設為 cm
+    let currentUnit = localStorage.getItem('chest_measurement_unit') || 'cm';
+    
+    // 創建單位切換器
+    const unitToggle = document.createElement('div');
+    unitToggle.style.cssText = `
+        display: flex;
+        gap: 0;
+        border: 1px solid #E5E7EB;
+        border-radius: 20px;
+        padding: 2px;
+        background: white;
+        width: fit-content;
+    `;
+    
+    const cmBtn = document.createElement('button');
+    cmBtn.textContent = '公分';
+    cmBtn.type = 'button';
+    cmBtn.style.cssText = `
+        padding: 6px 16px;
+        border: none;
+        border-radius: 18px;
+        background: ${currentUnit === 'cm' ? 'white' : 'transparent'};
+        color: ${currentUnit === 'cm' ? '#374151' : '#9CA3AF'};
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        box-shadow: ${currentUnit === 'cm' ? '0 0 0 1px #E5E7EB' : 'none'};
+    `;
+    
+    const inchBtn = document.createElement('button');
+    inchBtn.textContent = '英吋';
+    inchBtn.type = 'button';
+    inchBtn.style.cssText = `
+        padding: 6px 16px;
+        border: none;
+        border-radius: 18px;
+        background: ${currentUnit === 'inch' ? 'white' : 'transparent'};
+        color: ${currentUnit === 'inch' ? '#374151' : '#9CA3AF'};
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        box-shadow: ${currentUnit === 'inch' ? '0 0 0 1px #E5E7EB' : 'none'};
+    `;
+    
+    unitToggle.appendChild(cmBtn);
+    unitToggle.appendChild(inchBtn);
+    
+    // 創建上胸圍選擇區域
+    const upChestSection = document.createElement('div');
+    upChestSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    // 創建上胸圍標籤和單位切換器的容器（同一行）
+    const upChestLabelContainer = document.createElement('div');
+    upChestLabelContainer.style.cssText = `
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    `;
+    
+    const upChestLabel = document.createElement('div');
+    upChestLabel.style.cssText = `
+        font-size: 14px;
+        font-weight: 500;
+        color: #475569;
+    `;
+    upChestLabel.textContent = '上胸圍';
+    
+    upChestLabelContainer.appendChild(upChestLabel);
+    upChestLabelContainer.appendChild(unitToggle);
+    upChestSection.appendChild(upChestLabelContainer);
+    
+    const upChestSelect = document.createElement('select');
+    upChestSelect.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    upChestSection.appendChild(upChestSelect);
+    selectorContainer.appendChild(upChestSection);
+    
+    // 創建下胸圍選擇區域
+    const downChestSection = document.createElement('div');
+    downChestSection.style.cssText = `
+        margin-bottom: 20px;
+    `;
+    
+    const downChestLabel = document.createElement('div');
+    downChestLabel.style.cssText = `
+        font-size: 14px;
+        font-weight: 500;
+        color: #475569;
+        margin-bottom: 8px;
+    `;
+    downChestLabel.textContent = '下胸圍';
+    downChestSection.appendChild(downChestLabel);
+    
+    const downChestSelect = document.createElement('select');
+    downChestSelect.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    downChestSection.appendChild(downChestSelect);
+    selectorContainer.appendChild(downChestSection);
+    
+    // 創建按鈕區域
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    // 取消按鈕
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E2E8F0;
+        border-radius: 6px;
+        background: white;
+        color: #64748B;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    cancelBtn.addEventListener('mouseenter', () => {
+        cancelBtn.style.backgroundColor = '#F8FAFC';
+        cancelBtn.style.borderColor = '#CBD5E1';
+    });
+    cancelBtn.addEventListener('mouseleave', () => {
+        cancelBtn.style.backgroundColor = 'white';
+        cancelBtn.style.borderColor = '#E2E8F0';
+    });
+    
+    // 確認按鈕
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確認';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    confirmBtn.addEventListener('mouseenter', () => {
+        confirmBtn.style.backgroundColor = '#333333';
+    });
+    confirmBtn.addEventListener('mouseleave', () => {
+        confirmBtn.style.backgroundColor = '#000000';
+    });
+    
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonContainer);
+    
+    // 單位轉換函數
+    function cmToInch(cm) {
+        return Math.round(cm / 2.54 * 10) / 10;
+    }
+    
+    function inchToCm(inch) {
+        return Math.round(inch * 2.54 * 10) / 10;
+    }
+    
+    // 填充選項函數
+    function populateSelects(unit) {
+        upChestSelect.innerHTML = '';
+        downChestSelect.innerHTML = '';
+        
+        // 添加空選項
+        const upEmptyOption = document.createElement('option');
+        upEmptyOption.value = '';
+        upEmptyOption.textContent = '請選擇上胸圍';
+        upChestSelect.appendChild(upEmptyOption);
+        
+        const downEmptyOption = document.createElement('option');
+        downEmptyOption.value = '';
+        downEmptyOption.textContent = '請選擇下胸圍';
+        downChestSelect.appendChild(downEmptyOption);
+        
+        if (unit === 'cm') {
+            // 公分選項：上胸圍 65-120，下胸圍 60-110
+            for (let i = 65; i <= 120; i += 0.5) {
+                const option = document.createElement('option');
+                option.value = i.toString();
+                option.textContent = `${i} cm`;
+                upChestSelect.appendChild(option);
+            }
+            
+            for (let i = 60; i <= 110; i += 0.5) {
+                const option = document.createElement('option');
+                option.value = i.toString();
+                option.textContent = `${i} cm`;
+                downChestSelect.appendChild(option);
+            }
+        } else {
+            // 英吋選項：上胸圍 26-48，下胸圍 24-44
+            for (let i = 26; i <= 48; i += 0.5) {
+                const option = document.createElement('option');
+                option.value = inchToCm(i).toString();
+                option.textContent = `${i} inch`;
+                upChestSelect.appendChild(option);
+            }
+            
+            for (let i = 24; i <= 44; i += 0.5) {
+                const option = document.createElement('option');
+                option.value = inchToCm(i).toString();
+                option.textContent = `${i} inch`;
+                downChestSelect.appendChild(option);
+            }
+        }
+        
+        // 設置當前值 - 只在相同單位時設置
+        if (currentUpChest && currentUnit === unit) {
+            upChestSelect.value = currentUpChest;
+        }
+        if (currentDownChest && currentUnit === unit) {
+            downChestSelect.value = currentDownChest;
+        }
+    }
+    
+    // 單位切換事件
+    cmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentUnit !== 'cm') {
+            currentUnit = 'cm';
+            // 保存單位選擇到 localStorage
+            localStorage.setItem('chest_measurement_unit', 'cm');
+            
+            // 更新按鈕樣式 - 使用和歐規/日規一樣的樣式更新方式
+            cmBtn.style.background = 'white';
+            cmBtn.style.color = '#374151';
+            cmBtn.style.boxShadow = '0 0 0 1px #E5E7EB';
+            
+            inchBtn.style.background = 'transparent';
+            inchBtn.style.color = '#9CA3AF';
+            inchBtn.style.boxShadow = 'none';
+            
+            populateSelects('cm');
+            // 切換單位時清空選擇器
+            upChestSelect.value = '';
+            downChestSelect.value = '';
+        }
+    });
+    
+    inchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentUnit !== 'inch') {
+            currentUnit = 'inch';
+            // 保存單位選擇到 localStorage
+            localStorage.setItem('chest_measurement_unit', 'inch');
+            
+            // 更新按鈕樣式 - 使用和歐規/日規一樣的樣式更新方式
+            inchBtn.style.background = 'white';
+            inchBtn.style.color = '#374151';
+            inchBtn.style.boxShadow = '0 0 0 1px #E5E7EB';
+            
+            cmBtn.style.background = 'transparent';
+            cmBtn.style.color = '#9CA3AF';
+            cmBtn.style.boxShadow = 'none';
+            
+            populateSelects('inch');
+            // 切換單位時清空選擇器
+            upChestSelect.value = '';
+            downChestSelect.value = '';
+        }
+    });
+    
+    // 根據記憶的單位初始化選項和按鈕狀態
+    populateSelects(currentUnit);
+    
+    // 根據 currentUnit 設置初始按鈕狀態
+    if (currentUnit === 'inch') {
+        inchBtn.style.background = 'white';
+        inchBtn.style.color = '#374151';
+        inchBtn.style.boxShadow = '0 0 0 1px #E5E7EB';
+        
+        cmBtn.style.background = 'transparent';
+        cmBtn.style.color = '#9CA3AF';
+        cmBtn.style.boxShadow = 'none';
+    } else {
+        cmBtn.style.background = 'white';
+        cmBtn.style.color = '#374151';
+        cmBtn.style.boxShadow = '0 0 0 1px #E5E7EB';
+        
+        inchBtn.style.background = 'transparent';
+        inchBtn.style.color = '#9CA3AF';
+        inchBtn.style.boxShadow = 'none';
+    }
+    
+    // 將選擇器添加到欄位容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        valueElement.style.display = '';
+        selectorContainer.remove();
+    });
+    
+    // 確認按鈕事件
+    confirmBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        
+        const upValue = upChestSelect.value.trim();
+        const downValue = downChestSelect.value.trim();
+        
+        let newValue = '';
+        if (upValue && downValue) {
+            // 兩個值都有，使用下底線格式
+            newValue = `${upValue}_${downValue}`;
+        } else if (upValue && !downValue) {
+            // 只有上胸圍，使用上胸圍值
+            newValue = upValue;
+        } else if (!upValue && downValue) {
+            // 只有下胸圍，使用下胸圍值
+            newValue = downValue;
+        }
+        
+        // 創建模擬的 input 對象用於 saveFieldValue
+        const mockInput = {
+            value: newValue || '',
+            style: {
+                borderColor: '',
+                boxShadow: ''
+            },
+            focus: () => {},
+            parentNode: null
+        };
+        
+        console.log('胸圍測量確認，準備保存:', {
+            newValue: newValue,
+            userKey: userKey,
+            dataType: dataType,
+            fieldLabel: fieldLabel
+        });
+        
+        // 檢查憑證和用戶信息
+        const credential = localStorage.getItem('google_auth_credential');
+        const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
+        console.log('檢查認證狀態:', {
+            hasCredential: !!credential,
+            userSub: userInfo.sub,
+            userEmail: userInfo.email
+        });
+        
+        // 保存值 - 等待 API 調用完成
+        try {
+            console.log('開始調用 saveFieldValue API...');
+            await saveFieldValue(mockInput, 'CC', userKey, dataType, fieldLabel, '', valueElement, fieldContainer);
+            console.log('API 調用成功，胸圍測量保存成功:', newValue);
+            
+            // API 成功後更新顯示
+            let displayValue = '';
+            if (newValue) {
+                if (newValue.includes('_')) {
+                    const parts = newValue.split('_');
+                    const unit = currentUnit === 'cm' ? 'cm' : 'inch';
+                    displayValue = `上胸圍 ${parts[0]} ${unit} / 下胸圍 ${parts[1]} ${unit}`;
+                } else {
+                    const unit = currentUnit === 'cm' ? 'cm' : 'inch';
+                    displayValue = `${newValue} ${unit}`;
+                }
+            } else {
+                displayValue = '尚未提供';
+            }
+            
+            valueElement.textContent = displayValue;
+            valueElement.style.display = '';
+            selectorContainer.remove();
+            
+            // 移除事件監聽器
+            document.removeEventListener('click', clickOutsideHandler);
+            
+        } catch (error) {
+            console.error('API 調用失敗，保存胸圍測量數據時發生錯誤:', error);
+            
+            // API 失敗時也要更新顯示和關閉選擇器
+            let displayValue = '';
+            if (newValue) {
+                if (newValue.includes('_')) {
+                    const parts = newValue.split('_');
+                    const unit = currentUnit === 'cm' ? 'cm' : 'inch';
+                    displayValue = `上胸圍 ${parts[0]} ${unit} / 下胸圍 ${parts[1]} ${unit}`;
+                } else {
+                    const unit = currentUnit === 'cm' ? 'cm' : 'inch';
+                    displayValue = `${newValue} ${unit}`;
+                }
+            } else {
+                displayValue = '尚未提供';
+            }
+            
+            valueElement.textContent = displayValue;
+            valueElement.style.display = '';
+            selectorContainer.remove();
+            
+            // 移除事件監聽器
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target) ||
+            e.target === cmBtn || e.target === inchBtn ||
+            cmBtn.contains(e.target) || inchBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target)) {
+            valueElement.style.display = '';
+            selectorContainer.remove();
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    // 延遲添加點擊外部監聽器，避免立即觸發
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
 
