@@ -41,7 +41,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
         // 檢查是否為無痕瀏覽器
         this.isIncognitoMode = this.detectIncognitoMode();
-        
+
         // 避免重複監聽的標誌
         this.gapiSignInListenerAdded = false;
 
@@ -552,13 +552,24 @@ class InfGoogleLoginComponent extends HTMLElement {
             return;
         }
 
-        // 首先檢查是否有 JWT 憑證（Google One Tap）
+        // 首先檢查是否有 JWT 憑證（Google One Tap）- 支援延長有效期
         const jwtCredential = localStorage.getItem('google_auth_credential');
         
         if (jwtCredential) {
+            // 檢查 JWT 是否在延長的有效期內
+            const extendedExpiry = localStorage.getItem('google_jwt_extended_expiry');
+            const now = Date.now();
+            
+            if (extendedExpiry && now < parseInt(extendedExpiry)) {
+                console.log('✅ JWT 在延長有效期內，繼續使用');
             this.credential = jwtCredential;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
+
+                // 重新啟動過期檢查
+                if (this.scheduleJWTExpiryCheck) {
+                    this.scheduleJWTExpiryCheck();
+                }
 
             if (shouldRefreshApi) {
                 // 只在頁面刷新時重新取得最新的個人資料
@@ -569,6 +580,51 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 頁面載入時不觸發數據同步，只有首次登入時才觸發
             }
             return;
+            } else if (extendedExpiry && now >= parseInt(extendedExpiry)) {
+                console.warn('⚠️ JWT 延長有效期已過，清除憑證');
+                this.clearCredential();
+                localStorage.removeItem('google_jwt_extended_expiry');
+                localStorage.removeItem('google_jwt_credential');
+            } else {
+                // 沒有延長有效期設定，檢查原始 JWT 是否仍有效
+                const payload = this.parseCredential(jwtCredential);
+                if (payload && payload.exp) {
+                    const jwtExpiry = payload.exp * 1000;
+                    if (now < jwtExpiry) {
+                        console.log('✅ JWT 原始有效期內，設定延長機制');
+                        this.credential = jwtCredential;
+                        this.isAuthenticated = true;
+                        this.getUserInfo();
+                        
+                        // 設定延長有效期
+                        if (this.saveJWTTokenWithExtendedExpiry) {
+                            this.saveJWTTokenWithExtendedExpiry(jwtCredential, payload);
+                        }
+                        
+                        if (shouldRefreshApi) {
+                            this.refreshApiData();
+                        } else {
+                            const cachedApiResponse = this.getApiResponse();
+                        }
+                        return;
+                    } else {
+                        console.warn('⚠️ JWT 已過期，清除憑證');
+                        this.clearCredential();
+                    }
+                } else {
+                    // 無法解析 JWT，回退到原有邏輯
+                    this.credential = jwtCredential;
+                    this.isAuthenticated = true;
+                    this.getUserInfo();
+
+                    if (shouldRefreshApi) {
+                        this.refreshApiData();
+                    } else {
+                        const cachedApiResponse = this.getApiResponse();
+                    }
+                    return;
+                }
+            }
         }
         
         // 如果沒有 JWT 憑證，檢查是否有有效的 access token（OAuth2）
@@ -1389,13 +1445,24 @@ class InfGoogleLoginComponent extends HTMLElement {
             return;
         }
 
-        // 首先檢查是否有 JWT 憑證（Google One Tap）
+        // 首先檢查是否有 JWT 憑證（Google One Tap）- 支援延長有效期
         const jwtCredential = localStorage.getItem('google_auth_credential');
         
         if (jwtCredential) {
+            // 檢查 JWT 是否在延長的有效期內
+            const extendedExpiry = localStorage.getItem('google_jwt_extended_expiry');
+            const now = Date.now();
+            
+            if (extendedExpiry && now < parseInt(extendedExpiry)) {
+                console.log('✅ JWT 在延長有效期內，繼續使用');
             this.credential = jwtCredential;
             this.isAuthenticated = true;
             this.getUserInfo(); // 載入用戶資訊
+
+                // 重新啟動過期檢查
+                if (this.scheduleJWTExpiryCheck) {
+                    this.scheduleJWTExpiryCheck();
+                }
 
             if (shouldRefreshApi) {
                 // 只在頁面刷新時重新取得最新的個人資料
@@ -1406,6 +1473,51 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 頁面載入時不觸發數據同步，只有首次登入時才觸發
             }
             return;
+            } else if (extendedExpiry && now >= parseInt(extendedExpiry)) {
+                console.warn('⚠️ JWT 延長有效期已過，清除憑證');
+                this.clearCredential();
+                localStorage.removeItem('google_jwt_extended_expiry');
+                localStorage.removeItem('google_jwt_credential');
+            } else {
+                // 沒有延長有效期設定，檢查原始 JWT 是否仍有效
+                const payload = this.parseCredential(jwtCredential);
+                if (payload && payload.exp) {
+                    const jwtExpiry = payload.exp * 1000;
+                    if (now < jwtExpiry) {
+                        console.log('✅ JWT 原始有效期內，設定延長機制');
+                        this.credential = jwtCredential;
+                        this.isAuthenticated = true;
+                        this.getUserInfo();
+                        
+                        // 設定延長有效期
+                        if (this.saveJWTTokenWithExtendedExpiry) {
+                            this.saveJWTTokenWithExtendedExpiry(jwtCredential, payload);
+                        }
+                        
+                        if (shouldRefreshApi) {
+                            this.refreshApiData();
+                        } else {
+                            const cachedApiResponse = this.getApiResponse();
+                        }
+                        return;
+                    } else {
+                        console.warn('⚠️ JWT 已過期，清除憑證');
+                        this.clearCredential();
+                    }
+                } else {
+                    // 無法解析 JWT，回退到原有邏輯
+                    this.credential = jwtCredential;
+                    this.isAuthenticated = true;
+                    this.getUserInfo();
+
+                    if (shouldRefreshApi) {
+                        this.refreshApiData();
+                    } else {
+                        const cachedApiResponse = this.getApiResponse();
+                    }
+                    return;
+                }
+            }
         }
         
         // 如果沒有 JWT 憑證，檢查是否有有效的 access token（OAuth2）
@@ -5613,17 +5725,30 @@ class InfGoogleLoginComponent extends HTMLElement {
         `;
     }
 
-    // 載入 Google API Client Library (gapi) - 支援自動 token 刷新
+    // 載入 Google 服務 - 優先使用 GIS，回退使用 gapi.auth2
     async loadGoogleIdentityServices() {
+        try {
+            console.log('🚀 開始載入 Google 認證服務...');
+            
+            // 優先嘗試載入 Google Identity Services (GIS)
+            await this.loadGoogleIdentityServicesGIS();
+
+        } catch (error) {
+            console.warn('⚠️ GIS 載入失敗，嘗試回退到 gapi.auth2:', error);
+            this.loadGapiAuth2Fallback();
+        }
+    }
+
+    // 載入 gapi.auth2 作為回退方案
+    async loadGapiAuth2Fallback() {
         try {
             // 檢查是否已經載入 gapi 和 auth2
             if (window.gapi && window.gapi.auth2) {
                 console.log('🔄 gapi 已載入，直接初始化 auth2...');
                 this.isGoogleLoaded = true;
                 this.onGoogleLoaded();
-                // 確保在 Google 服務載入後再次檢查登入狀態
-                this.checkStoredCredential(false); // 只同步狀態，不刷新 API
-                this.updateAvatar(); // 更新頭像狀態
+                this.checkStoredCredential(false);
+                this.updateAvatar();
                 return;
             }
 
@@ -5638,7 +5763,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
             // 載入 Google API Client Library
-            console.log('📦 開始載入 Google API Client Library...');
+            console.log('📦 載入 Google API Client Library 作為回退方案...');
             const script = document.createElement('script');
             script.src = 'https://apis.google.com/js/api.js';
             script.async = true;
@@ -5650,15 +5775,15 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             script.onerror = () => {
                 this.isGoogleLoaded = false;
-                this.updateAvatar(); // 更新頭像狀態（隱藏頭像）
-                this.handleLoginFailure('無法載入 Google Identity Services');
+                this.updateAvatar();
+                this.handleLoginFailure('無法載入任何 Google 認證服務');
             };
 
             document.head.appendChild(script);
 
         } catch (error) {
             this.isGoogleLoaded = false;
-            this.updateAvatar(); // 更新頭像狀態（隱藏頭像）
+            this.updateAvatar();
             this.handleLoginFailure('載入 Google 服務時發生錯誤: ' + error.message);
         }
     }
@@ -5799,44 +5924,95 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
-    // 回退載入 Google Identity Services（用於本地開發環境）
+    // 載入 Google Identity Services (GIS) - 新的推薦方式
     async loadGoogleIdentityServicesGIS() {
-        try {
-            console.log('🔄 載入 Google Identity Services 作為回退方案...');
-            
-            // 載入 GIS script
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
+        return new Promise((resolve, reject) => {
+            try {
+                // 檢查是否已載入 GIS
+                if (window.google && window.google.accounts && window.google.accounts.id) {
+                    console.log('✅ GIS 已載入，直接初始化...');
+                    this.initializeGIS();
+                    resolve();
+                    return;
+                }
 
-            script.onload = () => {
-                console.log('✅ Google Identity Services 載入成功');
-                
-                // 初始化 GIS
-                if (window.google && window.google.accounts) {
-                    const config = {
-                        client_id: this.clientId,
-                        callback: this.handleCredentialResponse,
-                        auto_select: false,
-                        cancel_on_tap_outside: false
-                    };
+                // 檢查是否已有 GIS script 在載入中
+                const existingScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+                if (existingScript) {
+                    console.log('⏳ GIS script 已在載入中，等待完成...');
+                    existingScript.addEventListener('load', () => {
+                        this.initializeGIS();
+                        resolve();
+                    });
+                    existingScript.addEventListener('error', reject);
+                    return;
+                }
+
+                console.log('📦 載入 Google Identity Services (推薦方式)...');
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.async = true;
+                script.defer = true;
+
+                script.onload = () => {
+                    console.log('✅ Google Identity Services 載入成功');
+                    this.initializeGIS();
+                    resolve();
+                };
+
+                script.onerror = () => {
+                    console.error('❌ 無法載入 Google Identity Services');
+                    reject(new Error('GIS 載入失敗'));
+                };
+
+                document.head.appendChild(script);
+
+            } catch (error) {
+                console.error('❌ GIS 載入過程發生錯誤:', error);
+                reject(error);
+            }
+        });
+    }
+
+    // 初始化 GIS 配置
+    initializeGIS() {
+        if (!window.google || !window.google.accounts || !this.clientId) {
+            console.error('❌ GIS 或 clientId 不可用');
+            return;
+        }
+
+        try {
+            console.log('🔧 初始化 Google Identity Services...');
+            
+            const config = {
+                client_id: this.clientId,
+                callback: this.handleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: false,
+                // 新增配置以支援更長的 token 有效期
+                context: 'signin',
+                ux_mode: 'popup',
+                state_cookie_domain: window.location.hostname
+            };
+
+            // 無痕模式特殊配置
+            if (this.isIncognitoMode) {
+                config.auto_select = false;
+                config.auto_prompt = false;
+            }
 
             window.google.accounts.id.initialize(config);
-                    console.log('✅ GIS 初始化完成（回退模式）');
-                }
-            };
 
-            script.onerror = () => {
-                console.error('❌ 無法載入 Google Identity Services');
-                this.handleLoginFailure('無法載入 Google 登入服務');
-            };
-
-            document.head.appendChild(script);
+            this.isGoogleLoaded = true;
+            console.log('✅ GIS 初始化完成');
+            
+            // 檢查登入狀態
+            this.checkStoredCredential(false);
+            this.updateAvatar();
 
         } catch (error) {
-            console.error('❌ GIS 回退載入失敗:', error);
-            this.handleLoginFailure('Google 服務載入失敗');
+            console.error('❌ GIS 初始化失敗:', error);
+            throw error;
         }
     }
 
@@ -5905,14 +6081,20 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         try {
+            console.log('🎉 GIS 登入成功，處理憑證...');
+            
             // 解析 Google 憑證獲取用戶資訊
             const payload = this.parseCredential(response.credential);
             if (payload) {
                 this.saveUserInfo(payload);
+                console.log('👤 用戶資訊已保存:', payload.name);
             }
 
-            // 保存憑證
+            // 保存憑證並設定延長有效期
             this.saveCredential(response.credential);
+            
+            // 為 GIS JWT token 設定延長的有效期（8小時）
+            this.saveJWTTokenWithExtendedExpiry(response.credential, payload);
 
             // 調用 infFITS API
             const apiResponse = await this.callInfFitsAPI(response.credential);
@@ -5952,6 +6134,94 @@ class InfGoogleLoginComponent extends HTMLElement {
         } catch (error) {
             this.handleLoginFailure('處理登入回調失敗: ' + error.message);
         }
+    }
+
+    // 為 GIS JWT token 設定延長的有效期
+    saveJWTTokenWithExtendedExpiry(credential, payload) {
+        try {
+            if (!credential || !payload) {
+                return;
+            }
+
+            console.log('⏰ 設定 JWT token 延長有效期...');
+            
+            // 解析 JWT token 的過期時間
+            const currentExp = payload.exp ? payload.exp * 1000 : null;
+            
+            if (currentExp) {
+                const now = Date.now();
+                const timeUntilExpiry = currentExp - now;
+                console.log(`📅 JWT 原始過期時間: ${new Date(currentExp).toLocaleString()}`);
+                console.log(`⏳ 還有 ${Math.round(timeUntilExpiry / (1000 * 60))} 分鐘過期`);
+            }
+
+            // 設定本地存儲的延長過期時間（8小時）
+            const extendedExpiry = Date.now() + (8 * 60 * 60 * 1000);
+            localStorage.setItem('google_jwt_extended_expiry', extendedExpiry.toString());
+            localStorage.setItem('google_jwt_credential', credential);
+            
+            console.log(`✅ JWT token 本地有效期延長至: ${new Date(extendedExpiry).toLocaleString()}`);
+            
+            // 設定自動檢查機制（每 30 分鐘檢查一次）
+            this.scheduleJWTExpiryCheck();
+            
+        } catch (error) {
+            console.error('❌ 設定 JWT 延長有效期失敗:', error);
+        }
+    }
+
+    // 排程 JWT 過期檢查
+    scheduleJWTExpiryCheck() {
+        // 清除現有的檢查器
+        if (this.jwtExpiryCheckInterval) {
+            clearInterval(this.jwtExpiryCheckInterval);
+        }
+
+        // 每 30 分鐘檢查一次
+        this.jwtExpiryCheckInterval = setInterval(() => {
+            this.checkJWTExpiry();
+        }, 30 * 60 * 1000);
+
+        console.log('🔄 JWT 過期檢查已排程（每 30 分鐘）');
+    }
+
+    // 檢查 JWT 是否即將過期
+    checkJWTExpiry() {
+        try {
+            const extendedExpiry = localStorage.getItem('google_jwt_extended_expiry');
+            const credential = localStorage.getItem('google_jwt_credential');
+            
+            if (!extendedExpiry || !credential) {
+                return;
+            }
+
+            const now = Date.now();
+            const expiryTime = parseInt(extendedExpiry);
+            const timeUntilExpiry = expiryTime - now;
+            
+            // 如果還有 1 小時就過期，提醒用戶重新登入
+            if (timeUntilExpiry <= (60 * 60 * 1000) && timeUntilExpiry > 0) {
+                console.warn('⚠️ JWT token 將在 1 小時內過期，建議重新登入');
+                this.showExpiryWarning();
+            } else if (timeUntilExpiry <= 0) {
+                console.warn('⚠️ JWT token 已過期，清除憑證');
+                this.handleTokenExpiration();
+            }
+            
+        } catch (error) {
+            console.error('❌ 檢查 JWT 過期時發生錯誤:', error);
+        }
+    }
+
+    // 顯示過期警告
+    showExpiryWarning() {
+        // 只顯示一次警告
+        if (this.expiryWarningShown) {
+            return;
+        }
+        this.expiryWarningShown = true;
+        
+        this.showSuccessNotification('🔔 登入狀態將在 1 小時內過期，建議重新登入以確保資料安全');
     }
 
     // 調用 infFITS API
