@@ -1073,26 +1073,7 @@ window.addEventListener("message",function(e){
              value: {
                     HV: $('#HTxixPS_mbinfo').val(),
                     WV: $('#wTxixPS_mbinfo').val(),
-                    // CC: (Bra_value+Cuxv).length > 2 ? Bra_value+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val(),
-                    CC: (function() {
-                        // 優先從 localStorage BodyID_size 獲取 CC 值
-                        try {
-                            const bodyIDSize = localStorage.getItem('BodyID_size');
-                            if (bodyIDSize) {
-                                const sizeData = JSON.parse(bodyIDSize);
-                                if (sizeData && sizeData.CC) {
-                                    return sizeData.CC;
-                                }
-                            }else{
-                                return (Bra_value+Cuxv).length > 2 ? Bra_value+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val();
-                            }
-                        } catch (error) {
-                            // 如果讀取失敗，使用備用邏輯
-                        }
-                        
-                        // 備用邏輯：使用原有的胸圍計算方式
-                        return (Bra_value+Cuxv).length > 2 ? Bra_value+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val();
-                    })(),
+                    CC: (Bra_value+Cuxv).length > 2 ? Bra_value+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val(),
                     DataItem: Wdtype_data_item.toString() + avg_item.toString() + Uptype_data_item.toString() + Dntype_data_item.toString(),
                     Shoulder: '',
                     UpChest: '',
