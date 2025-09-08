@@ -98,19 +98,19 @@ class InfGoogleLoginComponent extends HTMLElement {
             const error = urlParams.get('error');
             
             if (credential) {
-                console.log('🕵️ 檢測到 Google 登入回調，處理憑證:', credential);
+                // console statement removed
                 // 處理 Google 登入成功
                 this.handleCredentialResponse({ credential: credential });
                 // 清除 URL 參數
                 this.clearUrlParams();
             } else if (error) {
-                console.error('🕵️ Google 登入失敗:', error);
+                // console statement removed
                 this.handleLoginFailure(`Google 登入失敗: ${error}`);
                 // 清除 URL 參數
                 this.clearUrlParams();
             }
         } catch (error) {
-            console.error('檢查 Google 登入回調失敗:', error);
+            // console statement removed
         }
     }
 
@@ -121,7 +121,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             url.search = '';
             window.history.replaceState({}, document.title, url.pathname);
         } catch (error) {
-            console.error('清除 URL 參數失敗:', error);
+            // console statement removed
         }
     }
 
@@ -368,7 +368,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 頁面可見性變化時檢查 token（用戶回到頁面時）
         const visibilityChangeHandler = () => {
             if (!document.hidden && this.isAuthenticated) {
-                console.log('📱 頁面重新可見，檢查 token 狀態');
+                // console statement removed
                 this.checkAndRefreshToken();
             }
         };
@@ -412,7 +412,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     quickTokenValidityCheck() {
         const expiresAt = localStorage.getItem('google_token_expires_at');
         if (!expiresAt) {
-            console.log('⚠️ 沒有找到 token 過期時間');
+            // console statement removed
             return;
         }
 
@@ -421,14 +421,14 @@ class InfGoogleLoginComponent extends HTMLElement {
         const timeUntilExpiry = expiresAtTime - now;
         const minutesUntilExpiry = Math.floor(timeUntilExpiry / (60 * 1000));
 
-        console.log(`⏰ Token 剩餘有效時間: ${minutesUntilExpiry} 分鐘`);
+        // console statement removed
 
         // 如果 token 將在 15 分鐘內過期，主動觸發刷新
         if (timeUntilExpiry < 15 * 60 * 1000) {
-            console.log('⚡ Token 即將過期，主動觸發刷新...');
+            // console statement removed
             this.checkAndRefreshToken();
         } else if (timeUntilExpiry < 30 * 60 * 1000) {
-            console.log('⏳ Token 將在 30 分鐘內過期，準備刷新...');
+            // console statement removed
         }
     }
 
@@ -462,18 +462,18 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 檢查並刷新 token
     async checkAndRefreshToken() {
         try {
-            console.log('檢查 token 狀態...');
+            // console statement removed
             
             const credential = localStorage.getItem('google_auth_credential');
             if (!credential) {
-                console.log('沒有找到憑證，跳過 token 檢查');
+                // console statement removed
                 return;
             }
             
             // 優先檢查是否有 refresh token
             const refreshToken = localStorage.getItem('google_refresh_token');
             if (refreshToken) {
-                console.log('找到 refresh token，檢查過期時間...');
+                // console statement removed
                 
                 // 檢查 access token 是否即將過期
                 const expiresAt = localStorage.getItem('google_token_expires_at');
@@ -482,24 +482,24 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const expiresAtTime = parseInt(expiresAt);
                     const timeUntilExpiry = expiresAtTime - now;
                     
-                    console.log(`Token 過期時間: ${new Date(expiresAtTime).toLocaleString()}`);
-                    console.log(`距離過期還有: ${Math.round(timeUntilExpiry / 1000 / 60)} 分鐘`);
+                    // console statement removed
+                    // console statement removed
                     
                     // 如果 token 將在 30 分鐘內過期，提前刷新
                     if (timeUntilExpiry < 30 * 60 * 1000) {
-                        console.log('Token 即將過期，開始刷新...');
+                        // console statement removed
                         try {
                             const newAccessToken = await this.refreshAccessToken(refreshToken);
                             if (newAccessToken) {
                                 const newCredential = `oauth2_${newAccessToken}`;
                                 this.saveCredential(newCredential);
-                                console.log('Token 刷新成功！');
+                                // console statement removed
                                 return;
                             } else {
-                                console.log('Token 刷新失敗：沒有返回新的 access token');
+                                // console statement removed
                             }
                         } catch (error) {
-                            console.error('Token 刷新失敗：', error);
+                            // console statement removed
                         }
                     } else {
                         return;
@@ -4744,7 +4744,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         try {
             // 在無痕瀏覽器中，使用標準的 Google 登入按鈕
             if (this.isIncognitoMode) {
-                console.log('🕵️ 無痕瀏覽器模式，使用標準 Google 登入按鈕');
+                // console statement removed
                 this.createStandardGoogleSignInButton();
                 return;
             }
@@ -4795,7 +4795,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 找到現有的 Google 登入組件
             const existingComponent = document.querySelector('inf-google-login');
             if (!existingComponent) {
-                console.log('🕵️ 找不到現有的 Google 登入組件，使用備用方法');
+                // console statement removed
                 this.fallbackGoogleSignIn();
                 return;
             }
@@ -4859,7 +4859,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
 
         } catch (error) {
-            console.error('替換 Google 登入按鈕失敗:', error);
+            // console statement removed
             // 如果失敗，回退到彈出視窗登入
             this.fallbackGoogleSignIn();
         }
@@ -4978,9 +4978,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 try {
                     const jwtPayload = JSON.parse(atob(accessToken.split('_')[1].split('.')[1]));
                     expiresAt = jwtPayload.exp * 1000; // JWT exp 是秒，轉換為毫秒
-                    console.log(`🕐 從 JWT 解析到過期時間: ${new Date(expiresAt).toLocaleString()}`);
+                    // console statement removed
                 } catch (parseError) {
-                    console.warn('無法解析 JWT 過期時間，使用預設值:', parseError);
+                    // console statement removed
                     expiresAt = Date.now() + (55 * 60 * 1000); // 55 分鐘（保守估計）
                 }
             } else {
@@ -4989,7 +4989,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
             
             localStorage.setItem('google_token_expires_at', expiresAt.toString());
-            console.log(`💾 Token 已保存，過期時間: ${new Date(expiresAt).toLocaleString()}`);
+            // console statement removed
         }
     }
 
@@ -5020,7 +5020,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
         } else if (shouldRefresh && this.isIncognitoMode) {
             // 無痕模式下直接觸發重新登入，不嘗試刷新
-            console.log('🕵️ 無痕模式 token 即將過期，觸發重新登入');
+            // console statement removed
             this.handleTokenExpiration();
             return null;
         }
@@ -5031,12 +5031,12 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 刷新 access token - 使用 Google Identity Services 的無聲刷新
     async refreshAccessToken(refreshToken) {
         try {
-            console.log('🔄 嘗試使用 Google Identity Services 無聲刷新 token...');
+            // console statement removed
             
             return new Promise((resolve, reject) => {
                 // 首先檢查 Google Identity Services 是否可用
                 if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-                    console.log('❌ Google Identity Services 不可用，觸發重新登入');
+                    // console statement removed
                     this.handleTokenExpiration();
                     resolve(null);
                     return;
@@ -5049,7 +5049,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         moment_callback: (promptMomentNotification) => {
                             if (promptMomentNotification.isDisplayMoment()) {
                                 // 如果需要顯示登入界面，表示無法無聲刷新
-                                console.log('⚠️ 需要重新登入，觸發登入流程');
+                                // console statement removed
                                 this.handleTokenExpiration();
                                 resolve(null);
                             }
@@ -5057,7 +5057,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         credential_callback: (response) => {
                             // 成功獲得新的 credential
                             if (response && response.credential) {
-                                console.log('✅ 無聲刷新成功！');
+                                // console statement removed
                                 
                                 // 解析新的 JWT token
                                 try {
@@ -5071,26 +5071,26 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     
                                     resolve(newAccessToken);
                                 } catch (parseError) {
-                                    console.error('解析新 token 失敗:', parseError);
+                                    // console statement removed
                                     this.handleTokenExpiration();
                                     resolve(null);
                                 }
                             } else {
-                                console.log('❌ 無聲刷新失敗，觸發重新登入');
+                                // console statement removed
                                 this.handleTokenExpiration();
                                 resolve(null);
                             }
                         }
                     });
                 } catch (promptError) {
-                    console.error('Google prompt 失敗:', promptError);
+                    // console statement removed
                     this.handleTokenExpiration();
                     resolve(null);
                 }
             });
             
         } catch (error) {
-            console.error('Token 刷新過程中發生錯誤:', error);
+            // console statement removed
             this.handleTokenExpiration();
             return null;
         }
@@ -5793,13 +5793,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                 use_fedcm_for_prompt: true,
                 // 啟用自動重新驗證和 token 延長
                 intermediate_iframe_close_callback: () => {
-                    console.log('🔄 Google 中間 iframe 關閉，準備進行 token 刷新');
+                    // console statement removed
                 },
                 // 啟用 moment 回調以處理自動刷新
                 moment_callback: (notification) => {
-                    console.log('📱 Google moment notification:', notification.getMomentType());
+                    // console statement removed
                     if (notification.isSkippedMoment()) {
-                        console.log('⏭️ 跳過顯示登入提示，使用現有會話');
+                        // console statement removed
                     }
                 }
             };
@@ -5815,7 +5815,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             window.google.accounts.id.initialize(config);
 
         } catch (error) {
-            console.error('Google 初始化失敗:', error);
+            // console statement removed
         }
     }
 
@@ -5828,7 +5828,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         try {
-            console.log('🎉 收到 Google 登入憑證');
+            // console statement removed
             
             // 解析 Google 憑證獲取用戶資訊
             const payload = this.parseCredential(response.credential);
@@ -5838,7 +5838,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 從 JWT payload 中獲取過期時間並智能保存 token
                 if (payload.exp) {
                     const expiryTime = payload.exp * 1000; // 轉換為毫秒
-                    console.log(`📝 Token 過期時間: ${new Date(expiryTime).toLocaleString()}`);
+                    // console statement removed
                     this.saveTokens(`gid_${response.credential}`, null, expiryTime);
                 } else {
                     // 如果無法從 payload 獲取過期時間，使用預設值
@@ -5874,7 +5874,7 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 立即設置 token 刷新機制（如果還沒設置）
             if (!this.tokenRefreshSetup) {
-                console.log('🔄 設置 token 自動刷新機制');
+                // console statement removed
                 this.setupTokenRefresh();
                 this.tokenRefreshSetup = true;
             }
@@ -6066,9 +6066,9 @@ class InfGoogleLoginComponent extends HTMLElement {
                 if (hasLocalData && !hasCloudData) {
                     // 情況：已登入 本地已使用 雲端無資料
                     // 自動上傳本地資料到雲端
-                    console.log('🔄 檢測到本地有數據但雲端無數據，開始自動上傳...');
+                    // console statement removed
                     await this.uploadLocalDataToCloud();
-                    console.log('✅ 本地數據自動上傳完成');
+                    // console statement removed
                 } else if (hasLocalData && hasCloudData) {
                     // 情況：已登入 本地已使用 雲端有資料 → 詢問使用者是否用本地覆蓋雲端
                     await this.showDataConflictDialog();
@@ -6268,16 +6268,12 @@ class InfGoogleLoginComponent extends HTMLElement {
     
     // 開始監聽 localStorage 變化
     startLocalStorageMonitoring() {
-        console.log('開始監聽 localStorage 變化...');
+        // console statement removed
         
         // 監聽 storage 事件（跨標籤頁）
         window.addEventListener('storage', (e) => {
             if (e.key === 'BodyID_size') {
-                console.log('⚠️ 檢測到 BodyID_size 被其他地方修改:', {
-                    oldValue: e.oldValue,
-                    newValue: e.newValue,
-                    url: e.url
-                });
+                // console statement removed
             }
         });
         
@@ -6285,11 +6281,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         const originalSetItem = Storage.prototype.setItem;
         Storage.prototype.setItem = function(key, value) {
             if (key === 'BodyID_size') {
-                console.log('⚠️ 檢測到 BodyID_size 被直接修改:', {
-                    key: key,
-                    value: value,
-                    stack: new Error().stack
-                });
+                // console statement removed
             }
             return originalSetItem.call(this, key, value);
         };
@@ -6297,7 +6289,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         // 定期檢查資料是否被覆蓋
         this.storageCheckInterval = setInterval(() => {
             const currentData = localStorage.getItem('BodyID_size');
-            console.log('定期檢查 localStorage:', currentData);
+            // console statement removed
         }, 1000);
     }
     
@@ -6540,11 +6532,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                 
                 // 檢查是否在個人資訊頁面
                 if (isOnPersonalInfoPage()) {
-                    console.log('在個人資訊頁面選擇雲端資料，調用 selectCloudDataAndSync');
+                    // console statement removed
                     // 在個人資訊頁面，使用專門的方法處理
                     await this.selectCloudDataAndSync(currentApiResponse);
                 } else {
-                    console.log('不在個人資訊頁面，調用 downloadCloudDataToLocal');
+                    // console statement removed
                     // 不在個人資訊頁面，使用原有的下載邏輯
                 await this.downloadCloudDataToLocal(currentApiResponse);
                 }
@@ -7238,7 +7230,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
             
             if (!credential) {
-                console.error('沒有找到憑證');
+                // console statement removed
                 return;
             }
             
@@ -7337,10 +7329,10 @@ class InfGoogleLoginComponent extends HTMLElement {
                 ensureBodyIDFootSizeHasTS();
                 
             } else {
-                console.error('上傳腳部資料失敗:', response.status);
+                // console statement removed
             }
         } catch (error) {
-            console.error('上傳腳部資料時發生錯誤:', error);
+            // console statement removed
         }
     }
 
@@ -7702,13 +7694,13 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             // 觸發 Find My Size 功能
         triggerFindMySize() {
-            console.error("triggerFindMySize", $("#findmysize"));
+            // console statement removed
             const $btn = $("#findmysize");
             if ($btn.length > 0) {
                 $btn.trigger("click");
-                console.log("Find My Size button clicked.");
+                // console statement removed
             } else {
-                console.warn("Find My Size button not found.");
+                // console statement removed
             }
         }
         
@@ -8038,9 +8030,9 @@ function triggerFindMySizeGlobal() {
     const $btn = $("#findmysize");
     if ($btn.length > 0) {
         $btn.trigger("click");
-        console.log("Find My Size button clicked (global).");
+        // console statement removed
     } else {
-        console.warn("Find My Size button not found (global).");
+        // console statement removed
     }
 }
 
@@ -8063,7 +8055,7 @@ function ensureBodyIDSizeHasTS() {
             }
         }
     } catch (error) {
-        console.warn("Error ensuring TS field in BodyID_size:", error);
+        // console statement removed
     }
 }
 
@@ -8086,25 +8078,21 @@ function ensureBodyIDFootSizeHasTS() {
             }
         }
     } catch (error) {
-        console.warn("Error ensuring TS field in BodyID_Foot_size:", error);
+        // console statement removed
     }
 }
 
 // 同步更新本地 localStorage 資料
 function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
     try {
-        console.log('updateLocalStorageFromAPI 調用:', {
-            userKey: userKey,
-            fieldName: fieldName,
-            newValue: newValue
-        });
+        // console statement removed
         
         // 獲取當前 API 回應
         const currentApiResponse = JSON.parse(localStorage.getItem('inffits_api_response') || '{}');
         const bodyData = currentApiResponse.BodyData || {};
         
-        console.log('當前 API 回應:', currentApiResponse);
-        console.log('BodyData:', bodyData);
+        // console statement removed
+        // console statement removed
         
         // 統一處理所有用戶類型
         const userData = bodyData[userKey];
@@ -8122,12 +8110,12 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                     userData.FitP = userData.Pattern_Prefer;
                 }
                 
-                console.log('準備保存到 BodyID_size:', userData);
+                // console statement removed
                 localStorage.setItem('BodyID_size', JSON.stringify(userData));
                 
                 // 驗證保存結果
                 const savedData = JSON.parse(localStorage.getItem('BodyID_size') || '{}');
-                console.log('保存後的 BodyID_size:', savedData);
+                // console statement removed
                 
                 // 更新性別資料
                 if (userKey === 'bodyF') {
@@ -8140,12 +8128,12 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 localStorage.setItem('data_modified_flag', 'true');
             } else if (userKey === 'shoesF' || userKey === 'shoesM') {
                 // 對於 shoesF/shoesM，整包資料保存到 BodyID_Foot_size
-                console.log('準備保存到 BodyID_Foot_size:', userData);
+                // console statement removed
                 localStorage.setItem('BodyID_Foot_size', JSON.stringify(userData));
                 
                 // 驗證保存結果
                 const savedFootData = JSON.parse(localStorage.getItem('BodyID_Foot_size') || '{}');
-                console.log('保存後的 BodyID_Foot_size:', savedFootData);
+                // console statement removed
                 
                 // 更新性別資料
                 if (userKey === 'shoesF') {
@@ -9276,11 +9264,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
     
     // 胸圍測量的特殊處理：從顯示文字提取實際值進行比較
     if (fieldName === 'CC') {
-        console.log('CC 欄位比較:', {
-            originalText: valueElement.textContent,
-            originalValue: originalValue,
-            newValue: newValue
-        });
+        // console statement removed
         
         // 如果原始文字包含 "上胸圍" 和 "下胸圍"，提取數值
         const originalText = valueElement.textContent;
@@ -9298,18 +9282,15 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
             }
         }
         
-        console.log('CC 欄位提取後的值:', {
-            originalValue: originalValue,
-            newValue: newValue
-        });
+        // console statement removed
     }
     
     // 如果值沒有改變，直接取消編輯
     if (newValue === originalValue || (newValue === '' && originalValue === '')) {
-        console.log('值沒有改變，取消編輯');
+        // console statement removed
         // 對於胸圍測量選擇器，不調用 cancelEdit，因為它有自己的 UI 邏輯
         if (fieldName === 'CC' && input.value !== undefined && !input.parentNode) {
-            console.log('胸圍測量值沒有改變，直接返回');
+            // console statement removed
             return;
         }
         cancelEdit(input, valueElement);
@@ -9433,20 +9414,13 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         // 恢復顯示
         // 對於胸圍測量選擇器，不調用 cancelEdit，因為它有自己的 UI 邏輯
         if (fieldName === 'CC' && input.value !== undefined && !input.parentNode) {
-            console.log('胸圍測量成功，跳過 cancelEdit');
+            // console statement removed
         } else {
             cancelEdit(input, valueElement);
         }
         
     } catch (error) {
-        console.error('saveFieldValue 捕獲到錯誤:', {
-            error: error,
-            message: error.message,
-            stack: error.stack,
-            fieldName: fieldName,
-            newValue: newValue,
-            fieldLabel: fieldLabel
-        });
+        // console statement removed
         
         // 檢查是否為憑證問題
         if (error.message.includes('401') || error.message.includes('憑證') || error.message.includes('認證')) {
@@ -9721,11 +9695,11 @@ function isOnPersonalInfoPage() {
     const backArrow = document.querySelector('#modal-profile-back-arrow');
     
     if (backArrow) {
-        console.log('檢測到返回按鈕，仍在個人資訊頁面');
+        // console statement removed
         return true;
     }
     
-    console.log('未檢測到返回按鈕，已離開個人資訊頁面');
+    // console statement removed
     return false;
 }
 
@@ -9736,12 +9710,12 @@ function checkAndTriggerDelayedFindMySize() {
         if (shouldTrigger === 'true') {
             // 檢查是否還在個人資訊頁面
             if (isOnPersonalInfoPage()) {
-                console.log("仍在個人資訊頁面，延遲觸發 Find My Size");
+                // console statement removed
                 return; // 如果還在個人資訊頁面，不觸發
             }
             
             localStorage.removeItem('delayed_trigger_findmysize');
-            console.log("已離開個人資訊頁面，觸發延遲的 Find My Size 功能");
+            // console statement removed
             
             // 找到 inf-google-login 組件並觸發
             const infGoogleLoginElement = document.querySelector('inf-google-login');
@@ -9753,7 +9727,7 @@ function checkAndTriggerDelayedFindMySize() {
             }
         }
     } catch (error) {
-        console.warn("Error checking delayed trigger:", error);
+        // console statement removed
     }
 }
 
@@ -10135,7 +10109,7 @@ function createHeightSelector(fieldContainer, valueElement, currentValue, userKe
     cancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('身高選擇器取消按鈕被點擊');
+        // console statement removed
         selectorContainer.remove();
         valueElement.style.display = 'block';
         fieldContainer.querySelector('.edit-icon').style.display = 'flex';
@@ -10157,7 +10131,7 @@ function createHeightSelector(fieldContainer, valueElement, currentValue, userKe
                 valueElement.style.display = 'block';
                 fieldContainer.querySelector('.edit-icon').style.display = 'flex';
             } catch (error) {
-                console.error('保存身高失敗:', error);
+                // console statement removed
                 showNotification('保存失敗，請重試', 'error');
             }
   } else {
@@ -10174,7 +10148,7 @@ function createHeightSelector(fieldContainer, valueElement, currentValue, userKe
         }
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
-            console.log('身高選擇器外部點擊，關閉選擇器');
+            // console statement removed
             selectorContainer.remove();
             valueElement.style.display = 'block';
             fieldContainer.querySelector('.edit-icon').style.display = 'flex';
@@ -10308,7 +10282,7 @@ function createWeightSelector(fieldContainer, valueElement, currentValue, userKe
     cancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('體重選擇器取消按鈕被點擊');
+        // console statement removed
         selectorContainer.remove();
         valueElement.style.display = 'block';
         fieldContainer.querySelector('.edit-icon').style.display = 'flex';
@@ -10330,7 +10304,7 @@ function createWeightSelector(fieldContainer, valueElement, currentValue, userKe
                 valueElement.style.display = 'block';
                 fieldContainer.querySelector('.edit-icon').style.display = 'flex';
             } catch (error) {
-                console.error('保存體重失敗:', error);
+                // console statement removed
                 showNotification('保存失敗，請重試', 'error');
             }
         } else {
@@ -10347,7 +10321,7 @@ function createWeightSelector(fieldContainer, valueElement, currentValue, userKe
         }
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
-            console.log('體重選擇器外部點擊，關閉選擇器');
+            // console statement removed
             selectorContainer.remove();
             valueElement.style.display = 'block';
             fieldContainer.querySelector('.edit-icon').style.display = 'flex';
@@ -10677,7 +10651,7 @@ function createChestSelector(fieldContainer, valueElement, currentValue, userKey
     cancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log(`${fieldLabel}選擇器取消按鈕被點擊`);
+        // console statement removed
         selectorContainer.remove();
         valueElement.style.display = 'block';
         fieldContainer.querySelector('.edit-icon').style.display = 'flex';
@@ -10700,7 +10674,7 @@ function createChestSelector(fieldContainer, valueElement, currentValue, userKey
                 valueElement.style.display = 'block';
                 fieldContainer.querySelector('.edit-icon').style.display = 'flex';
             } catch (error) {
-                console.error(`保存${fieldLabel}失敗:`, error);
+                // console statement removed
                 showNotification('保存失敗，請重試', 'error');
             }
         } else {
@@ -10719,7 +10693,7 @@ function createChestSelector(fieldContainer, valueElement, currentValue, userKey
         }
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
-            console.log(`${fieldLabel}選擇器外部點擊，關閉選擇器`);
+            // console statement removed
             selectorContainer.remove();
             valueElement.style.display = 'block';
             fieldContainer.querySelector('.edit-icon').style.display = 'flex';
@@ -10854,7 +10828,7 @@ function createFootLengthSelector(fieldContainer, valueElement, currentValue, us
     cancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('腳長選擇器取消按鈕被點擊');
+        // console statement removed
         selectorContainer.remove();
         valueElement.style.display = 'block';
         const editIcon = fieldContainer.querySelector('.edit-icon');
@@ -10879,7 +10853,7 @@ function createFootLengthSelector(fieldContainer, valueElement, currentValue, us
                 valueElement.style.display = 'block';
                 fieldContainer.querySelector('.edit-icon').style.display = 'flex';
             } catch (error) {
-                console.error('保存腳長失敗:', error);
+                // console statement removed
                 showNotification('保存失敗，請重試', 'error');
             }
         } else {
@@ -10896,7 +10870,7 @@ function createFootLengthSelector(fieldContainer, valueElement, currentValue, us
         }
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
-            console.log('腳長選擇器外部點擊，關閉選擇器');
+            // console statement removed
             selectorContainer.remove();
             valueElement.style.display = 'block';
             const editIcon = fieldContainer.querySelector('.edit-icon');
@@ -11034,7 +11008,7 @@ function createFootWidthSelector(fieldContainer, valueElement, currentValue, use
     cancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('腳寬選擇器取消按鈕被點擊');
+        // console statement removed
         selectorContainer.remove();
         valueElement.style.display = 'block';
         const editIcon = fieldContainer.querySelector('.edit-icon');
@@ -11059,7 +11033,7 @@ function createFootWidthSelector(fieldContainer, valueElement, currentValue, use
                 valueElement.style.display = 'block';
                 fieldContainer.querySelector('.edit-icon').style.display = 'flex';
             } catch (error) {
-                console.error('保存腳寬失敗:', error);
+                // console statement removed
                 showNotification('保存失敗，請重試', 'error');
             }
         } else {
@@ -11076,7 +11050,7 @@ function createFootWidthSelector(fieldContainer, valueElement, currentValue, use
         }
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
-            console.log('腳寬選擇器外部點擊，關閉選擇器');
+            // console statement removed
             selectorContainer.remove();
             valueElement.style.display = 'block';
             const editIcon = fieldContainer.querySelector('.edit-icon');
@@ -11214,7 +11188,7 @@ function createFootCircumferenceSelector(fieldContainer, valueElement, currentVa
     cancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('腳圍選擇器取消按鈕被點擊');
+        // console statement removed
         selectorContainer.remove();
         valueElement.style.display = 'block';
         const editIcon = fieldContainer.querySelector('.edit-icon');
@@ -11239,7 +11213,7 @@ function createFootCircumferenceSelector(fieldContainer, valueElement, currentVa
                 valueElement.style.display = 'block';
                 fieldContainer.querySelector('.edit-icon').style.display = 'flex';
             } catch (error) {
-                console.error('保存腳圍失敗:', error);
+                // console statement removed
                 showNotification('保存失敗，請重試', 'error');
             }
         } else {
@@ -11256,7 +11230,7 @@ function createFootCircumferenceSelector(fieldContainer, valueElement, currentVa
         }
         
         if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
-            console.log('腳圍選擇器外部點擊，關閉選擇器');
+            // console statement removed
             selectorContainer.remove();
             valueElement.style.display = 'block';
             const editIcon = fieldContainer.querySelector('.edit-icon');
@@ -11274,7 +11248,7 @@ function createFootCircumferenceSelector(fieldContainer, valueElement, currentVa
 
 // 創建胸圍尺寸選擇器
 function createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
-    console.log('createBraSizeSelector invoked. Initial currentValue:', currentValue);
+    // console statement removed
     // 隱藏原始值
     valueElement.style.display = 'none';
     
@@ -11489,10 +11463,10 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
     let selectedBand = currentBand;
     let selectedCup = currentCup || '';
     
-    console.log('createBraSizeSelector: selectedBand initialized to', selectedBand, 'selectedCup initialized to', selectedCup);
+    // console statement removed
     
     function createBandButtons() {
-        console.log('createBandButtons called, selectedBand:', selectedBand);
+        // console statement removed
         bandGrid.innerHTML = '';
         const sizes = bandSizes[currentSystem];
         
@@ -11574,7 +11548,7 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
     const cupSizes = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
     
     function createCupButtons() {
-        console.log('createCupButtons called, selectedCup:', selectedCup);
+        // console statement removed
         cupGrid.innerHTML = '';
         
         cupSizes.forEach(cup => {
@@ -11673,7 +11647,7 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
     // 在 selectorContainer 上添加點擊事件監聽器並阻止冒泡
     selectorContainer.addEventListener('click', (e) => {
         e.stopPropagation();
-        console.log('Click inside selectorContainer, stopped propagation.');
+        // console statement removed
     });
     
     // 規格切換事件
@@ -11757,7 +11731,7 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
 
 // 創建胸圍測量選擇器（上胸圍/下胸圍模式）
 function createChestMeasurementSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
-    console.log('createChestMeasurementSelector invoked. Initial currentValue:', currentValue);
+    // console statement removed
     // 隱藏原始值
     valueElement.style.display = 'none';
     
@@ -12219,27 +12193,18 @@ function createChestMeasurementSelector(fieldContainer, valueElement, currentVal
             parentNode: null
         };
         
-        console.log('胸圍測量確認，準備保存:', {
-            newValue: newValue,
-            userKey: userKey,
-            dataType: dataType,
-            fieldLabel: fieldLabel
-        });
+        // console statement removed
         
         // 檢查憑證和用戶信息
         const credential = localStorage.getItem('google_auth_credential');
         const userInfo = JSON.parse(localStorage.getItem('google_user_info') || '{}');
-        console.log('檢查認證狀態:', {
-            hasCredential: !!credential,
-            userSub: userInfo.sub,
-            userEmail: userInfo.email
-        });
+        // console statement removed
         
         // 保存值 - 等待 API 調用完成
         try {
-            console.log('開始調用 saveFieldValue API...');
+            // console statement removed
             await saveFieldValue(mockInput, 'CC', userKey, dataType, fieldLabel, '', valueElement, fieldContainer);
-            console.log('API 調用成功，胸圍測量保存成功:', newValue);
+            // console statement removed
             
             // API 成功後更新顯示
             let displayValue = '';
@@ -12264,7 +12229,7 @@ function createChestMeasurementSelector(fieldContainer, valueElement, currentVal
             document.removeEventListener('click', clickOutsideHandler);
             
         } catch (error) {
-            console.error('API 調用失敗，保存胸圍測量數據時發生錯誤:', error);
+            // console statement removed
             
             // API 失敗時也要更新顯示和關閉選擇器
             let displayValue = '';
