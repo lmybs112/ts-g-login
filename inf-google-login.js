@@ -1968,18 +1968,18 @@ class InfGoogleLoginComponent extends HTMLElement {
                 },
                 modalContainerStyle: {
                     desktop: {
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        background: 'white',
-                        borderRadius: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        maxWidth: '440px',
-                        margin: '0 auto',
-                        paddingTop: '20px'
+                        // width: '100%',
+                        // height: '100%',
+                        // display: 'flex',
+                        // justifyContent: 'center',
+                        // alignItems: 'center',
+                        // background: 'white',
+                        // borderRadius: '8px',
+                        // position: 'relative',
+                        // overflow: 'hidden',
+                        // maxWidth: '440px',
+                        // margin: '0 auto',
+                        // paddingTop: '20px'
                     },
                     mobile: {
                         width: '100%',
@@ -3474,31 +3474,202 @@ class InfGoogleLoginComponent extends HTMLElement {
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 `;
 
-                // 添加身體資料標題
-                formattedHtml += `
-                    <div style="
-                        grid-column: 1 / -1;
-                    ">
+                // 根據 userKey 類型決定顯示的資料類型
+                const isShoeData = userKey === 'shoesF' || userKey === 'shoesM';
+                
+                if (isShoeData) {
+                    // 腳部資料標題
+                    formattedHtml += `
                         <div style="
-                            color: #475569;
-                            font-size: 14px;
-                            font-weight: 600;
+                            grid-column: 1 / -1;
                         ">
-                            身體資料
+                            <div style="
+                                color: #475569;
+                                font-size: 14px;
+                                font-weight: 600;
+                            ">
+                                腳部資料
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    // 身體資料標題
+                    formattedHtml += `
+                        <div style="
+                            grid-column: 1 / -1;
+                        ">
+                            <div style="
+                                color: #475569;
+                                font-size: 14px;
+                                font-weight: 600;
+                            ">
+                                身體資料
+                            </div>
+                        </div>
+                    `;
+                }
 
 
 
-                // 身高資料 - 始終顯示
-                const heightValue = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? `${bodyInfo.HV} cm` : '尚未提供';
-                const heightColor = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
-                formattedHtml += `
-                    <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
+                // 根據資料類型顯示不同欄位
+                if (isShoeData) {
+                    // 顯示腳部資料欄位：腳長、腳寬、腳圍
+                    
+                    // 腳長資料
+                    const footLengthValue = bodyInfo.FH && bodyInfo.FH.trim() !== '' ? `${bodyInfo.FH} cm` : '尚未提供';
+                    const footLengthColor = bodyInfo.FH && bodyInfo.FH.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            position: relative;
+                            transition: all 0.2s ease;
+                            cursor: pointer;
+                        " 
+                        class="editable-field"
+                        data-field="FH"
+                        data-user="${userKey}"
+                        data-type="foot"
+                        onclick="editField(this, 'FH', '${userKey}', 'foot', '${bodyInfo.FH || ''}', '腳長', 'cm')"
+                        onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                        onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                        >
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">腳長</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: ${footLengthColor}; font-size: 14px; font-weight: 600;" class="field-value">${footLengthValue}</span>
+                                <div class="edit-icon" style="
+                                    opacity: 0;
+                                    transition: all 0.2s ease;
+                                    cursor: pointer;
+                                    padding: 4px;
+                                    border-radius: 4px;
+                                    background: rgba(107, 114, 128, 0.1);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                        <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // 腳寬資料
+                    const footWidthValue = bodyInfo.FW && bodyInfo.FW.trim() !== '' ? `${bodyInfo.FW} cm` : '尚未提供';
+                    const footWidthColor = bodyInfo.FW && bodyInfo.FW.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            position: relative;
+                            transition: all 0.2s ease;
+                            cursor: pointer;
+                        " 
+                        class="editable-field"
+                        data-field="FW"
+                        data-user="${userKey}"
+                        data-type="foot"
+                        onclick="editField(this, 'FW', '${userKey}', 'foot', '${bodyInfo.FW || ''}', '腳寬', 'cm')"
+                        onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                        onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                        >
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">腳寬</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: ${footWidthColor}; font-size: 14px; font-weight: 600;" class="field-value">${footWidthValue}</span>
+                                <div class="edit-icon" style="
+                                    opacity: 0;
+                                    transition: all 0.2s ease;
+                                    cursor: pointer;
+                                    padding: 4px;
+                                    border-radius: 4px;
+                                    background: rgba(107, 114, 128, 0.1);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                        <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // 腳圍資料
+                    const footCircumValue = bodyInfo.FCir && bodyInfo.FCir.trim() !== '' ? `${bodyInfo.FCir} cm` : '尚未提供';
+                    const footCircumColor = bodyInfo.FCir && bodyInfo.FCir.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            position: relative;
+                            transition: all 0.2s ease;
+                            cursor: pointer;
+                        " 
+                        class="editable-field"
+                        data-field="FCir"
+                        data-user="${userKey}"
+                        data-type="foot"
+                        onclick="editField(this, 'FCir', '${userKey}', 'foot', '${bodyInfo.FCir || ''}', '腳圍', 'cm')"
+                        onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                        onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                        >
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: #475569; font-size: 13px; font-weight: 500;">腳圍</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: ${footCircumColor}; font-size: 14px; font-weight: 600;" class="field-value">${footCircumValue}</span>
+                                <div class="edit-icon" style="
+                                    opacity: 0;
+                                    transition: all 0.2s ease;
+                                    cursor: pointer;
+                                    padding: 4px;
+                                    border-radius: 4px;
+                                    background: rgba(107, 114, 128, 0.1);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                ">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                        <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                } else {
+                    // 顯示身體資料欄位：身高、體重等
+
+                    // 身高資料 - 始終顯示
+                    const heightValue = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? `${bodyInfo.HV} cm` : '尚未提供';
+                    const heightColor = bodyInfo.HV && bodyInfo.HV.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                    formattedHtml += `
+                        <div style="
+                            background: #F1F5F9;
+                            border-radius: 8px;
+                            padding: 12px;
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
@@ -3687,54 +3858,54 @@ class InfGoogleLoginComponent extends HTMLElement {
                     </div>
                 `;
 
-                // 肩寬資料 - 始終顯示
-                const shoulderValue = bodyInfo.Shoulder && bodyInfo.Shoulder.trim() !== '' ? `${bodyInfo.Shoulder} cm` : '尚未提供';
-                const shoulderColor = bodyInfo.Shoulder && bodyInfo.Shoulder.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                // 肩寬資料 - 已隱藏
+                // const shoulderValue = bodyInfo.Shoulder && bodyInfo.Shoulder.trim() !== '' ? `${bodyInfo.Shoulder} cm` : '尚未提供';
+                // const shoulderColor = bodyInfo.Shoulder && bodyInfo.Shoulder.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
-                formattedHtml += `
-                    <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        position: relative;
-                        transition: all 0.2s ease;
-                        cursor: pointer;
-                    " 
-                    class="editable-field"
-                    data-field="Shoulder"
-                    data-user="${userKey}"
-                    data-type="body"
-                    onclick="editField(this, 'Shoulder', '${userKey}', 'body', '${bodyInfo.Shoulder || ''}', '肩寬', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
-                    >
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #475569; font-size: 13px; font-weight: 500;">肩寬</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${shoulderColor}; font-size: 14px; font-weight: 600;" class="field-value">${shoulderValue}</span>
-                            <div class="edit-icon" style="
-                                opacity: 0;
-                                transition: all 0.2s ease;
-                                cursor: pointer;
-                                padding: 4px;
-                                border-radius: 4px;
-                                background: rgba(107, 114, 128, 0.1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // formattedHtml += `
+                //     <div style="
+                //         background: #F1F5F9;
+                //         border-radius: 8px;
+                //         padding: 12px;
+                //         display: flex;
+                //         align-items: center;
+                //         justify-content: space-between;
+                //         position: relative;
+                //         transition: all 0.2s ease;
+                //         cursor: pointer;
+                //     " 
+                //     class="editable-field"
+                //     data-field="Shoulder"
+                //     data-user="${userKey}"
+                //     data-type="body"
+                //     onclick="editField(this, 'Shoulder', '${userKey}', 'body', '${bodyInfo.Shoulder || ''}', '肩寬', 'cm')"
+                //     onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                //     onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                //     >
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: #475569; font-size: 13px; font-weight: 500;">肩寬</span>
+                //         </div>
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: ${shoulderColor}; font-size: 14px; font-weight: 600;" class="field-value">${shoulderValue}</span>
+                //             <div class="edit-icon" style="
+                //                 opacity: 0;
+                //                 transition: all 0.2s ease;
+                //                 cursor: pointer;
+                //                 padding: 4px;
+                //                 border-radius: 4px;
+                //                 background: rgba(107, 114, 128, 0.1);
+                //                 display: flex;
+                //                 align-items: center;
+                //                 justify-content: center;
+                //             ">
+                //                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                //                     <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                     <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                 </svg>
+                //             </div>
+                //         </div>
+                //     </div>
+                // `;
 
                 // 上胸圍資料 - 隱藏此欄位，因為已整合到胸圍欄位
                 // const upChestValue = bodyInfo.UpChest && bodyInfo.UpChest.trim() !== '' ? `${bodyInfo.UpChest} cm` : '尚未提供';
@@ -3834,103 +4005,103 @@ class InfGoogleLoginComponent extends HTMLElement {
                 //     </div>
                 // `;
 
-                // 腰圍資料 - 始終顯示
-                const waistValue = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? `${bodyInfo.Waist} cm` : '尚未提供';
-                const waistColor = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                // 腰圍資料 - 已隱藏
+                // const waistValue = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? `${bodyInfo.Waist} cm` : '尚未提供';
+                // const waistColor = bodyInfo.Waist && bodyInfo.Waist.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
-                formattedHtml += `
-                    <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        position: relative;
-                        transition: all 0.2s ease;
-                        cursor: pointer;
-                    " 
-                    class="editable-field"
-                    data-field="Waist"
-                    data-user="${userKey}"
-                    data-type="body"
-                    onclick="editField(this, 'Waist', '${userKey}', 'body', '${bodyInfo.Waist || ''}', '腰圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
-                    >
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #475569; font-size: 13px; font-weight: 500;">腰圍</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${waistColor}; font-size: 14px; font-weight: 600;" class="field-value">${waistValue}</span>
-                            <div class="edit-icon" style="
-                                opacity: 0;
-                                transition: all 0.2s ease;
-                                cursor: pointer;
-                                padding: 4px;
-                                border-radius: 4px;
-                                background: rgba(107, 114, 128, 0.1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // formattedHtml += `
+                //     <div style="
+                //         background: #F1F5F9;
+                //         border-radius: 8px;
+                //         padding: 12px;
+                //         display: flex;
+                //         align-items: center;
+                //         justify-content: space-between;
+                //         position: relative;
+                //         transition: all 0.2s ease;
+                //         cursor: pointer;
+                //     " 
+                //     class="editable-field"
+                //     data-field="Waist"
+                //     data-user="${userKey}"
+                //     data-type="body"
+                //     onclick="editField(this, 'Waist', '${userKey}', 'body', '${bodyInfo.Waist || ''}', '腰圍', 'cm')"
+                //     onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                //     onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                //     >
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: #475569; font-size: 13px; font-weight: 500;">腰圍</span>
+                //         </div>
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: ${waistColor}; font-size: 14px; font-weight: 600;" class="field-value">${waistValue}</span>
+                //             <div class="edit-icon" style="
+                //                 opacity: 0;
+                //                 transition: all 0.2s ease;
+                //                 cursor: pointer;
+                //                 padding: 4px;
+                //                 border-radius: 4px;
+                //                 background: rgba(107, 114, 128, 0.1);
+                //                 display: flex;
+                //                 align-items: center;
+                //                 justify-content: center;
+                //             ">
+                //                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                //                     <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                     <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                 </svg>
+                //             </div>
+                //         </div>
+                //     </div>
+                // `;
 
-                // 臀圍資料 - 始終顯示
-                const hipValue = bodyInfo.Hip && bodyInfo.Hip.trim() !== '' ? `${bodyInfo.Hip} cm` : '尚未提供';
-                const hipColor = bodyInfo.Hip && bodyInfo.Hip.trim() !== '' ? '#1E293B' : '#9CA3AF';
+                // 臀圍資料 - 已隱藏
+                // const hipValue = bodyInfo.Hip && bodyInfo.Hip.trim() !== '' ? `${bodyInfo.Hip} cm` : '尚未提供';
+                // const hipColor = bodyInfo.Hip && bodyInfo.Hip.trim() !== '' ? '#1E293B' : '#9CA3AF';
 
-                formattedHtml += `
-                    <div style="
-                        background: #F1F5F9;
-                        border-radius: 8px;
-                        padding: 12px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        position: relative;
-                        transition: all 0.2s ease;
-                        cursor: pointer;
-                    " 
-                    class="editable-field"
-                    data-field="Hip"
-                    data-user="${userKey}"
-                    data-type="body"
-                    onclick="editField(this, 'Hip', '${userKey}', 'body', '${bodyInfo.Hip || ''}', '臀圍', 'cm')"
-                    onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
-                    onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
-                    >
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: #475569; font-size: 13px; font-weight: 500;">臀圍</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${hipColor}; font-size: 14px; font-weight: 600;" class="field-value">${hipValue}</span>
-                            <div class="edit-icon" style="
-                                opacity: 0;
-                                transition: all 0.2s ease;
-                                cursor: pointer;
-                                padding: 4px;
-                                border-radius: 4px;
-                                background: rgba(107, 114, 128, 0.1);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            ">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                    <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                // formattedHtml += `
+                //     <div style="
+                //         background: #F1F5F9;
+                //         border-radius: 8px;
+                //         padding: 12px;
+                //         display: flex;
+                //         align-items: center;
+                //         justify-content: space-between;
+                //         position: relative;
+                //         transition: all 0.2s ease;
+                //         cursor: pointer;
+                //     " 
+                //     class="editable-field"
+                //     data-field="Hip"
+                //     data-user="${userKey}"
+                //     data-type="body"
+                //     onclick="editField(this, 'Hip', '${userKey}', 'body', '${bodyInfo.Hip || ''}', '臀圍', 'cm')"
+                //     onmouseenter="this.querySelector('.edit-icon').style.opacity='1'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.2)'"
+                //     onmouseleave="this.querySelector('.edit-icon').style.opacity='0'; this.querySelector('.edit-icon').style.background='rgba(107, 114, 128, 0.1)'"
+                //     >
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: #475569; font-size: 13px; font-weight: 500;">臀圍</span>
+                //         </div>
+                //         <div style="display: flex; align-items: center; gap: 8px;">
+                //             <span style="color: ${hipColor}; font-size: 14px; font-weight: 600;" class="field-value">${hipValue}</span>
+                //             <div class="edit-icon" style="
+                //                 opacity: 0;
+                //                 transition: all 0.2s ease;
+                //                 cursor: pointer;
+                //                 padding: 4px;
+                //                 border-radius: 4px;
+                //                 background: rgba(107, 114, 128, 0.1);
+                //                 display: flex;
+                //                 align-items: center;
+                //                 justify-content: center;
+                //             ">
+                //                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                //                     <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                     <path d="M18.5 2.50023C18.8978 2.10243 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.10243 21.5 2.50023C21.8978 2.89804 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.10243 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                //                 </svg>
+                //             </div>
+                //         </div>
+                //     </div>
+                // `;
 
                 // BMI 資料（始終顯示）
                     formattedHtml += `
@@ -4041,6 +4212,8 @@ class InfGoogleLoginComponent extends HTMLElement {
                         </div>
                     `;
                 }
+
+                } // 關閉 else 區塊（身體資料顯示）
 
                 formattedHtml += '</div></div>';
             }
@@ -5735,18 +5908,31 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 檢查本地是否有尺寸資料
     checkLocalSizeData() {
             const bodyIdSizeLast = localStorage.getItem('BodyID_size');
+            const bodyIdFootSizeLast = localStorage.getItem('BodyID_Foot_size');
             const genderLast = localStorage.getItem('Gender_Last');
         
             
-            if (!bodyIdSizeLast || !genderLast) {
+            if ((!bodyIdSizeLast && !bodyIdFootSizeLast) || !genderLast) {
             return false;
             }
             
             try {
-                const sizeData = JSON.parse(bodyIdSizeLast);
-            // 檢查是否有完整的身高體重資料
-            const hasCompleteData = sizeData.HV && sizeData.WV && genderLast;
-            return hasCompleteData;
+                // 檢查身體尺寸資料
+                let hasBodyData = false;
+                if (bodyIdSizeLast) {
+                    const sizeData = JSON.parse(bodyIdSizeLast);
+                    hasBodyData = sizeData.HV && sizeData.WV && genderLast;
+                }
+                
+                // 檢查腳部尺寸資料
+                let hasFootData = false;
+                if (bodyIdFootSizeLast) {
+                    const footSizeData = JSON.parse(bodyIdFootSizeLast);
+                    hasFootData = footSizeData.FH && footSizeData.FW && genderLast;
+                }
+                
+                // 有任一種完整資料即可
+                return hasBodyData || hasFootData;
         } catch (error) {
             return false;
         }
@@ -5758,19 +5944,30 @@ class InfGoogleLoginComponent extends HTMLElement {
         
         // 優先檢查與本地性別對應的雲端資料
         const localGender = localStorage.getItem('Gender_Last');
-        let targetKey = null;
+        let bodyTargetKey = null;
+        let shoesTargetKey = null;
         
         if (localGender === 'M') {
-            targetKey = 'bodyM';
+            bodyTargetKey = 'bodyM';
+            shoesTargetKey = 'shoesM';
         } else if (localGender === 'F') {
-            targetKey = 'bodyF';
+            bodyTargetKey = 'bodyF';
+            shoesTargetKey = 'shoesF';
         }
         
-        // 先檢查對應性別的資料
-        if (targetKey && bodyData[targetKey]) {
-            const userData = bodyData[targetKey];
+        // 檢查身體資料
+        if (bodyTargetKey && bodyData[bodyTargetKey]) {
+            const userData = bodyData[bodyTargetKey];
             const bodyInfo = userData;
             if (userData && (bodyInfo.HV || bodyInfo.WV || bodyInfo.Gender)) {
+                return true;
+            }
+        }
+        
+        // 檢查鞋子資料
+        if (shoesTargetKey && bodyData[shoesTargetKey]) {
+            const shoesData = bodyData[shoesTargetKey];
+            if (shoesData && (shoesData.FH || shoesData.FW || shoesData.FCir || shoesData.Gender)) {
                 return true;
             }
         }
@@ -5793,26 +5990,42 @@ class InfGoogleLoginComponent extends HTMLElement {
         try {
             
             const bodyIdSizeLast = localStorage.getItem('BodyID_size');
+            const bodyIdFootSizeLast = localStorage.getItem('BodyID_Foot_size');
             const genderLast = localStorage.getItem('Gender_Last');
             
             
-            if (!bodyIdSizeLast || !genderLast) {
+            if ((!bodyIdSizeLast && !bodyIdFootSizeLast) || !genderLast) {
                 showNotification('❌ 缺少本地資料，無法上傳', 'error');
                 return;
             }
             
-            const sizeData = JSON.parse(bodyIdSizeLast);
+            // 準備身體尺寸上傳資料
+            if (bodyIdSizeLast) {
+                const sizeData = JSON.parse(bodyIdSizeLast);
+                const uploadData = {
+                    HV: sizeData.HV,
+                    WV: sizeData.WV,
+                    Gender: genderLast
+                };
+                
+                // 調用上傳 API（身體資料）
+                await this.callUploadDataAPI(uploadData);
+            }
             
-            // 準備上傳的資料
-            const uploadData = {
-                HV: sizeData.HV,
-                WV: sizeData.WV,
-                Gender: genderLast
-            };
-            
-            
-            // 調用上傳 API
-            await this.callUploadDataAPI(uploadData);
+            // 準備腳部尺寸上傳資料
+            if (bodyIdFootSizeLast) {
+                const footSizeData = JSON.parse(bodyIdFootSizeLast);
+                const uploadFootData = {
+                    FH: footSizeData.FH,
+                    FW: footSizeData.FW,
+                    FCir: footSizeData.FCir,
+                    Gender: genderLast,
+                    isFootData: true // 標記為腳部資料
+                };
+                
+                // 調用上傳 API（腳部資料）
+                await this.callUploadFootDataAPI(uploadFootData);
+            }
             
         } catch (error) {
             showNotification('❌ 上傳資料失敗，請稍後再試', 'error');
@@ -5925,31 +6138,45 @@ class InfGoogleLoginComponent extends HTMLElement {
                     return;
                 }
                 
-            // 優先尋找 bodyF 或 bodyM 資料（因為它們直接包含身高體重）
-            let targetKey = null;
-            let userData = null;
+            // 優先尋找 bodyF/bodyM 或 shoesF/shoesM 資料
+            let bodyTargetKey = null;
+            let bodyUserData = null;
+            let shoesTargetKey = null;
+            let shoesUserData = null;
             
-            // 優先選擇 bodyF 或 bodyM（它們有完整的身體資料）
+            // 檢查身體資料（bodyF/bodyM）
             if (bodyData.bodyF) {
-                targetKey = 'bodyF';
-                userData = bodyData.bodyF;
+                bodyTargetKey = 'bodyF';
+                bodyUserData = bodyData.bodyF;
             } else if (bodyData.bodyM) {
-                targetKey = 'bodyM';
-                userData = bodyData.bodyM;
-            } else {
-                // 如果沒有 bodyF/bodyM，使用預設使用者或第一個使用者
-                targetKey = apiResponse.BodyData_ptr || userKeys[0];
-                userData = bodyData[targetKey];
+                bodyTargetKey = 'bodyM';
+                bodyUserData = bodyData.bodyM;
             }
             
-            if (userData) {
-                // 所有資料都直接使用，不需要 .body 屬性
-                const bodyInfo = userData;
+            // 檢查鞋子資料（shoesF/shoesM）
+            if (bodyData.shoesF) {
+                shoesTargetKey = 'shoesF';
+                shoesUserData = bodyData.shoesF;
+            } else if (bodyData.shoesM) {
+                shoesTargetKey = 'shoesM';
+                shoesUserData = bodyData.shoesM;
+            }
+            
+            // 如果沒有專用的身體或鞋子資料，使用預設使用者
+            if (!bodyUserData && !shoesUserData) {
+                const fallbackKey = apiResponse.BodyData_ptr || userKeys[0];
+                bodyUserData = bodyData[fallbackKey];
+                bodyTargetKey = fallbackKey;
+            }
+            
+            let hasData = false;
+            
+            // 處理身體資料（bodyF/bodyM -> BodyID_size）
+            if (bodyUserData) {
+                const bodyInfo = bodyUserData;
                 
-                let hasData = false;
-                
-                // 將雲端資料保存到本地 BodyID_size
-                if (targetKey === 'bodyF' || targetKey === 'bodyM') {
+                // 將雲端身體資料保存到本地 BodyID_size
+                if (bodyTargetKey === 'bodyF' || bodyTargetKey === 'bodyM') {
                     // bodyF/bodyM 整包資料都保存到 BodyID_size
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
                     if (bodyInfo.CC === "null_null") {
@@ -5962,7 +6189,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                     localStorage.setItem('BodyID_size', JSON.stringify(bodyInfo));
                     hasData = true;
                 } else if (bodyInfo.HV && bodyInfo.WV) {
-                    // 其他資料源保存所有可用字段，並添加 TS
+                    // 其他資料源保存所有可用字段
                     const localSizeData = {
                         ...bodyInfo,  // 保留所有原始字段
                     };
@@ -5977,54 +6204,75 @@ class InfGoogleLoginComponent extends HTMLElement {
                     localStorage.setItem('BodyID_size', JSON.stringify(localSizeData));
                     hasData = true;
                 }
+            }
+            
+            // 處理鞋子資料（shoesF/shoesM -> BodyID_Foot_size）
+            if (shoesUserData) {
+                const shoesInfo = shoesUserData;
                 
-                // 將雲端資料保存到本地 Gender_Last
-                let genderToSave = null;
-                if (targetKey === 'bodyM') {
-                    genderToSave = 'M';
-                } else if (targetKey === 'bodyF') {
-                    genderToSave = 'F';
-                } else if (bodyInfo.Gender) {
-                    genderToSave = bodyInfo.Gender;
-                }
-                
-                if (genderToSave) {
-                    localStorage.setItem('Gender_Last', genderToSave);
+                // 將雲端鞋子資料保存到本地 BodyID_Foot_size
+                if (shoesTargetKey === 'shoesF' || shoesTargetKey === 'shoesM') {
+                    // shoesF/shoesM 整包資料都保存到 BodyID_Foot_size
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (shoesInfo.CC === "null_null") {
+                        shoesInfo.CC = "";
+                    }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (shoesInfo.Pattern_Prefer !== undefined) {
+                        shoesInfo.FitP = shoesInfo.Pattern_Prefer;
+                    }
+                    localStorage.setItem('BodyID_Foot_size', JSON.stringify(shoesInfo));
                     hasData = true;
                 }
+            }
+            
+            // 保存性別資訊
+            let genderToSave = null;
+            if (bodyTargetKey === 'bodyM' || shoesTargetKey === 'shoesM') {
+                genderToSave = 'M';
+            } else if (bodyTargetKey === 'bodyF' || shoesTargetKey === 'shoesF') {
+                genderToSave = 'F';
+            } else if (bodyUserData && bodyUserData.Gender) {
+                genderToSave = bodyUserData.Gender;
+            } else if (shoesUserData && shoesUserData.Gender) {
+                genderToSave = shoesUserData.Gender;
+            }
+            
+            if (genderToSave) {
+                localStorage.setItem('Gender_Last', genderToSave);
+                hasData = true;
+            }
                 
-                if (hasData) {
-                    // 設置資料修改標記，表示有資料被修改
-                    localStorage.setItem('data_modified_flag', 'true');
-                    
-                    // 觸發 localStorage 更新事件
-                    window.dispatchEvent(new CustomEvent('localStorage-updated', {
-                        detail: {
-                            keys: ['BodyID_size', 'Gender_Last']
-                        }
-                    }));
-                    
-                    // 確保 BodyID_size 有 TS 字段
-                    ensureBodyIDSizeHasTS();
-                    
-                    // 驗證資料完整性
-                    try {
-                        const updatedBodyIDSize = localStorage.getItem('BodyID_size');
-                        const bodyData = JSON.parse(updatedBodyIDSize);
-                    } catch (e) {
-                        // 解析失敗，忽略
+            if (hasData) {
+                // 設置資料修改標記，表示有資料被修改
+                localStorage.setItem('data_modified_flag', 'true');
+                
+                // 觸發 localStorage 更新事件
+                window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                    detail: {
+                        keys: ['BodyID_size', 'Gender_Last']
                     }
-                    
-                    // 完全移除 Find My Size 觸發邏輯，避免畫面變空
-                    
-                    if (typeof showNotification === 'function') {
-                    showNotification('✅ 雲端資料已同步到本地', 'success');
-                        
-                        // 等待並驗證資料確實已更新到本地，然後重新整理頁面
-                        this.waitForDataUpdateAndReload();
-                    }
+                }));
+                
+                // 確保 BodyID_size 有 TS 字段
+                ensureBodyIDSizeHasTS();
+                
+                // 驗證資料完整性
+                try {
+                    const updatedBodyIDSize = localStorage.getItem('BodyID_size');
+                    const bodyData = JSON.parse(updatedBodyIDSize);
+                } catch (e) {
+                    // 解析失敗，忽略
                 }
-            } else {
+                
+                // 完全移除 Find My Size 觸發邏輯，避免畫面變空
+                
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ 雲端資料已同步到本地', 'success');
+                    
+                    // 等待並驗證資料確實已更新到本地，然後重新整理頁面
+                    this.waitForDataUpdateAndReload();
+                }
             }
             
         } catch (error) {
@@ -6084,12 +6332,15 @@ class InfGoogleLoginComponent extends HTMLElement {
             const cloudData = this.getCloudDataInfo();
             
             
-            // 檢查資料是否相同
+            // 檢查資料是否相同（包含身體和腳部資料）
             const isSameData = (
                 localData.height === cloudData.height &&
                 localData.weight === cloudData.weight &&
                 localData.gender === cloudData.gender &&
-                localData.cc === cloudData.cc
+                localData.cc === cloudData.cc &&
+                localData.footLength === cloudData.footLength &&
+                localData.footWidth === cloudData.footWidth &&
+                localData.footCircumference === cloudData.footCircumference
             );
             
             if (isSameData) {
@@ -6367,20 +6618,30 @@ class InfGoogleLoginComponent extends HTMLElement {
                             <div class="data-card selected" id="cloud-data-card">
                                 <p>☁️ 雲端資料</p>
                                 <div class="data-info">
+                                    <div style="font-weight: 600; margin-bottom: 8px; color: #374151;">身體尺寸</div>
                                     <div>身高：${cloudData.height}</div>
                                     <div>體重：${cloudData.weight}</div>
                                     <div>性別：${cloudData.gender}</div>
                                     <div>胸圍：${cloudData.cc}</div>
+                                    <div style="font-weight: 600; margin: 12px 0 8px 0; color: #374151;">腳部尺寸</div>
+                                    <div>腳長：${cloudData.footLength}</div>
+                                    <div>腳寬：${cloudData.footWidth}</div>
+                                    <div>腳圍：${cloudData.footCircumference}</div>
                                 </div>
                             </div>
                             
                             <div class="data-card" id="local-data-card">
                                 <p>📱 本地資料</p>
                                 <div class="data-info">
+                                    <div style="font-weight: 600; margin-bottom: 8px; color: #374151;">身體尺寸</div>
                                     <div>身高：${localData.height}</div>
                                     <div>體重：${localData.weight}</div>
                                     <div>性別：${localData.gender}</div>
                                     <div>胸圍：${localData.cc}</div>
+                                    <div style="font-weight: 600; margin: 12px 0 8px 0; color: #374151;">腳部尺寸</div>
+                                    <div>腳長：${localData.footLength}</div>
+                                    <div>腳寬：${localData.footWidth}</div>
+                                    <div>腳圍：${localData.footCircumference}</div>
                                 </div>
                             </div>
                         </div>
@@ -6465,42 +6726,73 @@ class InfGoogleLoginComponent extends HTMLElement {
     getLocalDataInfo() {
         try {
             const bodyIdSizeLast = localStorage.getItem('BodyID_size');
+            const bodyIdFootSizeLast = localStorage.getItem('BodyID_Foot_size');
             const genderLast = localStorage.getItem('Gender_Last');
             
-            if (!bodyIdSizeLast || !genderLast) {
-                return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
+            if ((!bodyIdSizeLast && !bodyIdFootSizeLast) || !genderLast) {
+                return { 
+                    height: '未設定', 
+                    weight: '未設定', 
+                    gender: '未設定', 
+                    cc: '未設定',
+                    footLength: '未設定',
+                    footWidth: '未設定',
+                    footCircumference: '未設定'
+                };
             }
             
-            const sizeData = JSON.parse(bodyIdSizeLast);
+            let bodyData = null;
+            let footData = null;
             
-            // 處理 CC 資料格式
+            // 解析身體資料
+            if (bodyIdSizeLast) {
+                bodyData = JSON.parse(bodyIdSizeLast);
+            }
+            
+            // 解析腳部資料
+            if (bodyIdFootSizeLast) {
+                footData = JSON.parse(bodyIdFootSizeLast);
+            }
+            
+            // 處理 CC 資料格式（來自身體資料）
             let ccValue = '未設定';
-            if (sizeData.CC && sizeData.CC.trim() !== '') {
+            if (bodyData && bodyData.CC && bodyData.CC.trim() !== '') {
                 // 如果是數字+字母格式（如28A），保持原樣
-                if (/^\d+[A-G]$/.test(sizeData.CC)) {
-                    ccValue = sizeData.CC;
-                } else if (sizeData.CC.includes('_')) {
+                if (/^\d+[A-G]$/.test(bodyData.CC)) {
+                    ccValue = bodyData.CC;
+                } else if (bodyData.CC.includes('_')) {
                     // 如果是上胸圍_下胸圍格式（如66_60），格式化為統一顯示
-                    const parts = sizeData.CC.split('_');
+                    const parts = bodyData.CC.split('_');
                     if (parts.length >= 2) {
                         ccValue = `上胸圍 ${parts[0]} cm / 下胸圍 ${parts[1]} cm`;
                     } else {
-                        ccValue = `${sizeData.CC} cm`;
+                        ccValue = `${bodyData.CC} cm`;
                     }
                 } else {
                     // 單一數值，格式化為上胸圍格式
-                    ccValue = `上胸圍 ${sizeData.CC} cm`;
+                    ccValue = `上胸圍 ${bodyData.CC} cm`;
                 }
             }
             
             return {
-                height: sizeData.HV ? `${sizeData.HV} cm` : '未設定',
-                weight: sizeData.WV ? `${sizeData.WV} kg` : '未設定',
+                height: bodyData && bodyData.HV ? `${bodyData.HV} cm` : '未設定',
+                weight: bodyData && bodyData.WV ? `${bodyData.WV} kg` : '未設定',
                 gender: genderLast === 'M' ? '男性' : genderLast === 'F' ? '女性' : '未設定',
-                cc: ccValue
+                cc: ccValue,
+                footLength: footData && footData.FH ? `${footData.FH} cm` : '未設定',
+                footWidth: footData && footData.FW ? `${footData.FW} cm` : '未設定',
+                footCircumference: footData && footData.FCir ? `${footData.FCir} cm` : '未設定'
             };
         } catch (error) {
-            return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
+            return { 
+                height: '未設定', 
+                weight: '未設定', 
+                gender: '未設定', 
+                cc: '未設定',
+                footLength: '未設定',
+                footWidth: '未設定',
+                footCircumference: '未設定'
+            };
         }
     }
 
@@ -6514,45 +6806,56 @@ class InfGoogleLoginComponent extends HTMLElement {
             // 根據本地性別決定要比較哪個雲端資料
             const localGender = localStorage.getItem('Gender_Last');
             
-            let targetKey = null;
+            let bodyTargetKey = null;
+            let shoesTargetKey = null;
             if (localGender === 'M') {
-                targetKey = 'bodyM';
+                bodyTargetKey = 'bodyM';
+                shoesTargetKey = 'shoesM';
             } else if (localGender === 'F') {
-                targetKey = 'bodyF';
+                bodyTargetKey = 'bodyF';
+                shoesTargetKey = 'shoesF';
             }
             
-            // 如果沒有對應的性別資料，嘗試使用預設或第一個可用的
-            let userData = null;
-            if (targetKey && bodyData[targetKey]) {
-                userData = bodyData[targetKey];
-            } else {
-                
-                // 回退到原邏輯：使用預設使用者或第一個可用的
+            // 取得身體資料
+            let bodyUserData = null;
+            if (bodyTargetKey && bodyData[bodyTargetKey]) {
+                bodyUserData = bodyData[bodyTargetKey];
+            }
+            
+            // 取得腳部資料
+            let shoesUserData = null;
+            if (shoesTargetKey && bodyData[shoesTargetKey]) {
+                shoesUserData = bodyData[shoesTargetKey];
+            }
+            
+            // 如果沒有對應的身體資料，回退到原邏輯
+            if (!bodyUserData) {
                 const userKeys = Object.keys(bodyData);
-                
                 if (userKeys.length > 0) {
                     const defaultUserKey = apiResponse.BodyData_ptr || userKeys[0];
-                    userData = bodyData[defaultUserKey];
-                } else {
+                    bodyUserData = bodyData[defaultUserKey];
                 }
             }
             
-            if (userData) {
-                // 所有資料都直接使用，沒有 .body 屬性
-                const bodyInfo = userData;
+            // 處理身體資料
+            let genderDisplay = '未設定';
+            let ccValue = '未設定';
+            let height = '未設定';
+            let weight = '未設定';
+            
+            if (bodyUserData) {
+                const bodyInfo = bodyUserData;
                 
-                // 如果是從 bodyM/bodyF 取得資料，直接根據 targetKey 判斷性別
-                let genderDisplay = '未設定';
-                if (targetKey === 'bodyM') {
+                // 性別顯示
+                if (bodyTargetKey === 'bodyM') {
                     genderDisplay = '男性';
-                } else if (targetKey === 'bodyF') {
+                } else if (bodyTargetKey === 'bodyF') {
                     genderDisplay = '女性';
                 } else if (bodyInfo.Gender) {
                     genderDisplay = bodyInfo.Gender === 'M' ? '男性' : bodyInfo.Gender === 'F' ? '女性' : '未設定';
                 }
                 
                 // 處理 CC 資料格式
-                let ccValue = '未設定';
                 if (bodyInfo.CC && bodyInfo.CC.trim() !== '') {
                     // 如果是數字+字母格式（如28A），保持原樣
                     if (/^\d+[A-G]$/.test(bodyInfo.CC)) {
@@ -6571,18 +6874,43 @@ class InfGoogleLoginComponent extends HTMLElement {
                     }
                 }
                 
-                const result = {
-                    height: bodyInfo.HV ? `${bodyInfo.HV} cm` : '未設定',
-                    weight: bodyInfo.WV ? `${bodyInfo.WV} kg` : '未設定',
-                    gender: genderDisplay,
-                    cc: ccValue
-                };
-                return result;
+                height = bodyInfo.HV ? `${bodyInfo.HV} cm` : '未設定';
+                weight = bodyInfo.WV ? `${bodyInfo.WV} kg` : '未設定';
             }
             
-            return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
+            // 處理腳部資料
+            let footLength = '未設定';
+            let footWidth = '未設定';
+            let footCircumference = '未設定';
+            
+            if (shoesUserData) {
+                const shoesInfo = shoesUserData;
+                footLength = shoesInfo.FH ? `${shoesInfo.FH} cm` : '未設定';
+                footWidth = shoesInfo.FW ? `${shoesInfo.FW} cm` : '未設定';
+                footCircumference = shoesInfo.FCir ? `${shoesInfo.FCir} cm` : '未設定';
+            }
+            
+            const result = {
+                height: height,
+                weight: weight,
+                gender: genderDisplay,
+                cc: ccValue,
+                footLength: footLength,
+                footWidth: footWidth,
+                footCircumference: footCircumference
+            };
+            return result;
+            
         } catch (error) {
-            return { height: '未設定', weight: '未設定', gender: '未設定', cc: '未設定' };
+            return { 
+                height: '未設定', 
+                weight: '未設定', 
+                gender: '未設定', 
+                cc: '未設定',
+                footLength: '未設定',
+                footWidth: '未設定',
+                footCircumference: '未設定'
+            };
         }
     }
 
@@ -6711,6 +7039,129 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
+    // 新增：處理腳部測量完成後上傳資料到雲端
+    async uploadFootMeasurementData(footData, genderFromUrl, shouldTriggerFindMySize = true) {
+        try {
+            // 獲取憑證資料
+            const credential = localStorage.getItem('google_auth_credential');
+            const userInfoStr = localStorage.getItem('google_user_info');
+            let sub = '';
+            
+            if (userInfoStr) {
+                try {
+                    const userInfo = JSON.parse(userInfoStr);
+                    sub = userInfo.sub || '';
+                } catch (e) {
+                }
+            }
+            
+            if (!credential) {
+                console.error('沒有找到憑證');
+                return;
+            }
+            
+            // 根據 URL 參數設置 BodyData 格式和 BodyData_ptr（鞋子版本）
+            // 確保 footData 使用正確的腳部欄位格式：FH、FW、FCir
+            let formattedBodyData, bodyDataPtr;
+            if (genderFromUrl === 'F') {
+                formattedBodyData = { shoesF: footData };
+                bodyDataPtr = 'shoesF';
+            } else if (genderFromUrl === 'M') {
+                formattedBodyData = { shoesM: footData };
+                bodyDataPtr = 'shoesM';
+            } else {
+                // 預設為女性
+                formattedBodyData = { shoesF: footData };
+                bodyDataPtr = 'shoesF';
+            }
+            
+            const payload = {
+                BodyData: formattedBodyData,
+                BodyData_ptr: bodyDataPtr,
+                update_bodydata: true,
+                credential: credential,
+                sub: sub,
+                IDTYPE: 'Google'
+            };
+
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                
+                // 更新本地儲存的 API 回應
+                localStorage.setItem('inffits_api_response', JSON.stringify(result));
+                
+                // 同時更新本地的 BodyID_Foot_size 和 Gender_Last
+                if (genderFromUrl === 'F') {
+                    // 女性：整包 footData 保存到 BodyID_Foot_size
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (footData.CC === "null_null") {
+                        footData.CC = "";
+                    }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (footData.Pattern_Prefer !== undefined) {
+                        footData.FitP = footData.Pattern_Prefer;
+                    }
+                    if(shouldTriggerFindMySize){
+                        localStorage.setItem('BodyID_Foot_size', JSON.stringify(footData));
+                        localStorage.setItem('Gender_Last', 'F');
+                    }
+
+                    // 設置資料修改標記
+                    localStorage.setItem('data_modified_flag', 'true');
+                } else if (genderFromUrl === 'M') {
+                    // 男性：整包 footData 保存到 BodyID_Foot_size
+                    // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+                    if (footData.CC === "null_null") {
+                        footData.CC = "";
+                    }
+                    // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
+                    if (footData.Pattern_Prefer !== undefined) {
+                        footData.FitP = footData.Pattern_Prefer;
+                    }
+                    if(shouldTriggerFindMySize){
+                        localStorage.setItem('BodyID_Foot_size', JSON.stringify(footData));
+                        localStorage.setItem('Gender_Last', 'M');
+                    }
+                    // 設置資料修改標記
+                    localStorage.setItem('data_modified_flag', 'true');
+                }
+                
+                // 觸發更新事件
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'inffits_api_response',
+                    newValue: JSON.stringify(result),
+                    oldValue: null,
+                    storageArea: localStorage
+                }));
+                
+                // 觸發本地資料更新事件
+                if(shouldTriggerFindMySize){
+                    window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                        detail: {
+                            keys: ['BodyID_Foot_size', 'Gender_Last']
+                        }
+                    }));
+                }
+                
+                // 確保 BodyID_Foot_size 有 TS 字段
+                ensureBodyIDFootSizeHasTS();
+                
+            } else {
+                console.error('上傳腳部資料失敗:', response.status);
+            }
+        } catch (error) {
+            console.error('上傳腳部資料時發生錯誤:', error);
+        }
+    }
+
     // 呼叫上傳資料 API
     async callUploadDataAPI(uploadData) {
         try {
@@ -6785,7 +7236,80 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
-
+    // 呼叫上傳腳部資料 API
+    async callUploadFootDataAPI(uploadFootData) {
+        try {
+            
+            // 獲取憑證資料
+            const storedCredential = localStorage.getItem('google_auth_credential');
+            const storedUserInfo = localStorage.getItem('google_user_info');
+            
+            if (!storedCredential) {
+                throw new Error('沒有可用的憑證');
+            }
+            
+            let subValue = '';
+            if (storedUserInfo) {
+                try {
+                    const userInfo = JSON.parse(storedUserInfo);
+                    subValue = userInfo.sub || '';
+                } catch (e) {
+                }
+            }
+            
+            // 獲取現有的 API 回應
+            const currentApiResponse = this.getApiResponse() || {};
+            const existingBodyData = currentApiResponse.BodyData || {};
+            
+            // 建立新的鞋子資料結構（對應 shoesM/shoesF）
+            const genderKey = uploadFootData.Gender === 'M' ? 'shoesM' : 'shoesF';
+            const newBodyData = {
+                ...existingBodyData,
+                [genderKey]: {
+                    FH: uploadFootData.FH,
+                    FW: uploadFootData.FW,
+                    FCir: uploadFootData.FCir,
+                    Gender: uploadFootData.Gender
+                }
+            };
+            
+            // 準備 API payload
+            const payload = {
+                BodyData: newBodyData,
+                BodyData_ptr: genderKey,
+                update_bodydata: true,
+                credential: storedCredential,
+                sub: subValue,
+                IDTYPE: 'Google'
+            };
+            
+            
+            // 發送 API 請求
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error ${response.status}: ${errorText}`);
+            }
+            
+            const data = await response.json();
+            
+            // 更新本地儲存的 API 回應
+            this.saveApiResponseSilently(data);
+            
+            showNotification('✅ 本地腳部資料已成功上傳到雲端', 'success');
+            
+        } catch (error) {
+            throw error;
+        }
+    }
 
     // 從 BodyID_size 恢復 BodyData
     async restoreBodyDataFromSizeLast(sizeData) {
@@ -6895,6 +7419,88 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
     }
 
+    // 從 BodyID_Foot_size 恢復腳部 BodyData
+    async restoreFootDataFromSizeLast(footSizeData) {
+        try {
+            
+            // 獲取憑證資料
+            const storedCredential = localStorage.getItem('google_auth_credential');
+            const storedUserInfo = localStorage.getItem('google_user_info');
+            
+            if (!storedCredential) {
+                return;
+            }
+            
+            let subValue = '';
+            if (storedUserInfo) {
+                try {
+                    const userInfo = JSON.parse(storedUserInfo);
+                    subValue = userInfo.sub || '';
+                } catch (e) {
+                }
+            }
+            
+            // 獲取性別資料
+            const genderLast = localStorage.getItem('Gender_Last');
+            
+            // 獲取現有的 BodyData
+            const currentApiResponse = this.getApiResponse();
+            const existingBodyData = currentApiResponse?.BodyData || {};
+            
+            // 創建新的 BodyData，保留現有資料
+            const newBodyData = { ...existingBodyData };
+            
+            // 根據性別決定加到 shoesM 或 shoesF
+            if (genderLast === 'M') {
+                if (!newBodyData.shoesM) {
+                    newBodyData.shoesM = {};
+                }
+                // 直接展開 footSizeData 的所有屬性，避免嵌套
+                newBodyData.shoesM = { ...newBodyData.shoesM, ...footSizeData };
+            } else if (genderLast === 'F') {
+                if (!newBodyData.shoesF) {
+                    newBodyData.shoesF = {};
+                }
+                // 直接展開 footSizeData 的所有屬性，避免嵌套
+                newBodyData.shoesF = { ...newBodyData.shoesF, ...footSizeData };
+            } else {
+                return;
+            }
+            
+            // 準備 API 請求資料
+            const payload = {
+                BodyData: newBodyData,
+                update_bodydata: true,
+                credential: storedCredential,
+                sub: subValue,
+                IDTYPE: 'Google'
+            };
+            
+            
+            // 調用 API 更新 BodyData
+            const response = await fetch('https://api.inffits.com/inffits_account_register_and_retrieve_data/model?IDTYPE=Google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            
+            // 獲取回應
+            const data = await response.json();
+            
+            // 靜默更新本地的 API 回應資料，避免干擾使用者操作
+            this.saveApiResponseSilently(data);
+            
+        } catch (error) {
+            // 發生錯誤時，靜默處理，不顯示錯誤訊息
+        }
+    }
+
     // 處理登入失敗
     handleLoginFailure(error) {
 
@@ -6926,8 +7532,9 @@ class InfGoogleLoginComponent extends HTMLElement {
         
         // 處理 AWS Lambda 錯誤
         handleAWSLambdaError() {
-            // 清除本地的 BodyID_size
+            // 清除本地的 BodyID_size 和 BodyID_Foot_size
             localStorage.removeItem('BodyID_size');
+            localStorage.removeItem('BodyID_Foot_size');
             
             // 延遲重新整理頁面
             setTimeout(() => {
@@ -7224,6 +7831,12 @@ function updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fi
         newOnclick = `editField(this, 'UpChest', '${userKey}', 'body', '${newValue}', '上胸圍', '${unit}')`;
     } else if (fieldName === 'DnChest') {
         newOnclick = `editField(this, 'DnChest', '${userKey}', 'body', '${newValue}', '下胸圍', '${unit}')`;
+    } else if (fieldName === 'FH') {
+        newOnclick = `editField(this, 'FH', '${userKey}', 'foot', '${newValue}', '腳長', 'cm')`;
+    } else if (fieldName === 'FW') {
+        newOnclick = `editField(this, 'FW', '${userKey}', 'foot', '${newValue}', '腳寬', 'cm')`;
+    } else if (fieldName === 'FCir') {
+        newOnclick = `editField(this, 'FCir', '${userKey}', 'foot', '${newValue}', '腳圍', 'cm')`;
     }
     
     if (newOnclick) {
@@ -7269,6 +7882,29 @@ function ensureBodyIDSizeHasTS() {
         }
     } catch (error) {
         console.warn("Error ensuring TS field in BodyID_size:", error);
+    }
+}
+
+// 確保 BodyID_Foot_size 有 TS 字段和正確的 CC 欄位的輔助函數
+function ensureBodyIDFootSizeHasTS() {
+    try {
+        const bodyIDFootSize = localStorage.getItem('BodyID_Foot_size');
+        if (bodyIDFootSize) {
+            const footSizeData = JSON.parse(bodyIDFootSize);
+            let needsUpdate = false;
+            // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
+            if (footSizeData.CC === "null_null") {
+                footSizeData.CC = "";
+                needsUpdate = true;
+            }
+            
+            // 如果有更新，重新保存到 localStorage
+            if (needsUpdate) {
+                localStorage.setItem('BodyID_Foot_size', JSON.stringify(footSizeData));
+            }
+        }
+    } catch (error) {
+        console.warn("Error ensuring TS field in BodyID_Foot_size:", error);
     }
 }
 
@@ -7320,6 +7956,24 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
                 
                 // 設置資料修改標記
                 localStorage.setItem('data_modified_flag', 'true');
+            } else if (userKey === 'shoesF' || userKey === 'shoesM') {
+                // 對於 shoesF/shoesM，整包資料保存到 BodyID_Foot_size
+                console.log('準備保存到 BodyID_Foot_size:', userData);
+                localStorage.setItem('BodyID_Foot_size', JSON.stringify(userData));
+                
+                // 驗證保存結果
+                const savedFootData = JSON.parse(localStorage.getItem('BodyID_Foot_size') || '{}');
+                console.log('保存後的 BodyID_Foot_size:', savedFootData);
+                
+                // 更新性別資料
+                if (userKey === 'shoesF') {
+                    localStorage.setItem('Gender_Last', 'F');
+                } else if (userKey === 'shoesM') {
+                    localStorage.setItem('Gender_Last', 'M');
+                }
+                
+                // 設置資料修改標記
+                localStorage.setItem('data_modified_flag', 'true');
             } else {
                 // 對於其他用戶，只保存 HV 和 WV
                 if (bodyInfo.HV && bodyInfo.WV) {
@@ -7340,15 +7994,24 @@ function updateLocalStorageFromAPI(userKey, fieldName, newValue) {
             }
             
             // 觸發本地資料更新事件
+            let updatedKeys = ['Gender_Last'];
+            if (userKey === 'bodyF' || userKey === 'bodyM' || (!userKey.includes('shoes'))) {
+                updatedKeys.push('BodyID_size');
+                // 確保 BodyID_size 有 TS 字段
+                ensureBodyIDSizeHasTS();
+            }
+            if (userKey === 'shoesF' || userKey === 'shoesM') {
+                updatedKeys.push('BodyID_Foot_size');
+                // 確保 BodyID_Foot_size 有 TS 字段
+                ensureBodyIDFootSizeHasTS();
+            }
+            
             window.dispatchEvent(new CustomEvent('localStorage-updated', {
                 detail: {
-                    keys: ['BodyID_size', 'Gender_Last'],
+                    keys: updatedKeys,
                     source: 'field-edit'
                 }
             }));
-            
-            // 確保 BodyID_size 有 TS 字段
-            ensureBodyIDSizeHasTS();
             
             // 完全移除 Find My Size 觸發邏輯，避免畫面變空
         }
@@ -7586,7 +8249,6 @@ const CONFIG_TEMPLATES = {
             }
         }
     ],
-    
     // Size 類型配置（尺寸選擇頁面）
     size: [
         {
@@ -7597,6 +8259,41 @@ const CONFIG_TEMPLATES = {
                     maxWidth: '90%',
                     margin: '0 auto',
                     paddingTop: '20px'
+                },
+                mobile: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                }
+            }
+        },
+        {
+            avatarContainerId: '#SB_Prod_cart',
+            modalContainerId: 'Sizebox_cart',
+            modalContainerStyle: {
+                desktop: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                },
+                mobile: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px'
+                }
+            }
+        }
+    ],
+    // Shoes 類型配置（鞋子尺寸選擇頁面）
+    shoes: [
+        {
+            avatarContainerId: '#container_BF_mbinfo .c_header',
+            modalContainerId: 'container_BF_mbinfo',
+            modalContainerStyle: {
+                desktop: {
+                    maxWidth: '90%',
+                    margin: '0 auto',
+                    paddingTop: '20px',
                 },
                 mobile: {
                     maxWidth: '90%',
@@ -8195,6 +8892,21 @@ function editField(editIcon, fieldName, userKey, dataType, currentValue, fieldLa
         createChestSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit, 'down');
         return;
         
+    } else if (fieldName === 'FH') {
+        // 腳長欄位使用下拉選擇器 (22~27, 間隔 0.1)
+        createFootLengthSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        return;
+        
+    } else if (fieldName === 'FW') {
+        // 腳寬欄位使用下拉選擇器 (6~15, 間隔 0.1)
+        createFootWidthSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        return;
+        
+    } else if (fieldName === 'FCir') {
+        // 腳圍欄位使用下拉選擇器 (18~39.9, 間隔 0.1)
+        createFootCircumferenceSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit);
+        return;
+        
     } else {
         // 其他欄位使用輸入框
         inputElement = document.createElement('input');
@@ -8497,8 +9209,8 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
             composed: true
         }));
 
-        // 如果更新的是身高、體重、性別或胸圍，則更新 BMI 和本地資料
-        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC' || fieldName === 'UpChest' || fieldName === 'DnChest') {
+        // 如果更新的是身高、體重、性別、胸圍或腳部資料，則更新 BMI 和本地資料
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC' || fieldName === 'UpChest' || fieldName === 'DnChest' || fieldName === 'FH' || fieldName === 'FW' || fieldName === 'FCir') {
             
             // 延遲執行 BMI 更新，確保 DOM 完全更新
         setTimeout(() => {
@@ -8512,7 +9224,7 @@ async function saveFieldValue(input, fieldName, userKey, dataType, fieldLabel, u
         }
         
         // 更新編輯圖標的 onclick 屬性，使其使用新的值
-        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC' || fieldName === 'UpChest' || fieldName === 'DnChest') {
+        if (fieldName === 'HV' || fieldName === 'WV' || fieldName === 'Gender' || fieldName === 'CC' || fieldName === 'UpChest' || fieldName === 'DnChest' || fieldName === 'FH' || fieldName === 'FW' || fieldName === 'FCir') {
             updateEditFieldOnclick(fieldContainer, fieldName, userKey, newValue, fieldLabel, unit);
         }
 
@@ -8632,7 +9344,7 @@ async function prepareUpdatePayload(fieldName, userKey, dataType, newValue) {
     // 構建新的 BodyData
     const newBodyData = { ...currentApiResponse.BodyData };
     
-    if (dataType === 'body') {
+    if (dataType === 'body' || dataType === 'foot') {
         if (!newBodyData[userKey]) {
             newBodyData[userKey] = {};
         }
@@ -8922,6 +9634,63 @@ function checkAndDeleteLocalDataIfSame(userKey, cloudUserData) {
     }
 }
 
+// 檢查並刪除本地腳部資料（如果與雲端資料相同）
+function checkAndDeleteLocalFootDataIfSame(userKey, cloudUserData) {
+    try {
+        
+        // 獲取本地腳部資料
+        const localFootData = localStorage.getItem('BodyID_Foot_size');
+        const localGender = localStorage.getItem('Gender_Last');
+        
+        if (!localFootData || !localGender) {
+            return false;
+        }
+        
+        let localData;
+        try {
+            localData = JSON.parse(localFootData);
+        } catch (error) {
+            return false;
+        }
+        
+        // 檢查性別是否匹配（腳部資料對應 shoesF/shoesM）
+        const genderMatches = (userKey === 'shoesF' && localGender === 'F') || 
+                             (userKey === 'shoesM' && localGender === 'M') ||
+                             (cloudUserData.Gender === localGender);
+        
+        if (!genderMatches) {
+            return false;
+        }
+        
+        // 檢查腳長、腳寬、腳圍是否相同
+        const footLengthMatches = localData.FH === cloudUserData.FH;
+        const footWidthMatches = localData.FW === cloudUserData.FW;
+        const footCircumMatches = localData.FCir === cloudUserData.FCir;
+        
+        if (footLengthMatches && footWidthMatches && footCircumMatches && genderMatches) {
+            // 資料相同，刪除本地腳部資料
+            localStorage.removeItem('BodyID_Foot_size');
+            localStorage.removeItem('Gender_Last');
+            
+            // 觸發本地資料更新事件
+            window.dispatchEvent(new CustomEvent('localStorage-updated', {
+                detail: {
+                    keys: ['BodyID_Foot_size', 'Gender_Last'],
+                    action: 'deleted'
+                }
+            }));
+            
+            showNotification('🗑️ 本地腳部資料已同步刪除', 'info');
+            return true;
+        } else {
+            return false;
+        }
+        
+    } catch (error) {
+        return false;
+    }
+}
+
 // 刪除使用者功能
 async function deleteUser(userKey) {
     try {
@@ -9081,7 +9850,7 @@ function createHeightSelector(fieldContainer, valueElement, currentValue, userKe
         border-radius: 8px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        z-index: 1500;
     `;
     
     // 創建標題
@@ -9254,7 +10023,7 @@ function createWeightSelector(fieldContainer, valueElement, currentValue, userKe
         border-radius: 8px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        z-index: 1500;
     `;
     
     // 創建標題
@@ -9427,7 +10196,7 @@ function createChestSelector(fieldContainer, valueElement, currentValue, userKey
         border-radius: 8px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        z-index: 1500;
     `;
     
     // 創建標題
@@ -9781,18 +10550,16 @@ function createChestSelector(fieldContainer, valueElement, currentValue, userKey
     }, 200);
 }
 
-// 創建胸圍尺寸選擇器
-function createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
-    console.log('createBraSizeSelector invoked. Initial currentValue:', currentValue);
+// 創建腳長選擇器 (22~27, 間隔 0.1)
+function createFootLengthSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
     // 隱藏原始值
     valueElement.style.display = 'none';
     
-    // 創建胸圍選擇器容器
+    // 創建選擇器容器
     const selectorContainer = document.createElement('div');
-    selectorContainer.className = 'bra-size-selector';
+    selectorContainer.className = 'foot-length-selector';
     selectorContainer.style.cssText = `
         position: absolute;
-        // top: 100%;
         top: 0;
         left: 0;
         right: 0;
@@ -9801,9 +10568,551 @@ function createBraSizeSelector(fieldContainer, valueElement, currentValue, userK
         border-radius: 8px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
-        // margin-top: 4px;
+        z-index: 1500;
     `;
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = '選擇腳長';
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    // 創建腳長選擇區域
+    const footLengthSection = document.createElement('div');
+    footLengthSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    // 創建下拉選擇器
+    const selectElement = document.createElement('select');
+    selectElement.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    
+    // 添加預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '請選擇腳長';
+    selectElement.appendChild(defaultOption);
+    
+    // 生成腳長選項 (22.0~27.0, 間隔 0.1)
+    for (let length = 22.0; length <= 27.0; length += 0.1) {
+        const option = document.createElement('option');
+        const roundedLength = Math.round(length * 10) / 10; // 確保精確度
+        option.value = roundedLength.toString();
+        option.textContent = `${roundedLength.toFixed(1)} cm`;
+        if (currentValue === roundedLength.toString() || Math.abs(parseFloat(currentValue) - roundedLength) < 0.01) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    }
+    
+    footLengthSection.appendChild(selectElement);
+    selectorContainer.appendChild(footLengthSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確定';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #000000;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('腳長選擇器取消按鈕被點擊');
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        const editIcon = fieldContainer.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.style.display = 'flex';
+        }
+    });
+    
+    // 確定按鈕事件
+    confirmBtn.addEventListener('click', async () => {
+        const selectedValue = selectElement.value;
+        if (selectedValue) {
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = selectedValue;
+            
+            try {
+                await saveFieldValue(tempInput, 'FH', userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+                
+                // 關閉選擇器
+            selectorContainer.remove();
+                valueElement.style.display = 'block';
+                fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            } catch (error) {
+                console.error('保存腳長失敗:', error);
+                showNotification('保存失敗，請重試', 'error');
+            }
+        } else {
+            showNotification('請選擇腳長', 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 排除按鈕點擊
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            console.log('腳長選擇器外部點擊，關閉選擇器');
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            const editIcon = fieldContainer.querySelector('.edit-icon');
+            if (editIcon) {
+                editIcon.style.display = 'flex';
+            }
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+            setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
+// 腳寬選擇器函數 (6.0~15.0, 間隔 0.1)
+function createFootWidthSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 創建選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'foot-width-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1500;
+    `;
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = '選擇腳寬';
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    // 創建腳寬選擇區域
+    const footWidthSection = document.createElement('div');
+    footWidthSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    // 創建下拉選擇器
+    const selectElement = document.createElement('select');
+    selectElement.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    
+    // 添加預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '請選擇腳寬';
+    selectElement.appendChild(defaultOption);
+    
+    // 生成腳寬選項 (6.0~15.0, 間隔 0.1)
+    for (let width = 6.0; width <= 15.0; width += 0.1) {
+        const option = document.createElement('option');
+        const roundedWidth = Math.round(width * 10) / 10; // 確保精確度
+        option.value = roundedWidth.toString();
+        option.textContent = `${roundedWidth.toFixed(1)} cm`;
+        if (currentValue === roundedWidth.toString() || Math.abs(parseFloat(currentValue) - roundedWidth) < 0.01) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    }
+    
+    footWidthSection.appendChild(selectElement);
+    selectorContainer.appendChild(footWidthSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確定';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #000000;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('腳寬選擇器取消按鈕被點擊');
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        const editIcon = fieldContainer.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.style.display = 'flex';
+        }
+    });
+    
+    // 確定按鈕事件
+    confirmBtn.addEventListener('click', async () => {
+        const selectedValue = selectElement.value;
+        if (selectedValue) {
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = selectedValue;
+            
+            try {
+                await saveFieldValue(tempInput, 'FW', userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+                
+                // 關閉選擇器
+            selectorContainer.remove();
+                valueElement.style.display = 'block';
+                fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            } catch (error) {
+                console.error('保存腳寬失敗:', error);
+                showNotification('保存失敗，請重試', 'error');
+            }
+        } else {
+            showNotification('請選擇腳寬', 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 排除按鈕點擊
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            console.log('腳寬選擇器外部點擊，關閉選擇器');
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            const editIcon = fieldContainer.querySelector('.edit-icon');
+            if (editIcon) {
+                editIcon.style.display = 'flex';
+            }
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
+// 腳圍選擇器函數 (18.0~39.9, 間隔 0.1)
+function createFootCircumferenceSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+    // 創建選擇器容器
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'foot-circumference-selector';
+    selectorContainer.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #000;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 1500;
+    `;
+    
+    // 創建標題
+    const title = document.createElement('div');
+    title.textContent = '選擇腳圍';
+    title.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        color: #1E293B;
+        margin-bottom: 16px;
+        text-align: center;
+    `;
+    selectorContainer.appendChild(title);
+    
+    // 創建腳圍選擇區域
+    const footCircumSection = document.createElement('div');
+    footCircumSection.style.cssText = `
+        margin-bottom: 16px;
+    `;
+    
+    // 創建下拉選擇器
+    const selectElement = document.createElement('select');
+    selectElement.style.cssText = `
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    `;
+    
+    // 添加預設選項
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '請選擇腳圍';
+    selectElement.appendChild(defaultOption);
+    
+    // 生成腳圍選項 (18.0~39.9, 間隔 0.1)
+    for (let circumference = 18.0; circumference <= 39.9; circumference += 0.1) {
+        const option = document.createElement('option');
+        const roundedCircumference = Math.round(circumference * 10) / 10; // 確保精確度
+        option.value = roundedCircumference.toString();
+        option.textContent = `${roundedCircumference.toFixed(1)} cm`;
+        if (currentValue === roundedCircumference.toString() || Math.abs(parseFloat(currentValue) - roundedCircumference) < 0.01) {
+            option.selected = true;
+        }
+        selectElement.appendChild(option);
+    }
+    
+    footCircumSection.appendChild(selectElement);
+    selectorContainer.appendChild(footCircumSection);
+    
+    // 創建按鈕區域
+    const buttonSection = document.createElement('div');
+    buttonSection.style.cssText = `
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    `;
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
+        background: white;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '確定';
+    confirmBtn.style.cssText = `
+        padding: 8px 16px;
+        border: 1px solid #000000;
+        border-radius: 6px;
+        background: #000000;
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+    
+    buttonSection.appendChild(cancelBtn);
+    buttonSection.appendChild(confirmBtn);
+    selectorContainer.appendChild(buttonSection);
+    
+    // 添加到容器
+    fieldContainer.appendChild(selectorContainer);
+    
+    // 取消按鈕事件
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('腳圍選擇器取消按鈕被點擊');
+        selectorContainer.remove();
+        valueElement.style.display = 'block';
+        const editIcon = fieldContainer.querySelector('.edit-icon');
+        if (editIcon) {
+            editIcon.style.display = 'flex';
+        }
+    });
+    
+    // 確定按鈕事件
+    confirmBtn.addEventListener('click', async () => {
+        const selectedValue = selectElement.value;
+        if (selectedValue) {
+            // 創建一個臨時的輸入元素來調用 saveFieldValue
+            const tempInput = document.createElement('input');
+            tempInput.value = selectedValue;
+            
+            try {
+                await saveFieldValue(tempInput, 'FCir', userKey, dataType, fieldLabel, unit, valueElement, fieldContainer);
+                
+                // 關閉選擇器
+                selectorContainer.remove();
+                valueElement.style.display = 'block';
+                fieldContainer.querySelector('.edit-icon').style.display = 'flex';
+            } catch (error) {
+                console.error('保存腳圍失敗:', error);
+                showNotification('保存失敗，請重試', 'error');
+            }
+        } else {
+            showNotification('請選擇腳圍', 'error');
+        }
+    });
+    
+    // 點擊外部關閉選擇器
+    const clickOutsideHandler = (e) => {
+        // 排除按鈕點擊
+        if (e.target === cancelBtn || e.target === confirmBtn || 
+            cancelBtn.contains(e.target) || confirmBtn.contains(e.target)) {
+            return;
+        }
+        
+        if (!selectorContainer.contains(e.target) && !fieldContainer.contains(e.target)) {
+            console.log('腳圍選擇器外部點擊，關閉選擇器');
+            selectorContainer.remove();
+            valueElement.style.display = 'block';
+            const editIcon = fieldContainer.querySelector('.edit-icon');
+            if (editIcon) {
+                editIcon.style.display = 'flex';
+            }
+            document.removeEventListener('click', clickOutsideHandler);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', clickOutsideHandler);
+    }, 200);
+}
+
+// 創建胸圍尺寸選擇器
+function createBraSizeSelector(fieldContainer, valueElement, currentValue, userKey, dataType, fieldLabel, unit) {
+    console.log('createBraSizeSelector invoked. Initial currentValue:', currentValue);
+    // 隱藏原始值
+    valueElement.style.display = 'none';
+    
+     // 創建胸圍選擇器容器
+     const selectorContainer = document.createElement('div');
+     selectorContainer.className = 'bra-size-selector';
+     selectorContainer.style.cssText = `
+         position: absolute;
+         // top: 100%;
+         top: 0;
+         left: 0;
+         right: 0;
+         background: white;
+         border: 1px solid #000;
+         border-radius: 8px;
+         padding: 16px;
+         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+         z-index: 1500;
+         // margin-top: 4px;
+     `;
     
         // 解析當前值
     let currentBand = '';
@@ -10301,7 +11610,7 @@ function createChestMeasurementSelector(fieldContainer, valueElement, currentVal
         border-radius: 8px;
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 1000;
+        z-index: 1500;
     `;
     
     // 創建標題區域（包含標題和切換按鈕）

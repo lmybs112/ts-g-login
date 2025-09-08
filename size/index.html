@@ -46,16 +46,13 @@
             width: 100%;
         }
         .inffits_back{
-            position: fixed; width: 100%; height: 100%; top: 0px; left: 0px; z-index: 2147483647; background: rgba(0, 0, 0, 0.5); transform: none;
+            position: fixed; width: 100%; height: 100%; top: 0px; left: 0px; z-index: 2147483647; background: rgba(0, 0, 0, 0.5); transform: none; display: none;
         }
         .abs-center{
             position:absolute;top:0;bottom:0;right:0;left:0;width:10px;margin:auto;
         }
         #inf_close{
             cursor: pointer;position:absolute;top: -5px;z-index: 100;right: -10px;padding: 2px;height: 24px;width: 24px;border-radius: 50%;box-shadow: rgb(54 62 81 / 15%) 0px 0.0625rem 0.125rem 0.0625rem;background: white; opacity:1
-        }
-        #inffits_ctryon_window{
-            width:100%; height:100%; visibility:visible; position:relative; border:none; outline:none;  z-index:14;border-radius:10px;box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 8px;
         }
     </style>
 </head>`
@@ -72,6 +69,16 @@
     <section>
         <h2>Home Page</h2>
         <p>This is the home page of my website.</p>
+        
+        <!-- iframe 選擇器 -->
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="btn-shoes" style="background-color: black; color: white; padding: 10px 20px; margin: 0 10px; border: none; cursor: pointer;" onclick="showIframe('shoes')">
+                google 登入 - 鞋款試穿
+            </button>
+            <button id="btn-login" style="background-color: black; color: white; padding: 10px 20px; margin: 0 10px; border: none; cursor: pointer;" onclick="showIframe('login')">
+                google 登入 - 服飾試穿
+            </button>
+        </div>
     </section>
     <footer>
         <p>&copy; 2024 My Website</p>
@@ -79,10 +86,9 @@
     <div class="inffits_back">
         <div id="inffits_cblock" class="abs-center">
             <div id="tryon">
-                <!-- <iframe id="inffits_ctryon_window" src="iframe_container_shoes_login.html?cid=GREENPINE_20250314010900072943MZ25030615091487926479&sizes=5,6,7,8,9,10&name=GREEN PINE漆皮4.5CM粗跟拖鞋 黑色 (00338879)&image=https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Original/SalePage/8876932/0/638765916496770000?v=1 " frameborder="0"></iframe> -->
-                <iframe id="inffits_ctryon_window" src="indexwebiframe_CAX_tw_ob91_login.html?F&OB91_20250901144552934090T25090101464341404619&U"></iframe>
+                <iframe id="inffits_ctryon_window" src="" frameborder="0" style="width:100%; height:100%; visibility:visible; position:relative; border:none; outline:none; z-index:14; border-radius:10px; box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 8px;"></iframe>
             </div>
-            <div id="inf_close" onclick="$(this.parentNode.parentNode).fadeOut()">
+            <div id="inf_close" onclick="closeIframe()">
                 <img src="https://inffits.com/webDesign/HTML/img/cancel.png" class="abs-center"> 
             </div>
         </div>
@@ -164,6 +170,21 @@
     </style>
 </body>
 <script>
+function showIframe(type) {
+    const iframe = document.getElementById('inffits_ctryon_window');
+    if (type === 'shoes') {
+        iframe.src = 'iframe_container_shoes_login.html?cid=GREENPINE_20250314010900072943MZ25030615091487926479&sizes=5,6,7,8,9,10&name=GREEN PINE漆皮4.5CM粗跟拖鞋 黑色 (00338879)&image=https://diz36nn4q02zr.cloudfront.net/webapi/imagesV3/Original/SalePage/8876932/0/638765916496770000?v=1';
+    } else if (type === 'login') {
+        iframe.src = 'indexwebiframe_CAX_tw_ob91_login.html?F&OB91_20250901144552934090T25090101464341404619&U';
+    }
+    document.querySelector('.inffits_back').style.display = 'block';
+}
+
+function closeIframe() {
+    document.querySelector('.inffits_back').style.display = 'none';
+    document.getElementById('inffits_ctryon_window').src = '';
+}
+
 function IDRxGet(o, t, s, x, test, fast) {
     var e = {
             MsgHeader: "IDRxGet",
