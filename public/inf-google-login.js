@@ -5768,8 +5768,68 @@ class InfGoogleLoginComponent extends HTMLElement {
 
 
 
+    // 設定 GSI 警告靜默處理器
+    setupGSIWarningHandler() {
+        // 如果已經設定過，不重複設定
+        if (this.gsiHandlerSetup) return;
+        
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const originalLog = console.log;
+        
+        const filterGSIMessages = (...args) => {
+            const message = args.join(' ');
+            return message.includes('GSI_LOGGER') || 
+                   message.includes('FedCM') || 
+                   message.includes('Google One Tap') ||
+                   message.includes('fedcm-migration') ||
+                   message.includes('cross-origin permission policy') ||
+                   message.includes('display_moment') ||
+                   message.includes('skipped_moment');
+        };
+        
+        console.error = (...args) => {
+            if (!filterGSIMessages(...args)) {
+                originalError.apply(console, args);
+            }
+        };
+        
+        console.warn = (...args) => {
+            if (!filterGSIMessages(...args)) {
+                originalWarn.apply(console, args);
+            }
+        };
+        
+        console.log = (...args) => {
+            if (!filterGSIMessages(...args)) {
+                originalLog.apply(console, args);
+            }
+        };
+        
+        // 保存原始方法引用，以便後續恢復
+        this.originalConsoleMethods = {
+            error: originalError,
+            warn: originalWarn,
+            log: originalLog
+        };
+        
+        this.gsiHandlerSetup = true;
+        
+        // 10秒後恢復原始方法（給足時間讓 GSI 完成初始化）
+        setTimeout(() => {
+            if (this.originalConsoleMethods) {
+                console.error = this.originalConsoleMethods.error;
+                console.warn = this.originalConsoleMethods.warn;
+                console.log = this.originalConsoleMethods.log;
+                this.gsiHandlerSetup = false;
+            }
+        }, 10000);
+    }
+
     // Google 服務載入完成後的回調
     onGoogleLoaded() {
+        // 設定全域的 GSI 警告靜默處理器
+        this.setupGSIWarningHandler();
 
         if (!this.clientId) {
             return;
@@ -7733,25 +7793,60 @@ class InfGoogleLoginComponent extends HTMLElement {
                 window.google.accounts.id.disableAutoSelect();
                 // 已禁用 Google 自動選擇
                 
-                // 臨時設定錯誤處理器來捕獲 FedCM 錯誤
+                // 設定全面的 GSI/FedCM 錯誤處理器
                 const originalConsoleError = console.error;
-                const fedcmErrorHandler = (...args) => {
+                const originalConsoleWarn = console.warn;
+                const originalConsoleLog = console.log;
+                
+                const gsiErrorHandler = (...args) => {
                     const message = args.join(' ');
-                    if (message.includes('FedCM disconnect failed') || 
-                        message.includes('disconnect request failed')) {
-                        // 靜默處理 FedCM 錯誤
+                    // 過濾所有 GSI 和 FedCM 相關的訊息
+                    if (message.includes('GSI_LOGGER') || 
+                        message.includes('FedCM') || 
+                        message.includes('disconnect failed') ||
+                        message.includes('Google One Tap') ||
+                        message.includes('fedcm-migration') ||
+                        message.includes('cross-origin permission policy')) {
+                        // 靜默處理所有 GSI/FedCM 相關訊息
                         return;
                     }
                     // 其他錯誤正常顯示
                     originalConsoleError.apply(console, args);
                 };
                 
-                console.error = fedcmErrorHandler;
+                const gsiWarnHandler = (...args) => {
+                    const message = args.join(' ');
+                    if (message.includes('GSI_LOGGER') || 
+                        message.includes('FedCM') || 
+                        message.includes('Google One Tap') ||
+                        message.includes('fedcm-migration')) {
+                        return;
+                    }
+                    originalConsoleWarn.apply(console, args);
+                };
                 
-                // 2秒後恢復原始 console.error
+                const gsiLogHandler = (...args) => {
+                    const message = args.join(' ');
+                    if (message.includes('GSI_LOGGER') || 
+                        message.includes('FedCM') || 
+                        message.includes('Google One Tap') ||
+                        message.includes('fedcm-migration')) {
+                        return;
+                    }
+                    originalConsoleLog.apply(console, args);
+                };
+                
+                // 劫持所有 console 方法
+                console.error = gsiErrorHandler;
+                console.warn = gsiWarnHandler;
+                console.log = gsiLogHandler;
+                
+                // 3秒後恢復原始 console 方法
                 setTimeout(() => {
                     console.error = originalConsoleError;
-                }, 2000);
+                    console.warn = originalConsoleWarn;
+                    console.log = originalConsoleLog;
+                }, 3000);
                 
                 // 安全的撤銷憑證方式
                 if (this.clientId) {
@@ -7782,7 +7877,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 clearTimeout(timeoutId);
                                 // 靜默處理已知的 FedCM 錯誤
                                 if (syncError.message && syncError.message.includes('fedcm')) {
-                                    // Google FedCM 錯誤已靜默處理
+                                    // Google FedCM
                                 } else {
                                     console.warn('⚠️ Google revoke 同步錯誤:', syncError.message);
                                 }
