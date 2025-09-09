@@ -64,6 +64,21 @@ export default async function handler(req, res) {
             state = req.query.state;
             redirect_uri = req.query.redirect_uri || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/api/auth/google`;
             
+            // 如果是測試請求，返回配置狀態
+            if (req.query.test === '1') {
+                const clientId = process.env.GOOGLE_CLIENT_ID;
+                const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+                
+                return res.status(200).json({
+                    success: true,
+                    config_status: {
+                        client_id: clientId ? 'configured' : 'missing',
+                        client_secret: clientSecret ? 'configured' : 'missing',
+                        redirect_uri: `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/api/auth/google`
+                    }
+                });
+            }
+            
             // 如果是 GET 請求且有授權碼，返回一個頁面來處理回調
             if (code) {
                 return res.status(200).send(`
@@ -104,8 +119,8 @@ export default async function handler(req, res) {
                                         }
                                     }));
                                     
-                                    // 重定向回原頁面
-                                    window.location.href = '/';
+                                    // 重定向回測試頁面
+                                    window.location.href = '/auth-test.html';
                                 } else {
                                     console.error('OAuth 失敗:', data.message);
                                     window.location.href = '/?error=oauth_failed';

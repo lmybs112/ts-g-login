@@ -362,6 +362,7 @@
                 <button class="btn danger" onclick="logout()">🚪 登出</button>
             </div>
             <div>
+                <button class="btn secondary" onclick="checkConfig()">⚙️ 檢查配置</button>
                 <button class="btn secondary" onclick="testAPIConnection()">🌐 測試 API 連線</button>
                 <button class="btn secondary" onclick="validateToken()">✅ 驗證 Token</button>
                 <button class="btn secondary" onclick="saveToCookie()">🍪 保存到 Cookie</button>
@@ -946,31 +947,49 @@
                 // 觸發登入
                 if (typeof googleComponent.signIn === 'function') {
                     addLog('使用 signIn 方法觸發登入...', 'info');
-                    await googleComponent.signIn();
+                    try {
+                        await googleComponent.signIn();
+                        addLog('OAuth2 重定向已觸發，請完成授權...', 'info');
+                    } catch (signInError) {
+                        addLog(`signIn 方法失敗: ${signInError.message}`, 'error');
+                        throw signInError;
+                    }
                 } else if (typeof googleComponent.triggerGoogleSignIn === 'function') {
                     addLog('使用 triggerGoogleSignIn 方法觸發登入...', 'info');
-                    await googleComponent.triggerGoogleSignIn();
-                } else {
-                    // 最後的備用方案：直接使用 Google API
-                    addLog('組件方法不可用，嘗試直接使用 Google API...', 'warning');
-                    
-                    if (window.google?.accounts?.id) {
-                        window.google.accounts.id.initialize({
-                            client_id: '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com',
-                            callback: (response) => {
-                                addLog('Google API 直接回調成功', 'success');
-                                // 觸發自定義事件
-                                document.dispatchEvent(new CustomEvent('google-login-success', {
-                                    detail: { credential: response.credential }
-                                }));
-                            }
-                        });
-                        
-                        window.google.accounts.id.prompt();
-                        addLog('已觸發 Google One Tap', 'info');
-                    } else {
-                        throw new Error('Google 登入組件和 API 都不可用');
+                    try {
+                        await googleComponent.triggerGoogleSignIn();
+                        addLog('OAuth2 重定向已觸發，請完成授權...', 'info');
+                    } catch (triggerError) {
+                        addLog(`triggerGoogleSignIn 方法失敗: ${triggerError.message}`, 'error');
+                        throw triggerError;
                     }
+                } else {
+                    // 直接觸發 OAuth2 流程
+                    addLog('直接觸發 OAuth2 流程...', 'info');
+                    
+                    const authUrl = 'https://accounts.google.com/oauth/authorize';
+                    const redirectUri = window.location.origin + '/api/auth/google';
+                    const state = 'oauth2_flow_' + Date.now();
+                    
+                    const params = new URLSearchParams({
+                        client_id: '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com',
+                        response_type: 'code',
+                        scope: 'openid email profile',
+                        access_type: 'offline',
+                        prompt: 'consent',
+                        redirect_uri: redirectUri,
+                        state: state,
+                        include_granted_scopes: 'true'
+                    });
+
+                    // 記錄狀態用於驗證
+                    localStorage.setItem('google_oauth_state', state);
+                    localStorage.setItem('google_oauth_redirect_uri', redirectUri);
+                    
+                    addLog('重定向到 Google 授權頁面...', 'info');
+                    
+                    // 直接重定向到 Google 授權頁面
+                    window.location.href = `${authUrl}?${params.toString()}`;
                 }
                 
             } catch (error) {
@@ -1063,6 +1082,36 @@
             } catch (error) {
                 addLog(`登出失敗: ${error.message}`, 'error');
                 showNotification('登出失敗', 'error');
+            }
+        }
+
+        async function checkConfig() {
+            addLog('檢查 OAuth2 配置...', 'info');
+            
+            try {
+                const response = await fetch('/api/auth/google?test=1');
+                const data = await response.json();
+                
+                if (data.success) {
+                    addLog('✅ API 端點可用', 'success');
+                    addLog(`Client ID: ${data.config_status.client_id}`, data.config_status.client_id === 'configured' ? 'success' : 'error');
+                    addLog(`Client Secret: ${data.config_status.client_secret}`, data.config_status.client_secret === 'configured' ? 'success' : 'error');
+                    addLog(`Redirect URI: ${data.config_status.redirect_uri}`, 'info');
+                    
+                    if (data.config_status.client_secret === 'missing') {
+                        addLog('⚠️ 需要在 Vercel 設定 GOOGLE_CLIENT_SECRET 環境變數', 'warning');
+                        showNotification('需要設定 GOOGLE_CLIENT_SECRET', 'warning');
+                    } else {
+                        addLog('✅ OAuth2 配置完整', 'success');
+                        showNotification('OAuth2 配置完整', 'success');
+                    }
+                } else {
+                    addLog('❌ 配置檢查失敗', 'error');
+                    showNotification('配置檢查失敗', 'error');
+                }
+            } catch (error) {
+                addLog(`配置檢查錯誤: ${error.message}`, 'error');
+                showNotification('配置檢查錯誤', 'error');
             }
         }
 

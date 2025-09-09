@@ -577,13 +577,14 @@ window.addEventListener("message",function(e){
             const messageData = {
              header: 'bid',
              value: {
-                    "FH": "22.5",
-                    "FW": "6.4",
-                    "FCir": "18.3",
-                    "DataItem": "0010"
+                    "FH": FH,
+                    "FW": FW,
+                    "FCir": FCir,
+                    "DataItem": DataItem
                 }
             }
             console.log('FML_Done value', messageData.value)
+            console.log('FML_Done value', e)
             
             // 同時調用 update_bodydata API
             // 找到 inf-google-login 組件並調用其方法
