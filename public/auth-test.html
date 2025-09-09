@@ -1009,10 +1009,17 @@
                     localStorage.setItem('google_oauth_redirect_uri', redirectUri);
                     
                     addLog(`重定向 URI: ${redirectUri}`, 'info');
+                    addLog(`完整授權 URL: ${authUrl}?${params.toString()}`, 'info');
                     addLog('重定向到 Google 授權頁面...', 'info');
                     
+                    // 檢查 URL 長度是否過長
+                    const fullUrl = `${authUrl}?${params.toString()}`;
+                    if (fullUrl.length > 2048) {
+                        addLog('⚠️ 警告：授權 URL 可能過長', 'warning');
+                    }
+                    
                     // 直接重定向到 Google 授權頁面
-                    window.location.href = `${authUrl}?${params.toString()}`;
+                    window.location.href = fullUrl;
                 }
                 
             } catch (error) {

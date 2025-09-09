@@ -576,10 +576,10 @@ window.addEventListener("message",function(e){
             const messageData = {
              header: 'bid',
              value: {
-                "FH": $('#FootLength_input_PS_mbinfo').val(),
+                    "FH": $('#FootLength_input_PS_mbinfo').val(),
                     "FW": $('#FootWidth_input_PS_mbinfo').val(),
                     "FCir": $('#FootCircu_input_PS_mbinfo').val(),
-                    DataItem: "0010",
+                    DataItem: DataItem.join(','),
                 }
             }
             console.log('FML_Done value', messageData.value)
