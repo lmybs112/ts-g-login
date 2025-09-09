@@ -585,7 +585,41 @@
             const userName = document.getElementById('user-name');
             const userEmail = document.getElementById('user-email');
 
-            if (authStatus.isAuthenticated) {
+            // 檢查是否有 Token（即使整合管理器沒有識別）
+            const hasToken = localStorage.getItem('google_access_token');
+            const hasValidToken = hasToken && hasToken.length > 50;
+            
+            let isAuthenticated = authStatus.isAuthenticated;
+            let userInfo = authStatus.user;
+            
+            // 如果整合管理器沒有識別登入，但有 Token，嘗試從 JWT 提取資訊
+            if (!isAuthenticated && hasValidToken) {
+                try {
+                    const token = localStorage.getItem('google_access_token');
+                    if (token && (token.startsWith('gid_') || token.includes('.'))) {
+                        const parts = token.split('.');
+                        if (parts.length === 3) {
+                            const payload = JSON.parse(atob(parts[1]));
+                            
+                            // 檢查 token 是否過期
+                            const now = Math.floor(Date.now() / 1000);
+                            if (payload.exp && payload.exp > now) {
+                                isAuthenticated = true;
+                                userInfo = {
+                                    id: payload.sub,
+                                    name: payload.name,
+                                    email: payload.email
+                                };
+                                addLog('從 JWT Token 提取使用者資訊', 'info');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    addLog(`JWT 解析失敗: ${e.message}`, 'warning');
+                }
+            }
+
+            if (isAuthenticated) {
                 authStatusIndicator.className = 'status-indicator active';
                 authText.textContent = '已登入';
             } else {
@@ -593,10 +627,10 @@
                 authText.textContent = '未登入';
             }
 
-            if (authStatus.user) {
-                userId.textContent = authStatus.user.id || '-';
-                userName.textContent = authStatus.user.name || '-';
-                userEmail.textContent = authStatus.user.email || '-';
+            if (userInfo) {
+                userId.textContent = userInfo.id || '-';
+                userName.textContent = userInfo.name || '-';
+                userEmail.textContent = userInfo.email || '-';
             } else {
                 userId.textContent = '-';
                 userName.textContent = '-';

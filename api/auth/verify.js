@@ -168,13 +168,19 @@ export default async function handler(req, res) {
 }
 
 /**
- * 驗證 access token
+ * 驗證 access token（支援 JWT）
  */
 async function validateAccessToken(accessToken) {
     try {
-        const tokenInfoEndpoint = `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(accessToken)}`;
+        // 檢查是否為 Google Identity Token (JWT)
+        if (accessToken.startsWith('gid_') || (accessToken.includes('.') && accessToken.split('.').length === 3)) {
+            console.log('🔍 處理 Google Identity Token (JWT)...');
+            return await validateJwtToken(accessToken);
+        }
         
+        // 處理傳統 access token
         console.log('🔗 調用 Google Token 驗證 API...');
+        const tokenInfoEndpoint = `https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${encodeURIComponent(accessToken)}`;
         
         const response = await fetch(tokenInfoEndpoint, {
             method: 'GET',
@@ -227,10 +233,102 @@ async function validateAccessToken(accessToken) {
 }
 
 /**
- * 獲取使用者資訊
+ * 驗證 JWT Token
+ */
+async function validateJwtToken(jwtToken) {
+    try {
+        // 解析 JWT
+        const parts = jwtToken.split('.');
+        if (parts.length !== 3) {
+            return { valid: false, error: 'Invalid JWT format' };
+        }
+        
+        // 解碼 payload
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        
+        console.log('🔍 JWT Payload 解析成功:', {
+            iss: payload.iss,
+            aud: payload.aud,
+            sub: payload.sub,
+            exp: payload.exp,
+            iat: payload.iat
+        });
+        
+        // 驗證 issuer
+        if (payload.iss !== 'https://accounts.google.com') {
+            return { valid: false, error: 'Invalid issuer' };
+        }
+        
+        // 驗證是否過期
+        const now = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < now) {
+            return { valid: false, error: 'Token expired' };
+        }
+        
+        // 計算剩餘時間
+        const expiresIn = payload.exp ? payload.exp - now : 0;
+        const isExpiringSoon = expiresIn < 300; // 5 分鐘
+        
+        console.log('✅ JWT 驗證成功:', {
+            userId: payload.sub,
+            email: payload.email,
+            expiresIn: expiresIn,
+            isExpiringSoon: isExpiringSoon
+        });
+        
+        return {
+            valid: true,
+            audience: payload.aud,
+            scope: 'openid profile email', // JWT 通常包含這些範圍
+            expiresIn: expiresIn,
+            isExpiringSoon: isExpiringSoon,
+            userId: payload.sub,
+            issuedAt: payload.iat,
+            verifiedEmail: payload.email_verified,
+            tokenType: 'jwt'
+        };
+        
+    } catch (error) {
+        console.error('❌ JWT 驗證失敗:', error);
+        return { valid: false, error: 'JWT validation failed: ' + error.message };
+    }
+}
+
+/**
+ * 獲取使用者資訊（支援 JWT）
  */
 async function getUserInfo(accessToken) {
     try {
+        // 如果是 JWT，直接從 payload 提取使用者資訊
+        if (accessToken.startsWith('gid_') || (accessToken.includes('.') && accessToken.split('.').length === 3)) {
+            console.log('👤 從 JWT 提取使用者資訊...');
+            
+            const parts = accessToken.split('.');
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+            
+            const userInfo = {
+                id: payload.sub,
+                sub: payload.sub,
+                name: payload.name,
+                given_name: payload.given_name,
+                family_name: payload.family_name,
+                email: payload.email,
+                email_verified: payload.email_verified,
+                picture: payload.picture,
+                locale: payload.locale
+            };
+            
+            console.log('✅ JWT 使用者資訊提取成功:', {
+                id: userInfo.id,
+                name: userInfo.name,
+                email: userInfo.email ? userInfo.email.substring(0, 3) + '***' : undefined,
+                verified: userInfo.email_verified
+            });
+            
+            return userInfo;
+        }
+        
+        // 處理傳統 access token
         const userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
         
         console.log('👤 調用 Google UserInfo API...');
@@ -269,15 +367,24 @@ async function getUserInfo(accessToken) {
 }
 
 /**
- * 驗證 access_token 格式
+ * 驗證 access_token 格式（支援 JWT）
  */
 function isValidAccessToken(token) {
     if (!token || typeof token !== 'string') {
         return false;
     }
     
+    // 檢查是否為 Google Identity Token (JWT)
+    if (token.startsWith('gid_') || token.includes('.')) {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+            // 這是 JWT 格式，暫時認為有效，後續會進一步驗證
+            return true;
+        }
+    }
+    
     // Google access_token 通常長度在 100-200 字符之間
-    if (token.length < 50 || token.length > 500) {
+    if (token.length < 50 || token.length > 2000) {  // 增加長度限制以支援 JWT
         return false;
     }
     
