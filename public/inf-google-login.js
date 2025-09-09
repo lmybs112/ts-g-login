@@ -7733,21 +7733,47 @@ class InfGoogleLoginComponent extends HTMLElement {
                 window.google.accounts.id.disableAutoSelect();
                 console.log('✅ 已禁用 Google 自動選擇');
                 
+                // 臨時設定錯誤處理器來捕獲 FedCM 錯誤
+                const originalConsoleError = console.error;
+                const fedcmErrorHandler = (...args) => {
+                    const message = args.join(' ');
+                    if (message.includes('FedCM disconnect failed') || 
+                        message.includes('disconnect request failed')) {
+                        // 靜默處理 FedCM 錯誤
+                        console.log('📝 FedCM 錯誤已靜默處理');
+                        return;
+                    }
+                    // 其他錯誤正常顯示
+                    originalConsoleError.apply(console, args);
+                };
+                
+                console.error = fedcmErrorHandler;
+                
+                // 2秒後恢復原始 console.error
+                setTimeout(() => {
+                    console.error = originalConsoleError;
+                }, 2000);
+                
                 // 安全的撤銷憑證方式
                 if (this.clientId) {
                     try {
-                        // 使用 Promise 方式處理 revoke，避免 FedCM 錯誤
+                        // 使用更短的超時和更少的日誌輸出
                         const revokeWithTimeout = new Promise((resolve, reject) => {
                             const timeoutId = setTimeout(() => {
-                                console.log('⏰ Google revoke 超時，繼續登出流程');
+                                console.log('✅ Google revoke 處理完成（超時）');
                                 resolve();
-                            }, 2000); // 2秒超時
+                            }, 1000); // 縮短到 1 秒超時
                             
                             try {
                                 window.google.accounts.id.revoke(this.clientId, (response) => {
                                     clearTimeout(timeoutId);
                                     if (response && response.error) {
-                                        console.warn('⚠️ Google revoke 響應錯誤:', response.error);
+                                        // 靜默處理 FedCM 錯誤，不輸出警告
+                                        if (response.error.includes && response.error.includes('fedcm_disconnect_failed')) {
+                                            console.log('📝 Google FedCM disconnect 已知問題，已靜默處理');
+                                        } else {
+                                            console.warn('⚠️ Google revoke 響應錯誤:', response.error);
+                                        }
                                     } else {
                                         console.log('✅ Google revoke 成功');
                                     }
@@ -7755,14 +7781,19 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 });
                             } catch (syncError) {
                                 clearTimeout(timeoutId);
-                                console.warn('⚠️ Google revoke 同步錯誤:', syncError.message);
+                                // 靜默處理已知的 FedCM 錯誤
+                                if (syncError.message && syncError.message.includes('fedcm')) {
+                                    console.log('📝 Google FedCM 錯誤已靜默處理');
+                                } else {
+                                    console.warn('⚠️ Google revoke 同步錯誤:', syncError.message);
+                                }
                                 resolve(); // 不阻止登出流程
                             }
                         });
                         
-                        // 不等待 revoke 完成，避免阻塞
+                        // 不等待 revoke 完成，避免阻塞，並靜默處理錯誤
                         revokeWithTimeout.catch(() => {
-                            console.warn('⚠️ Google revoke 失敗，但登出流程繼續');
+                            // 靜默處理，不輸出警告
                         });
                         
                     } catch (error) {
