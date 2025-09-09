@@ -7725,12 +7725,52 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 公開方法：登出
     signOut() {
+        console.log('🚪 開始登出流程...');
+        
         if (window.google && window.google.accounts) {
             try {
+                // 禁用自動選擇
                 window.google.accounts.id.disableAutoSelect();
-                // 清除 Google 的會話狀態
-                window.google.accounts.id.revoke(this.clientId, () => {});
+                console.log('✅ 已禁用 Google 自動選擇');
+                
+                // 安全的撤銷憑證方式
+                if (this.clientId) {
+                    try {
+                        // 使用 Promise 方式處理 revoke，避免 FedCM 錯誤
+                        const revokeWithTimeout = new Promise((resolve, reject) => {
+                            const timeoutId = setTimeout(() => {
+                                console.log('⏰ Google revoke 超時，繼續登出流程');
+                                resolve();
+                            }, 2000); // 2秒超時
+                            
+                            try {
+                                window.google.accounts.id.revoke(this.clientId, (response) => {
+                                    clearTimeout(timeoutId);
+                                    if (response && response.error) {
+                                        console.warn('⚠️ Google revoke 響應錯誤:', response.error);
+                                    } else {
+                                        console.log('✅ Google revoke 成功');
+                                    }
+                                    resolve();
+                                });
+                            } catch (syncError) {
+                                clearTimeout(timeoutId);
+                                console.warn('⚠️ Google revoke 同步錯誤:', syncError.message);
+                                resolve(); // 不阻止登出流程
+                            }
+                        });
+                        
+                        // 不等待 revoke 完成，避免阻塞
+                        revokeWithTimeout.catch(() => {
+                            console.warn('⚠️ Google revoke 失敗，但登出流程繼續');
+                        });
+                        
+                    } catch (error) {
+                        console.warn('⚠️ Google revoke 調用失敗:', error.message);
+                    }
+                }
             } catch (error) {
+                console.warn('⚠️ Google 登出操作失敗:', error.message);
             }
         }
 

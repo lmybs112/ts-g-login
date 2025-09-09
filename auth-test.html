@@ -402,8 +402,18 @@
 
     <!-- 通知容器 -->
     <div id="notification-container"></div>
+    
+    <!-- Google 登入組件容器 -->
+    <div id="google-login-container" style="display: none;"></div>
+    <div id="google-modal-container" style="display: none;"></div>
 
-    <!-- 載入模組 -->
+    <!-- 載入 Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- 載入 Google 登入組件 -->
+    <script src="inf-google-login.js"></script>
+    
+    <!-- 載入認證管理模組 -->
     <script src="auth-status-manager.js"></script>
     <script src="token-refresh-manager.js"></script>
     <script src="user-data-cookie-manager.js"></script>
@@ -684,11 +694,61 @@
         async function testGoogleLogin() {
             addLog('開始 Google 登入測試...', 'info');
             
-            // 模擬 Google 登入（實際應該調用 Google API）
             try {
-                // 這裡需要整合實際的 Google 登入邏輯
-                showNotification('請在實際環境中測試 Google 登入', 'warning');
-                addLog('Google 登入測試需要在實際環境中進行', 'warning');
+                // 檢查是否有現有的 Google 登入組件
+                let googleComponent = document.querySelector('inf-google-login-component');
+                
+                if (!googleComponent) {
+                    // 如果沒有組件，創建一個
+                    addLog('創建 Google 登入組件...', 'info');
+                    
+                    googleComponent = document.createElement('inf-google-login-component');
+                    googleComponent.setAttribute('client-id', 'your_google_client_id.apps.googleusercontent.com');
+                    googleComponent.setAttribute('avatar-container-id', 'google-login-container');
+                    googleComponent.setAttribute('modal-container-id', 'google-modal-container');
+                    
+                    // 添加到頁面中（隱藏）
+                    googleComponent.style.display = 'none';
+                    document.body.appendChild(googleComponent);
+                    
+                    // 等待組件初始化
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                // 監聽登入成功事件
+                const loginSuccessHandler = (event) => {
+                    addLog('Google 登入成功！', 'success');
+                    showNotification('Google 登入成功', 'success');
+                    updateStatus();
+                    
+                    // 移除事件監聽器
+                    document.removeEventListener('google-login-success', loginSuccessHandler);
+                };
+                
+                // 監聽登入失敗事件
+                const loginErrorHandler = (event) => {
+                    addLog(`Google 登入失敗: ${event.detail?.error || '未知錯誤'}`, 'error');
+                    showNotification('Google 登入失敗', 'error');
+                    
+                    // 移除事件監聽器
+                    document.removeEventListener('google-login-error', loginErrorHandler);
+                };
+                
+                // 添加事件監聽器
+                document.addEventListener('google-login-success', loginSuccessHandler);
+                document.addEventListener('google-login-error', loginErrorHandler);
+                
+                // 觸發登入
+                if (typeof googleComponent.signIn === 'function') {
+                    addLog('觸發 Google 登入...', 'info');
+                    googleComponent.signIn();
+                } else if (typeof googleComponent.triggerGoogleSignIn === 'function') {
+                    addLog('觸發 Google 登入...', 'info');
+                    googleComponent.triggerGoogleSignIn();
+                } else {
+                    throw new Error('Google 登入組件沒有可用的登入方法');
+                }
+                
             } catch (error) {
                 addLog(`Google 登入測試失敗: ${error.message}`, 'error');
                 showNotification('Google 登入測試失敗', 'error');
@@ -734,12 +794,51 @@
         async function logout() {
             addLog('執行登出操作...', 'info');
             
-            if (authManager) {
-                await authManager.logout();
+            try {
+                // 方法 1: 使用整合管理器登出
+                if (authManager) {
+                    await authManager.logout();
+                    addLog('整合管理器登出完成', 'success');
+                }
+                
+                // 方法 2: 直接調用 Google 登入組件登出
+                const googleComponent = document.querySelector('inf-google-login-component');
+                if (googleComponent && typeof googleComponent.signOut === 'function') {
+                    addLog('調用 Google 組件登出...', 'info');
+                    googleComponent.signOut();
+                    addLog('Google 組件登出完成', 'success');
+                }
+                
+                // 方法 3: 手動清理本地存儲
+                const keysToRemove = [
+                    'google_auth_credential',
+                    'google_access_token',
+                    'google_refresh_token',
+                    'google_token_expires_at',
+                    'google_token_info',
+                    'google_user_info',
+                    'inffits_api_response'
+                ];
+                
+                keysToRemove.forEach(key => {
+                    if (localStorage.getItem(key)) {
+                        localStorage.removeItem(key);
+                        addLog(`清除 ${key}`, 'info');
+                    }
+                });
+                
+                // 清理 cookies
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                
                 addLog('登出操作完成', 'success');
+                showNotification('已成功登出', 'success');
                 updateStatus();
-            } else {
-                addLog('認證管理器未初始化', 'error');
+                
+            } catch (error) {
+                addLog(`登出失敗: ${error.message}`, 'error');
+                showNotification('登出失敗', 'error');
             }
         }
 
