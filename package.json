@@ -1,0 +1,38 @@
+{
+  "name": "ts-g-login",
+  "version": "1.0.0",
+  "description": "完全原生的前端自動登入狀態檢查系統，支援 access_token 自動刷新和 cookie 使用者資料管理",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo '建置完成'",
+    "start": "vercel dev --listen 3000",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "google-auth",
+    "oauth2",
+    "vercel",
+    "serverless",
+    "native-javascript",
+    "token-refresh",
+    "auto-login",
+    "cookie-management"
+  ],
+  "author": "InfFits Team",
+  "license": "MIT",
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/ts-g-login.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/ts-g-login/issues"
+  },
+  "homepage": "https://github.com/your-username/ts-g-login#readme"
+}
