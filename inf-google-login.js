@@ -7357,40 +7357,64 @@ class InfGoogleLoginComponent extends HTMLElement {
 
             if (response.ok) {
                 const result = await response.json();
+                console.log('✅ API 回應成功:', result);
+                
+                // 檢查 API 是否真的更新了 shoesF/shoesM 資料
+                if (result.BodyData) {
+                    console.log('API 回應的 BodyData:', result.BodyData);
+                    if (result.BodyData.shoesF) {
+                        console.log('API 更新後的 shoesF:', result.BodyData.shoesF);
+                    }
+                    if (result.BodyData.shoesM) {
+                        console.log('API 更新後的 shoesM:', result.BodyData.shoesM);
+                    }
+                } else {
+                    console.warn('⚠️ API 回應中沒有 BodyData');
+                }
                 
                 // 更新本地儲存的 API 回應
                 localStorage.setItem('inffits_api_response', JSON.stringify(result));
                 
                 // 同時更新本地的 BodyID_Foot_size 和 Gender_Last
                 if (genderFromUrl === 'F') {
-                    // 女性：整包 footData 保存到 BodyID_Foot_size
+                    // 女性：使用標準化的腳部資料保存到 BodyID_Foot_size
+                    let footDataForStorage = { ...normalizedFootData };
+                    
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
-                    if (footData.CC === "null_null") {
-                        footData.CC = "";
+                    if (footDataForStorage.CC === "null_null") {
+                        footDataForStorage.CC = "";
                     }
                     // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
-                    if (footData.Pattern_Prefer !== undefined) {
-                        footData.FitP = footData.Pattern_Prefer;
+                    if (footDataForStorage.Pattern_Prefer !== undefined) {
+                        footDataForStorage.FitP = footDataForStorage.Pattern_Prefer;
                     }
+                    
+                    console.log('保存到本地的腳部資料:', footDataForStorage);
+                    
                     if(shouldTriggerFindMySize){
-                        localStorage.setItem('BodyID_Foot_size', JSON.stringify(footData));
+                        localStorage.setItem('BodyID_Foot_size', JSON.stringify(footDataForStorage));
                         localStorage.setItem('Gender_Last', 'F');
                     }
 
                     // 設置資料修改標記
                     localStorage.setItem('data_modified_flag', 'true');
                 } else if (genderFromUrl === 'M') {
-                    // 男性：整包 footData 保存到 BodyID_Foot_size
+                    // 男性：使用標準化的腳部資料保存到 BodyID_Foot_size
+                    let footDataForStorage = { ...normalizedFootData };
+                    
                     // 檢查 CC 欄位，如果為 "null_null" 則改為空字串
-                    if (footData.CC === "null_null") {
-                        footData.CC = "";
+                    if (footDataForStorage.CC === "null_null") {
+                        footDataForStorage.CC = "";
                     }
                     // 將 FitP 欄位的值改為使用 Pattern_Prefer 的值
-                    if (footData.Pattern_Prefer !== undefined) {
-                        footData.FitP = footData.Pattern_Prefer;
+                    if (footDataForStorage.Pattern_Prefer !== undefined) {
+                        footDataForStorage.FitP = footDataForStorage.Pattern_Prefer;
                     }
+                    
+                    console.log('保存到本地的腳部資料 (男性):', footDataForStorage);
+                    
                     if(shouldTriggerFindMySize){
-                        localStorage.setItem('BodyID_Foot_size', JSON.stringify(footData));
+                        localStorage.setItem('BodyID_Foot_size', JSON.stringify(footDataForStorage));
                         localStorage.setItem('Gender_Last', 'M');
                     }
                     // 設置資料修改標記
@@ -7421,6 +7445,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                 console.error('❌ API 調用失敗:', response.status, response.statusText);
                 const errorText = await response.text();
                 console.error('❌ 錯誤詳情:', errorText);
+                console.error('❌ 發送的 payload 是:', JSON.stringify(payload, null, 2));
             }
         } catch (error) {
             console.error('❌ uploadFootMeasurementData 發生錯誤:', error);
