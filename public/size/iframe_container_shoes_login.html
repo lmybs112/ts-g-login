@@ -598,11 +598,16 @@ window.addEventListener("message",function(e){
             // 找到 inf-google-login 組件並調用其方法
             const infGoogleLoginElement = document.querySelector('inf-google-login');
             if (infGoogleLoginElement && infGoogleLoginElement.uploadFootMeasurementData) {
-                // 準備鞋類數據格式
+                // 準備鞋類數據格式（需要同時支援兩種格式）
                 const shoesData = {
+                    // 原始格式（用於 API）
                     FH: footLength,
                     FW: footWidth,
                     FCir: footCircu,
+                    // 個人資訊頁面期望的格式
+                    HV: footLength,
+                    WV: footWidth,
+                    FOOT_CIRCUM: footCircu,
                     DataItem: "0010",
                     Gender: getGenderForShoes()
                 };
