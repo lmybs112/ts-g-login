@@ -4526,6 +4526,21 @@ class InfGoogleLoginComponent extends HTMLElement {
         const redirectUri = window.location.origin + '/api/auth/google';
         const state = 'oauth2_flow_' + Date.now();
         
+        // 使用 Google Identity Services 而不是 OAuth2 流程
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+            console.log('使用 Google Identity Services 進行登入');
+            
+            window.google.accounts.id.initialize({
+                client_id: this.clientId,
+                callback: this.handleCredentialResponse.bind(this)
+            });
+            
+            window.google.accounts.id.prompt();
+            return;
+        }
+        
+        // 如果 Google Identity Services 不可用，回退到傳統 OAuth2 流程
+        console.warn('Google Identity Services 不可用，使用傳統 OAuth2 流程');
         const params = new URLSearchParams({
             client_id: this.clientId,
             response_type: 'code',
