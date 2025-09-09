@@ -967,6 +967,28 @@
                     // 直接觸發 OAuth2 流程
                     addLog('直接觸發 OAuth2 流程...', 'info');
                     
+                    // 首先檢查 API 端點是否可用
+                    try {
+                        const testResponse = await fetch('/api/auth/google?test=1');
+                        if (!testResponse.ok) {
+                            throw new Error(`API 端點不可用: ${testResponse.status}`);
+                        }
+                        const testData = await testResponse.json();
+                        addLog(`✅ API 端點可用`, 'success');
+                        addLog(`配置狀態: Client ID: ${testData.config_status?.client_id}, Secret: ${testData.config_status?.client_secret}`, 'info');
+                        
+                        // 檢查配置是否完整
+                        if (testData.config_status?.client_secret === 'missing') {
+                            addLog('⚠️ 警告：GOOGLE_CLIENT_SECRET 環境變數未設定', 'warning');
+                            showNotification('請在 Vercel 設定 GOOGLE_CLIENT_SECRET 環境變數', 'warning');
+                        }
+                        
+                    } catch (apiTestError) {
+                        addLog(`❌ API 端點測試失敗: ${apiTestError.message}`, 'error');
+                        showNotification('API 端點不可用，請檢查 Vercel 部署', 'error');
+                        return;
+                    }
+                    
                     const authUrl = 'https://accounts.google.com/oauth/authorize';
                     const redirectUri = window.location.origin + '/api/auth/google';
                     const state = 'oauth2_flow_' + Date.now();
@@ -986,6 +1008,7 @@
                     localStorage.setItem('google_oauth_state', state);
                     localStorage.setItem('google_oauth_redirect_uri', redirectUri);
                     
+                    addLog(`重定向 URI: ${redirectUri}`, 'info');
                     addLog('重定向到 Google 授權頁面...', 'info');
                     
                     // 直接重定向到 Google 授權頁面
@@ -1089,8 +1112,21 @@
             addLog('檢查 OAuth2 配置...', 'info');
             
             try {
+                // 首先檢查基本連線
+                addLog('檢查 API 端點連線...', 'info');
                 const response = await fetch('/api/auth/google?test=1');
+                
+                addLog(`API 響應狀態: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addLog(`API 錯誤響應: ${errorText}`, 'error');
+                    showNotification('API 端點不可用', 'error');
+                    return;
+                }
+                
                 const data = await response.json();
+                addLog(`API 響應數據: ${JSON.stringify(data, null, 2)}`, 'info');
                 
                 if (data.success) {
                     addLog('✅ API 端點可用', 'success');
@@ -1105,12 +1141,24 @@
                         addLog('✅ OAuth2 配置完整', 'success');
                         showNotification('OAuth2 配置完整', 'success');
                     }
+                    
+                    // 測試 Google Console 設定
+                    addLog('檢查 Google Console 重定向 URI 設定...', 'info');
+                    addLog(`當前域名: ${window.location.origin}`, 'info');
+                    addLog(`設定的重定向 URI: ${data.config_status.redirect_uri}`, 'info');
+                    
+                    if (data.config_status.redirect_uri !== `${window.location.origin}/api/auth/google`) {
+                        addLog('⚠️ 重定向 URI 可能不匹配，請檢查 Google Console 設定', 'warning');
+                        showNotification('請檢查 Google Console 重定向 URI 設定', 'warning');
+                    }
+                    
                 } else {
                     addLog('❌ 配置檢查失敗', 'error');
                     showNotification('配置檢查失敗', 'error');
                 }
             } catch (error) {
                 addLog(`配置檢查錯誤: ${error.message}`, 'error');
+                addLog(`錯誤詳情: ${error.stack}`, 'error');
                 showNotification('配置檢查錯誤', 'error');
             }
         }
