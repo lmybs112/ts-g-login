@@ -7308,19 +7308,35 @@ class InfGoogleLoginComponent extends HTMLElement {
             }
             
             // 根據 URL 參數設置 BodyData 格式和 BodyData_ptr（鞋子版本）
-            // 確保 footData 使用正確的腳部欄位格式：FH、FW、FCir
+            // 確保 footData 使用正確的腳部欄位格式：FH、FW、FCir、DataItem
+            console.log('原始腳部資料:', footData);
+            console.log('性別參數:', genderFromUrl);
+            
+            // 確保腳部資料包含所有必要欄位
+            const normalizedFootData = {
+                FH: footData.FH || '',
+                FW: footData.FW || '', 
+                FCir: footData.FCir || '',
+                DataItem: footData.DataItem || ''
+            };
+            
+            console.log('標準化腳部資料:', normalizedFootData);
+            
             let formattedBodyData, bodyDataPtr;
             if (genderFromUrl === 'F') {
-                formattedBodyData = { shoesF: footData };
+                formattedBodyData = { shoesF: normalizedFootData };
                 bodyDataPtr = 'shoesF';
             } else if (genderFromUrl === 'M') {
-                formattedBodyData = { shoesM: footData };
+                formattedBodyData = { shoesM: normalizedFootData };
                 bodyDataPtr = 'shoesM';
             } else {
                 // 預設為女性
-                formattedBodyData = { shoesF: footData };
+                formattedBodyData = { shoesF: normalizedFootData };
                 bodyDataPtr = 'shoesF';
             }
+            
+            console.log('最終格式化的 BodyData:', formattedBodyData);
+            console.log('BodyData_ptr:', bodyDataPtr);
             
             const payload = {
                 BodyData: formattedBodyData,

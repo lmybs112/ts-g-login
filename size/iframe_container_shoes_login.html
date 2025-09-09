@@ -591,7 +591,28 @@ window.addEventListener("message",function(e){
             if (infGoogleLoginElement && infGoogleLoginElement.uploadFootMeasurementData) {
                 // 獲取性別參數用於鞋子資料上傳
                 const urlParams = new URLSearchParams(window.location.search);
-                const genderFromUrl = urlParams.toString().split('&')[0] || 'F'; // 預設為女性
+                // 從 URL 參數中獲取性別，通常是 M 或 F
+                let genderFromUrl = 'F'; // 預設為女性
+                
+                // 嘗試從不同的參數名稱獲取性別
+                const possibleGenderParams = ['gender', 'g', 'sex', 'type'];
+                for (const param of possibleGenderParams) {
+                    const value = urlParams.get(param);
+                    if (value && (value.toUpperCase() === 'M' || value.toUpperCase() === 'F')) {
+                        genderFromUrl = value.toUpperCase();
+                        break;
+                    }
+                }
+                
+                // 如果 URL 中包含 'male' 或 'man'，設為男性
+                const urlString = window.location.href.toLowerCase();
+                if (urlString.includes('male') || urlString.includes('man') || urlString.includes('boy')) {
+                    genderFromUrl = 'M';
+                } else if (urlString.includes('female') || urlString.includes('woman') || urlString.includes('girl')) {
+                    genderFromUrl = 'F';
+                }
+                
+                console.log('檢測到的性別參數:', genderFromUrl);
                 
                 // FML_Done 事件不需要自動觸發 Find My Size，傳入 false 參數
                 infGoogleLoginElement.uploadFootMeasurementData(messageData.value, genderFromUrl, false);
