@@ -923,7 +923,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 組件掛載到 DOM 時
     connectedCallback() {
         // 讀取屬性值
-        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id') || process.env.GOOGLE_CLIENT_ID;
+        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id') || '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com';
         this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
         this.loginUri = this.getAttribute('data-login-uri');
         this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
@@ -1739,7 +1739,7 @@ class InfGoogleLoginComponent extends HTMLElement {
     // 組件掛載到 DOM 時
     connectedCallback() {
         // 讀取屬性值
-        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id') || process.env.GOOGLE_CLIENT_ID;
+        this.clientId = this.getAttribute('client-id') || this.getAttribute('data-client-id') || '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com';
         this.autoSelect = (this.getAttribute('auto-select') || this.getAttribute('data-auto-select')) === 'true';
         this.loginUri = this.getAttribute('data-login-uri');
         this.targetContainerId = this.getAttribute('target-container-id') || this.getAttribute('data-target-container-id');
@@ -4531,7 +4531,7 @@ class InfGoogleLoginComponent extends HTMLElement {
             response_type: 'code',
             scope: 'openid email profile',
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
             redirect_uri: redirectUri,
             state: state,
             include_granted_scopes: 'true'
