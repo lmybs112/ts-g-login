@@ -573,23 +573,44 @@
 <script>
 window.addEventListener("message",function(e){
   if(e.data["MsgHeader"]=="FML_Done"){
+            // 檢查必要的表單元素是否存在
+            const footLength = $('#FootLength_input_PS_mbinfo').val();
+            const footWidth = $('#FootWidth_input_PS_mbinfo').val();
+            const footCircu = $('#FootCircu_input_PS_mbinfo').val();
+            
+            // 驗證鞋類數據有效性
+            if (!footLength || !footWidth) {
+                return;
+            }
+            
             const messageData = {
              header: 'bid',
              value: {
-                "FH": $('#FootLength_input_PS_mbinfo').val(),
-                    "FW": $('#FootWidth_input_PS_mbinfo').val(),
-                    "FCir": $('#FootCircu_input_PS_mbinfo').val(),
-                    DataItem: "0010",
+                "FH": footLength,
+                "FW": footWidth,
+                "FCir": footCircu,
+                DataItem: "0010",
                 }
             }
             console.log('FML_Done value', messageData.value)
             
-            // 同時調用 update_bodydata API
+            // 同時調用 update_bodydata API - 處理鞋類數據
             // 找到 inf-google-login 組件並調用其方法
             const infGoogleLoginElement = document.querySelector('inf-google-login');
             if (infGoogleLoginElement && infGoogleLoginElement.updateBodyDataAPI) {
+                // 準備鞋類數據格式，包含性別資訊
+                const shoesData = {
+                    FH: footLength,
+                    FW: footWidth,
+                    FCir: footCircu,
+                    DataItem: "0010",
+                    // 從 URL 或 localStorage 檢測性別
+                    Gender: getGenderForShoes()
+                };
+                
+                
                 // FML_Done 事件不需要自動觸發 Find My Size，傳入 false 參數
-                infGoogleLoginElement.updateBodyDataAPI(messageData.value, false);
+                infGoogleLoginElement.updateBodyDataAPI(shoesData, false);
             } else {
                 console.error('❌ 找不到 inf-google-login 組件或 updateBodyDataAPI 方法');
             }
@@ -597,6 +618,33 @@ window.addEventListener("message",function(e){
              window.postMessage(messageData, "*");
          }
 })
+
+// 檢測鞋類數據的性別
+function getGenderForShoes() {
+    // 方法1: 從 URL 參數檢測
+    const urlParams = new URLSearchParams(window.location.search);
+    const genderFromUrl = urlParams.toString().split('&')[0];
+    if (genderFromUrl === 'F' || genderFromUrl === 'M') {
+        return genderFromUrl;
+    }
+    
+    // 方法2: 從 localStorage 檢測
+    const storedGender = localStorage.getItem('Gender_Last');
+    if (storedGender === 'F' || storedGender === 'M') {
+        return storedGender;
+    }
+    
+    // 方法3: 從頁面 URL 檢測是否包含性別線索
+    const currentUrl = window.location.href.toLowerCase();
+    if (currentUrl.includes('/f/') || currentUrl.includes('female') || currentUrl.includes('women')) {
+        return 'F';
+    } else if (currentUrl.includes('/m/') || currentUrl.includes('male') || currentUrl.includes('men')) {
+        return 'M';
+    }
+    
+    // 預設為女性
+    return 'F';
+}
 </script>
 
 <script>
