@@ -41,7 +41,7 @@ class TokenRefreshManager {
         // 初始化
         this.init();
         
-        console.log('🔄 TokenRefreshManager 已初始化');
+        // console removed
     }
     
     /**
@@ -92,7 +92,7 @@ class TokenRefreshManager {
         if (this.monitoringActive) return;
         
         this.monitoringActive = true;
-        console.log('👁️ 啟動 Token 監控');
+        // console removed
         
         // 使用 requestAnimationFrame 替代 setTimeout 避免不可靠性
         this.scheduleNextCheck();
@@ -130,7 +130,7 @@ class TokenRefreshManager {
      */
     stopMonitoring() {
         this.monitoringActive = false;
-        console.log('⏹️ 停止 Token 監控');
+        // console removed
     }
     
     /**
@@ -162,13 +162,13 @@ class TokenRefreshManager {
         
         // 沒有 refresh token，無法刷新
         if (!refreshToken) {
-            console.log('⚠️ 沒有 refresh token，無法自動刷新');
+            // console removed
             return { shouldRefresh: false, reason: 'no_refresh_token' };
         }
         
         // 沒有過期時間資訊
         if (!expiresAtStr) {
-            console.log('⚠️ 沒有 token 過期時間，假設需要刷新');
+            // console removed
             return { shouldRefresh: true, reason: 'no_expiry_info', urgency: 'high' };
         }
         
@@ -178,30 +178,30 @@ class TokenRefreshManager {
         
         // Token 已過期
         if (timeUntilExpiry <= 0) {
-            console.log('🔴 Token 已過期，需要立即刷新');
+            // console removed
             return { shouldRefresh: true, reason: 'expired', urgency: 'critical', timeUntilExpiry };
         }
         
         // 緊急刷新（2 分鐘內過期）
         if (timeUntilExpiry <= this.criticalRefreshThreshold) {
-            console.log(`🟡 Token 將在 ${Math.round(timeUntilExpiry / 60000)} 分鐘內過期，緊急刷新`);
+            // console removed
             return { shouldRefresh: true, reason: 'critical_expiry', urgency: 'critical', timeUntilExpiry };
         }
         
         // 提前刷新（5 分鐘內過期）
         if (timeUntilExpiry <= this.earlyRefreshThreshold) {
-            console.log(`🟠 Token 將在 ${Math.round(timeUntilExpiry / 60000)} 分鐘內過期，提前刷新`);
+            // console removed
             return { shouldRefresh: true, reason: 'early_expiry', urgency: 'high', timeUntilExpiry };
         }
         
         // 預防性刷新（10 分鐘內過期）
         if (timeUntilExpiry <= this.refreshThreshold) {
-            console.log(`🟢 Token 將在 ${Math.round(timeUntilExpiry / 60000)} 分鐘內過期，預防性刷新`);
+            // console removed
             return { shouldRefresh: true, reason: 'preventive_refresh', urgency: 'normal', timeUntilExpiry };
         }
         
         // Token 仍然有效
-        console.log(`✅ Token 有效，還有 ${Math.round(timeUntilExpiry / 60000)} 分鐘過期`);
+        // console removed
         return { shouldRefresh: false, reason: 'token_valid', timeUntilExpiry };
     }
     
@@ -211,14 +211,14 @@ class TokenRefreshManager {
     async performTokenRefresh(urgency = 'normal') {
         // 防止重複刷新
         if (this.isRefreshing) {
-            console.log('⏳ 正在刷新中，跳過重複刷新');
+            // console removed
             return;
         }
         
         // 檢查刷新冷卻
         const now = Date.now();
         if (now - this.lastRefreshTime < this.refreshCooldown && urgency !== 'critical') {
-            console.log('🧊 刷新冷卻中，跳過刷新');
+            // console removed
             return;
         }
         
@@ -226,7 +226,7 @@ class TokenRefreshManager {
         this.lastRefreshTime = now;
         
         try {
-            console.log(`🔄 開始刷新 token (緊急度: ${urgency})...`);
+            // console removed
             
             const refreshToken = localStorage.getItem('google_refresh_token');
             if (!refreshToken) {
@@ -239,7 +239,7 @@ class TokenRefreshManager {
             // 方式 1: 使用現有 Google 登入元件的刷新方法
             if (this.googleLoginComponent && typeof this.googleLoginComponent.refreshAccessToken === 'function') {
                 try {
-                    console.log('🔄 使用 Google 登入元件刷新...');
+                    // console removed
                     newAccessToken = await this.googleLoginComponent.refreshAccessToken(refreshToken);
                 } catch (error) {
                     console.warn('⚠️ 元件刷新失敗，嘗試其他方式:', error.message);
@@ -249,7 +249,7 @@ class TokenRefreshManager {
             // 方式 2: 使用 Google Identity Services 無聲刷新
             if (!newAccessToken && window.google && window.google.accounts) {
                 try {
-                    console.log('🔄 使用 Google Identity Services 無聲刷新...');
+                    // console removed
                     newAccessToken = await this.performGoogleIdentityRefresh();
                 } catch (error) {
                     console.warn('⚠️ Google Identity Services 刷新失敗:', error.message);
@@ -258,13 +258,13 @@ class TokenRefreshManager {
             
             // 方式 3: 直接調用 Google OAuth2 API
             if (!newAccessToken) {
-                console.log('🔄 使用直接 API 調用刷新...');
+                // console removed
                 newAccessToken = await this.performDirectTokenRefresh(refreshToken);
             }
             
             if (newAccessToken) {
                 // 刷新成功
-                console.log('✅ Token 刷新成功');
+                // console removed
                 this.retryAttempts = 0;
                 
                 // 觸發刷新成功事件
@@ -338,7 +338,7 @@ class TokenRefreshManager {
         
         // 如果在前端，應該調用後端 API 來刷新 token
         if (!clientSecret) {
-            console.log('🔄 調用後端 API 刷新 token...');
+            // console removed
             return await this.callBackendRefreshAPI(refreshToken);
         }
         
@@ -433,7 +433,7 @@ class TokenRefreshManager {
         // 如果還有重試次數
         if (this.retryAttempts < this.maxRetries) {
             const retryDelay = this.retryDelays[this.retryAttempts - 1] || 10000;
-            console.log(`⏰ 將在 ${retryDelay / 1000} 秒後重試刷新...`);
+            // console removed
             
             // 使用 requestAnimationFrame 實現延遲，避免 setTimeout
             const startTime = Date.now();
@@ -484,11 +484,11 @@ class TokenRefreshManager {
         const { isAuthenticated } = event.detail;
         
         if (isAuthenticated) {
-            console.log('✅ 檢測到登入成功，重新啟動 token 監控');
+            // console removed
             this.retryAttempts = 0;
             this.startMonitoring();
         } else {
-            console.log('❌ 檢測到登出，停止 token 監控');
+            // console removed
             this.stopMonitoring();
         }
     }
@@ -497,7 +497,7 @@ class TokenRefreshManager {
      * 處理 token 刷新成功
      */
     handleTokenRefreshed(event) {
-        console.log('✅ 收到 token 刷新成功通知');
+        // console removed
         this.retryAttempts = 0;
     }
     
@@ -516,7 +516,7 @@ class TokenRefreshManager {
             this.googleLoginComponent.dispatchEvent(event);
         }
         
-        console.log(`📡 觸發事件: ${eventType}`, detail);
+        // console removed
     }
     
     /**
@@ -567,7 +567,7 @@ class TokenRefreshManager {
         keysToRemove.forEach(key => {
             if (localStorage.getItem(key)) {
                 localStorage.removeItem(key);
-                console.log(`🗑️ 清除 ${key}`);
+                // console removed
             }
         });
     }
@@ -576,7 +576,7 @@ class TokenRefreshManager {
      * 手動觸發 token 刷新
      */
     async forceRefresh() {
-        console.log('🔄 手動觸發 token 刷新');
+        // console removed
         this.lastRefreshTime = 0; // 重置冷卻時間
         await this.performTokenRefresh('manual');
     }
@@ -613,14 +613,14 @@ class TokenRefreshManager {
      */
     setGoogleLoginComponent(component) {
         this.googleLoginComponent = component;
-        console.log('🔗 設定 Google 登入元件引用（Token 刷新管理器）');
+        // console removed
     }
     
     /**
      * 清理資源
      */
     destroy() {
-        console.log('🧹 清理 TokenRefreshManager...');
+        // console removed
         
         // 停止監控
         this.stopMonitoring();
@@ -636,7 +636,7 @@ class TokenRefreshManager {
         this.retryAttempts = 0;
         this.googleLoginComponent = null;
         
-        console.log('✅ TokenRefreshManager 已清理完成');
+        // console removed
     }
 }
 
@@ -648,4 +648,4 @@ if (!window.globalTokenRefreshManager) {
     window.globalTokenRefreshManager = new TokenRefreshManager();
 }
 
-console.log('📦 TokenRefreshManager 模組已載入');
+// console removed

@@ -7725,13 +7725,13 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 公開方法：登出
     signOut() {
-        console.log('🚪 開始登出流程...');
+        // 開始登出流程
         
         if (window.google && window.google.accounts) {
             try {
                 // 禁用自動選擇
                 window.google.accounts.id.disableAutoSelect();
-                console.log('✅ 已禁用 Google 自動選擇');
+                // 已禁用 Google 自動選擇
                 
                 // 臨時設定錯誤處理器來捕獲 FedCM 錯誤
                 const originalConsoleError = console.error;
@@ -7740,7 +7740,6 @@ class InfGoogleLoginComponent extends HTMLElement {
                     if (message.includes('FedCM disconnect failed') || 
                         message.includes('disconnect request failed')) {
                         // 靜默處理 FedCM 錯誤
-                        console.log('📝 FedCM 錯誤已靜默處理');
                         return;
                     }
                     // 其他錯誤正常顯示
@@ -7760,7 +7759,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                         // 使用更短的超時和更少的日誌輸出
                         const revokeWithTimeout = new Promise((resolve, reject) => {
                             const timeoutId = setTimeout(() => {
-                                console.log('✅ Google revoke 處理完成（超時）');
+                                // Google revoke 處理完成（超時）
                                 resolve();
                             }, 1000); // 縮短到 1 秒超時
                             
@@ -7770,12 +7769,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                                     if (response && response.error) {
                                         // 靜默處理 FedCM 錯誤，不輸出警告
                                         if (response.error.includes && response.error.includes('fedcm_disconnect_failed')) {
-                                            console.log('📝 Google FedCM disconnect 已知問題，已靜默處理');
+                                            // Google FedCM disconnect 已知問題，已靜默處理
                                         } else {
                                             console.warn('⚠️ Google revoke 響應錯誤:', response.error);
                                         }
                                     } else {
-                                        console.log('✅ Google revoke 成功');
+                                        // Google revoke 成功
                                     }
                                     resolve();
                                 });
@@ -7783,7 +7782,7 @@ class InfGoogleLoginComponent extends HTMLElement {
                                 clearTimeout(timeoutId);
                                 // 靜默處理已知的 FedCM 錯誤
                                 if (syncError.message && syncError.message.includes('fedcm')) {
-                                    console.log('📝 Google FedCM 錯誤已靜默處理');
+                                    // Google FedCM
                                 } else {
                                     console.warn('⚠️ Google revoke 同步錯誤:', syncError.message);
                                 }

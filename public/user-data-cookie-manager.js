@@ -40,7 +40,7 @@ class UserDataCookieManager {
         // 初始化
         this.init();
         
-        console.log('🍪 UserDataCookieManager 已初始化');
+        // console removed
     }
     
     /**
@@ -83,7 +83,7 @@ class UserDataCookieManager {
      * 處理登入成功事件
      */
     async handleLoginSuccess(event) {
-        console.log('🎉 檢測到登入成功，保存使用者資料');
+        // console removed
         
         const { userInfo, accessToken } = event.detail || {};
         
@@ -99,7 +99,7 @@ class UserDataCookieManager {
         const { isAuthenticated, reason } = event.detail || {};
         
         if (!isAuthenticated) {
-            console.log('❌ 檢測到登出，清理使用者資料');
+            // console removed
             await this.clearUserData(reason);
         }
     }
@@ -108,7 +108,7 @@ class UserDataCookieManager {
      * 處理 token 刷新事件
      */
     async handleTokenRefreshed(event) {
-        console.log('🔄 Token 已刷新，檢查是否需要更新使用者資料');
+        // console removed
         
         // 刷新時更新最後活動時間
         const currentData = await this.getUserData();
@@ -157,7 +157,7 @@ class UserDataCookieManager {
             this.userDataCache = dataToSave;
             this.lastCacheTime = Date.now();
             
-            console.log('✅ 使用者資料已保存到 Cookie');
+            // console removed
             
             // 觸發保存成功事件
             this.dispatchEvent('user-data-saved', {
@@ -181,7 +181,7 @@ class UserDataCookieManager {
         try {
             // 檢查快取
             if (this.isValidCache()) {
-                console.log('📋 從快取載入使用者資料');
+                // console removed
                 return this.userDataCache;
             }
             
@@ -234,11 +234,11 @@ class UserDataCookieManager {
             const userData = { ...publicData, ...sensitiveData };
             
             if (Object.keys(userData).length === 0) {
-                console.log('📭 沒有找到使用者資料');
+                // console removed
                 return null;
             }
             
-            console.log('✅ 成功載入使用者資料');
+            // console removed
             return userData;
             
         } catch (error) {
@@ -253,11 +253,7 @@ class UserDataCookieManager {
     async loadUserDataFromStorage() {
         const userData = await this.getUserData();
         if (userData) {
-            console.log('🔄 初始化時載入使用者資料:', {
-                id: userData.id,
-                name: userData.name,
-                email: userData.email ? userData.email.substring(0, 3) + '***' : undefined
-            });
+            // console removed
         }
     }
     
@@ -274,7 +270,7 @@ class UserDataCookieManager {
             this.userDataCache = null;
             this.lastCacheTime = 0;
             
-            console.log('🗑️ 使用者資料已清理');
+            // console removed
             
             // 觸發清理事件
             this.dispatchEvent('user-data-cleared', {
@@ -584,7 +580,7 @@ class UserDataCookieManager {
         });
         
         document.dispatchEvent(event);
-        console.log(`📡 觸發事件: ${eventType}`, detail);
+        // console removed
     }
     
     /**
@@ -604,7 +600,7 @@ class UserDataCookieManager {
      * 清理資源
      */
     destroy() {
-        console.log('🧹 清理 UserDataCookieManager...');
+        // console removed
         
         // 刷新快取到存儲
         this.flushCacheToStorage();
@@ -619,7 +615,7 @@ class UserDataCookieManager {
         this.userDataCache = null;
         this.lastCacheTime = 0;
         
-        console.log('✅ UserDataCookieManager 已清理完成');
+        // console removed
     }
 }
 
@@ -631,4 +627,4 @@ if (!window.globalUserDataCookieManager) {
     window.globalUserDataCookieManager = new UserDataCookieManager();
 }
 
-console.log('📦 UserDataCookieManager 模組已載入');
+// console removed

@@ -32,7 +32,7 @@ class AuthStatusManager {
         // 初始化
         this.init();
         
-        console.log('🔐 AuthStatusManager 已初始化');
+        // console removed
     }
     
     /**
@@ -66,7 +66,7 @@ class AuthStatusManager {
         // 監聽網路狀態變化
         if ('navigator' in window && 'onLine' in navigator) {
             this.addEventListenerWithTracking(window, 'online', () => {
-                console.log('🌐 網路連線恢復，檢查登入狀態');
+                // console removed
                 this.checkAuthStatus();
             });
         }
@@ -84,7 +84,7 @@ class AuthStatusManager {
      * 初始檢查
      */
     async performInitialCheck() {
-        console.log('🚀 執行初始登入狀態檢查');
+        // console removed
         await this.checkAuthStatus();
     }
     
@@ -93,7 +93,7 @@ class AuthStatusManager {
      */
     async handleVisibilityChange() {
         if (!document.hidden) {
-            console.log('👁️ 頁面重新可見，檢查登入狀態');
+            // console removed
             await this.checkAuthStatus();
         }
     }
@@ -111,7 +111,7 @@ class AuthStatusManager {
         ];
         
         if (authRelatedKeys.includes(event.key)) {
-            console.log(`🔄 檢測到認證相關 localStorage 變化: ${event.key}`);
+            // console removed
             await this.checkAuthStatus();
         }
     }
@@ -120,7 +120,7 @@ class AuthStatusManager {
      * 處理頁面焦點變化
      */
     async handlePageFocus() {
-        console.log('🎯 頁面獲得焦點，檢查登入狀態');
+        // console removed
         await this.checkAuthStatus();
     }
     
@@ -130,14 +130,14 @@ class AuthStatusManager {
     async checkAuthStatus() {
         // 防止重複檢查
         if (this.isChecking) {
-            console.log('⏳ 正在檢查中，跳過重複檢查');
+            // console removed
             return;
         }
         
         // 冷卻時間檢查
         const now = Date.now();
         if (now - this.lastCheckTime < this.checkCooldown) {
-            console.log('🧊 檢查冷卻中，跳過檢查');
+            // console removed
             return;
         }
         
@@ -145,7 +145,7 @@ class AuthStatusManager {
         this.lastCheckTime = now;
         
         try {
-            console.log('🔍 開始檢查登入狀態...');
+            // console removed
             
             // 檢查基本 token 存在性
             const hasValidTokenStructure = await this.checkTokenStructure();
@@ -166,7 +166,7 @@ class AuthStatusManager {
                 await this.validateTokenWithComponent();
             }
             
-            console.log('✅ 登入狀態檢查完成，狀態正常');
+            // console removed
             
         } catch (error) {
             console.error('❌ 登入狀態檢查失敗:', error);
@@ -184,11 +184,11 @@ class AuthStatusManager {
         const credential = localStorage.getItem('google_auth_credential');
         
         if (!accessToken && !credential) {
-            console.log('❌ 沒有找到有效的認證資訊');
+            // console removed
             return false;
         }
         
-        console.log('✅ 找到認證資訊結構');
+        // console removed
         return true;
     }
     
@@ -199,7 +199,7 @@ class AuthStatusManager {
         const expiresAtStr = localStorage.getItem('google_token_expires_at');
         
         if (!expiresAtStr) {
-            console.log('⚠️ 沒有找到 token 過期時間');
+            // console removed
             return { isValid: false, reason: 'no_expiry_info' };
         }
         
@@ -208,16 +208,16 @@ class AuthStatusManager {
         const timeUntilExpiry = expiresAt - now;
         
         if (timeUntilExpiry <= 0) {
-            console.log('❌ Token 已過期');
+            // console removed
             return { isValid: false, reason: 'expired', timeUntilExpiry };
         }
         
         if (timeUntilExpiry <= this.tokenValidityThreshold) {
-            console.log(`⚠️ Token 將在 ${Math.round(timeUntilExpiry / 60000)} 分鐘內過期`);
+            // console removed
             return { isValid: false, reason: 'expiring_soon', timeUntilExpiry };
         }
         
-        console.log(`✅ Token 有效，還有 ${Math.round(timeUntilExpiry / 60000)} 分鐘過期`);
+        // console removed
         return { isValid: true, timeUntilExpiry };
     }
     
@@ -232,9 +232,9 @@ class AuthStatusManager {
         try {
             const validToken = await this.googleLoginComponent.getValidAccessToken();
             if (validToken) {
-                console.log('✅ 元件驗證 token 有效');
+                // console removed
             } else {
-                console.log('❌ 元件驗證 token 無效');
+                // console removed
                 await this.handleTokenExpired({ reason: 'component_validation_failed' });
             }
         } catch (error) {
@@ -246,7 +246,7 @@ class AuthStatusManager {
      * 處理沒有有效 token 的情況
      */
     async handleNoValidToken() {
-        console.log('🔓 沒有有效的登入狀態');
+        // console removed
         
         // 清理相關的認證資訊
         this.clearAuthData();
@@ -262,16 +262,16 @@ class AuthStatusManager {
      * 處理 token 過期情況
      */
     async handleTokenExpired(validation) {
-        console.log(`⏰ Token 過期處理: ${validation.reason}`);
+        // console removed
         
         // 如果有 refresh token，嘗試刷新
         if (this.googleLoginComponent && typeof this.googleLoginComponent.getValidAccessToken === 'function') {
             try {
-                console.log('🔄 嘗試使用現有元件刷新 token...');
+                // console removed
                 const newToken = await this.googleLoginComponent.getValidAccessToken();
                 
                 if (newToken) {
-                    console.log('✅ Token 刷新成功');
+                    // console removed
                     this.dispatchAuthEvent('token-refreshed', {
                         success: true,
                         newToken: newToken
@@ -326,7 +326,7 @@ class AuthStatusManager {
         keysToRemove.forEach(key => {
             if (localStorage.getItem(key)) {
                 localStorage.removeItem(key);
-                console.log(`🗑️ 清除 ${key}`);
+                // console removed
             }
         });
     }
@@ -348,7 +348,7 @@ class AuthStatusManager {
             this.googleLoginComponent.dispatchEvent(event);
         }
         
-        console.log(`📡 觸發事件: ${eventType}`, detail);
+        // console removed
     }
     
     /**
@@ -365,7 +365,7 @@ class AuthStatusManager {
     async triggerAutoReLogin() {
         if (this.googleLoginComponent && typeof this.googleLoginComponent.signIn === 'function') {
             try {
-                console.log('🔄 觸發自動重新登入...');
+                // console removed
                 await this.googleLoginComponent.signIn();
             } catch (error) {
                 console.error('❌ 自動重新登入失敗:', error);
@@ -377,7 +377,7 @@ class AuthStatusManager {
      * 手動觸發狀態檢查
      */
     async forceCheck() {
-        console.log('🔍 手動觸發登入狀態檢查');
+        // console removed
         this.lastCheckTime = 0; // 重置冷卻時間
         await this.checkAuthStatus();
     }
@@ -387,7 +387,7 @@ class AuthStatusManager {
      */
     setGoogleLoginComponent(component) {
         this.googleLoginComponent = component;
-        console.log('🔗 設定 Google 登入元件引用');
+        // console removed
     }
     
     /**
@@ -421,7 +421,7 @@ class AuthStatusManager {
      * 清理事件監聽器
      */
     destroy() {
-        console.log('🧹 清理 AuthStatusManager...');
+        // console removed
         
         // 移除所有事件監聽器
         this.eventListeners.forEach(({ target, event, handler }) => {
@@ -433,7 +433,7 @@ class AuthStatusManager {
         this.isChecking = false;
         this.googleLoginComponent = null;
         
-        console.log('✅ AuthStatusManager 已清理完成');
+        // console removed
     }
 }
 
@@ -445,4 +445,4 @@ if (!window.globalAuthStatusManager) {
     window.globalAuthStatusManager = new AuthStatusManager();
 }
 
-console.log('📦 AuthStatusManager 模組已載入');
+// console removed

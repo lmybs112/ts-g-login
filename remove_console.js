@@ -3,9 +3,9 @@ const fs = require('fs');
 // 讀取文件
 const content = fs.readFileSync('inf-google-login.js', 'utf8');
 
-// 將 console 語句替換為空語句，保持語法完整性
+// 只移除 console.log 和 console.info，保留 console.error 和 console.warn
 const cleanedContent = content.replace(
-    /(\s*)console\.(log|error|warn|info|debug)\([^;]*\);?/g, 
+    /(\s*)console\.(log|info|debug)\([^;]*\);?/g, 
     '$1// console statement removed'
 );
 

@@ -59,7 +59,7 @@ class AuthIntegrationManager {
             this.init();
         }
         
-        console.log('🔗 AuthIntegrationManager 已創建');
+        // console removed
     }
     
     /**
@@ -67,12 +67,12 @@ class AuthIntegrationManager {
      */
     async init() {
         if (this.isInitialized) {
-            console.log('⚠️ AuthIntegrationManager 已經初始化');
+            // console removed
             return;
         }
         
         try {
-            console.log('🚀 初始化 AuthIntegrationManager...');
+            // console removed
             this.stats.initTime = new Date().toISOString();
             
             // 等待 DOM 載入完成
@@ -91,7 +91,7 @@ class AuthIntegrationManager {
             await this.performInitialAuthCheck();
             
             this.isInitialized = true;
-            console.log('✅ AuthIntegrationManager 初始化完成');
+            // console removed
             
             // 觸發初始化完成事件
             this.dispatchEvent('auth-integration-ready', {
@@ -129,24 +129,24 @@ class AuthIntegrationManager {
      * 初始化各個管理器
      */
     async initializeManagers() {
-        console.log('📦 初始化子管理器...');
+        // console removed
         
         // 初始化認證狀態管理器
         if (this.options.enableStatusCheck && window.AuthStatusManager) {
             this.authStatusManager = new window.AuthStatusManager();
-            console.log('✅ AuthStatusManager 已初始化');
+            // console removed
         }
         
         // 初始化 Token 刷新管理器
         if (this.options.enableTokenRefresh && window.TokenRefreshManager) {
             this.tokenRefreshManager = new window.TokenRefreshManager();
-            console.log('✅ TokenRefreshManager 已初始化');
+            // console removed
         }
         
         // 初始化使用者資料 Cookie 管理器
         if (this.options.enableCookieManager && window.UserDataCookieManager) {
             this.userDataCookieManager = new window.UserDataCookieManager();
-            console.log('✅ UserDataCookieManager 已初始化');
+            // console removed
         }
         
         // 連接管理器之間的引用
@@ -173,7 +173,7 @@ class AuthIntegrationManager {
      * 設定全域事件監聽
      */
     setupGlobalEventListeners() {
-        console.log('📡 設定全域事件監聽...');
+        // console removed
         
         // 監聽登入成功事件
         this.addEventListenerWithTracking(document, 'google-login-success', (event) => {
@@ -228,7 +228,7 @@ class AuthIntegrationManager {
             const customComponents = document.querySelectorAll('inf-google-login-component');
             if (customComponents.length > 0) {
                 this.googleLoginComponent = customComponents[0];
-                console.log('✅ 找到 Google 登入元件:', this.googleLoginComponent);
+                // console removed
                 
                 // 重新連接管理器
                 this.connectManagers();
@@ -238,14 +238,14 @@ class AuthIntegrationManager {
             // 尋找全域實例
             if (window.globalGoogleLoginComponent) {
                 this.googleLoginComponent = window.globalGoogleLoginComponent;
-                console.log('✅ 找到全域 Google 登入元件');
+                // console removed
                 
                 // 重新連接管理器
                 this.connectManagers();
                 return;
             }
             
-            console.log('⚠️ 未找到 Google 登入元件，將在元件創建時自動連接');
+            // console removed
             
         } catch (error) {
             console.error('❌ 尋找 Google 登入元件失敗:', error);
@@ -257,7 +257,7 @@ class AuthIntegrationManager {
      */
     async performInitialAuthCheck() {
         try {
-            console.log('🔍 執行初始認證狀態檢查...');
+            // console removed
             
             // 檢查本地存儲的認證狀態
             const hasLocalAuth = this.checkLocalAuthData();
@@ -282,12 +282,7 @@ class AuthIntegrationManager {
                 tokenStatus: tokenValid ? 'valid' : 'invalid'
             });
             
-            console.log('📊 初始認證狀態:', {
-                hasLocalAuth,
-                hasUserData: !!userData,
-                tokenValid,
-                isAuthenticated: this.currentAuthState.isAuthenticated
-            });
+            // console removed
             
         } catch (error) {
             console.error('❌ 初始認證檢查失敗:', error);
@@ -343,7 +338,7 @@ class AuthIntegrationManager {
      * 處理登入成功事件
      */
     async handleLoginSuccess(event) {
-        console.log('🎉 處理登入成功事件');
+        // console removed
         
         const { userInfo, accessToken } = event.detail || {};
         
@@ -370,7 +365,7 @@ class AuthIntegrationManager {
      * 處理認證狀態變化
      */
     async handleAuthStatusChanged(event) {
-        console.log('🔄 處理認證狀態變化');
+        // console removed
         
         const { isAuthenticated, reason } = event.detail || {};
         
@@ -398,7 +393,7 @@ class AuthIntegrationManager {
      * 處理 token 刷新成功
      */
     async handleTokenRefreshed(event) {
-        console.log('🔄 處理 token 刷新成功');
+        // console removed
         
         this.stats.refreshCount++;
         this.stats.lastActivity = new Date().toISOString();
@@ -419,7 +414,7 @@ class AuthIntegrationManager {
      * 處理 token 刷新失敗
      */
     async handleTokenRefreshFailure(event) {
-        console.log('❌ 處理 token 刷新失敗');
+        // console removed
         
         this.stats.errorCount++;
         
@@ -446,7 +441,7 @@ class AuthIntegrationManager {
      * 處理使用者資料保存
      */
     async handleUserDataSaved(event) {
-        console.log('💾 處理使用者資料保存');
+        // console removed
         
         const { userData } = event.detail || {};
         
@@ -462,7 +457,7 @@ class AuthIntegrationManager {
      * 處理使用者資料清理
      */
     async handleUserDataCleared(event) {
-        console.log('🗑️ 處理使用者資料清理');
+        // console removed
         
         this.currentAuthState.user = null;
         this.updateAuthState({
@@ -475,7 +470,7 @@ class AuthIntegrationManager {
      * 處理頁面卸載
      */
     handleBeforeUnload() {
-        console.log('📱 頁面即將卸載，執行清理操作');
+        // console removed
         
         // 確保所有管理器正確清理
         this.cleanup();
@@ -491,12 +486,7 @@ class AuthIntegrationManager {
         
         // 如果狀態有顯著變化，記錄日誌
         if (oldState.isAuthenticated !== this.currentAuthState.isAuthenticated) {
-            console.log('📊 認證狀態變化:', {
-                from: oldState.isAuthenticated,
-                to: this.currentAuthState.isAuthenticated,
-                reason: updates.reason,
-                timestamp: this.currentAuthState.lastCheck
-            });
+            // console removed
         }
     }
     
@@ -558,7 +548,7 @@ class AuthIntegrationManager {
      */
     async logout() {
         try {
-            console.log('🚪 執行登出操作');
+            // console removed
             
             // 清理各個管理器的資料
             if (this.authStatusManager && typeof this.authStatusManager.clearAuthData === 'function') {
@@ -587,7 +577,7 @@ class AuthIntegrationManager {
                 reason: 'manual'
             });
             
-            console.log('✅ 登出完成');
+            // console removed
             
         } catch (error) {
             console.error('❌ 登出失敗:', error);
@@ -607,7 +597,7 @@ class AuthIntegrationManager {
         document.dispatchEvent(event);
         
         if (this.options.debug) {
-            console.log(`📡 觸發事件: ${eventType}`, detail);
+            // console removed
         }
     }
     
@@ -616,7 +606,7 @@ class AuthIntegrationManager {
      */
     setGoogleLoginComponent(component) {
         this.googleLoginComponent = component;
-        console.log('🔗 設定 Google 登入元件');
+        // console removed
         
         // 重新連接管理器
         this.connectManagers();
@@ -626,7 +616,7 @@ class AuthIntegrationManager {
      * 清理資源
      */
     cleanup() {
-        console.log('🧹 清理 AuthIntegrationManager...');
+        // console removed
         
         // 清理各個管理器
         if (this.authStatusManager && typeof this.authStatusManager.destroy === 'function') {
@@ -651,14 +641,14 @@ class AuthIntegrationManager {
         this.isInitialized = false;
         this.googleLoginComponent = null;
         
-        console.log('✅ AuthIntegrationManager 已清理完成');
+        // console removed
     }
     
     /**
      * 重新初始化
      */
     async reinitialize() {
-        console.log('🔄 重新初始化 AuthIntegrationManager...');
+        // console removed
         
         this.cleanup();
         await this.init();
@@ -673,4 +663,4 @@ if (!window.globalAuthIntegrationManager) {
     window.globalAuthIntegrationManager = new AuthIntegrationManager();
 }
 
-console.log('📦 AuthIntegrationManager 模組已載入');
+// console removed
