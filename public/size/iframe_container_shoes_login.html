@@ -375,6 +375,18 @@
            $("#nosize_section").find("div")[0].innerHTML="建議您可以聯繫線上客服，進一步確認商品尺寸。"
            $("#nosize_section").find("div").css({"width":"auto","height":"auto",'font-size':'12px','text-align':'left'})
            $("#nosize_section").css({'border':'none'})
+           const messageData = {
+             header: 'bid',
+             value: {
+                    "FH": $('FootLength_input_PS_mbinfo').val(),
+                    "FW": $('FootWidth_input_PS_mbinfo').val(),
+                    "FCir": $('FootCircu_input_PS_mbinfo').val(),
+                    DataItem: "0010",
+                }
+            }
+            console.log('FML_Done value', messageData.value)
+            console.log('FML_Done ----',e.data)
+            console.error('FML_Done ----',e.data)
 
            //TEXT check
            if($('#first_FTEXT').text() == '不建議'){ $('#first_FTEXT').parent().parent().parent().hide()} 
@@ -574,18 +586,18 @@
 <script>
 window.addEventListener("message",function(e){
   if(e.data["MsgHeader"]=="FML_Done"){
-            const messageData = {
-             header: 'bid',
-             value: {
-                    "FH": $('FootLength_input_PS_mbinfo').val(),
-                    "FW": $('FootWidth_input_PS_mbinfo').val(),
-                    "FCir": $('FootCircu_input_PS_mbinfo').val(),
-                    DataItem: "0010",
-                }
-            }
-            console.log('FML_Done value', messageData.value)
-            console.log('FML_Done ----',e.data)
-            console.error('FML_Done ----',e.data)
+            // const messageData = {
+            //  header: 'bid',
+            //  value: {
+            //         "FH": $('FootLength_input_PS_mbinfo').val(),
+            //         "FW": $('FootWidth_input_PS_mbinfo').val(),
+            //         "FCir": $('FootCircu_input_PS_mbinfo').val(),
+            //         DataItem: "0010",
+            //     }
+            // }
+            // console.log('FML_Done value', messageData.value)
+            // console.log('FML_Done ----',e.data)
+            // console.error('FML_Done ----',e.data)
             
             // 同時調用 update_bodydata API
             // 找到 inf-google-login 組件並調用其方法
