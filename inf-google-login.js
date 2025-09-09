@@ -7375,6 +7375,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 // 更新本地儲存的 API 回應
                 localStorage.setItem('inffits_api_response', JSON.stringify(result));
                 
+                // 重要：清除實例快取，強制重新讀取最新資料
+                this.apiResponse = null;
+                
+                // 立即更新會員資料顯示
+                this.updateBodyDataDisplay(result);
+                
                 // 同時更新本地的 BodyID_Foot_size 和 Gender_Last
                 if (genderFromUrl === 'F') {
                     // 女性：使用標準化的腳部資料保存到 BodyID_Foot_size
