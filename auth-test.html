@@ -364,6 +364,7 @@
             <div>
                 <button class="btn secondary" onclick="testAPIConnection()">🌐 測試 API 連線</button>
                 <button class="btn secondary" onclick="validateToken()">✅ 驗證 Token</button>
+                <button class="btn secondary" onclick="saveToCookie()">🍪 保存到 Cookie</button>
                 <button class="btn secondary" onclick="exportData()">📤 匯出資料</button>
                 <button class="btn secondary" onclick="clearLogs()">🧹 清理日誌</button>
             </div>
@@ -608,9 +609,21 @@
                                 userInfo = {
                                     id: payload.sub,
                                     name: payload.name,
-                                    email: payload.email
+                                    email: payload.email,
+                                    picture: payload.picture,
+                                    email_verified: payload.email_verified
                                 };
                                 addLog('從 JWT Token 提取使用者資訊', 'info');
+                                
+                                // 保存使用者資料到 Cookie
+                                if (authManager && authManager.userDataCookieManager) {
+                                    try {
+                                        authManager.userDataCookieManager.saveUserDataToCookie(userInfo, 'jwt_extraction');
+                                        addLog('使用者資料已自動保存到 Cookie', 'success');
+                                    } catch (cookieError) {
+                                        addLog(`Cookie 保存失敗: ${cookieError.message}`, 'warning');
+                                    }
+                                }
                             }
                         }
                     }
@@ -879,6 +892,14 @@
                     addLog(`使用者: ${event.detail?.user?.name || '未知'}`, 'info');
                     addLog(`郵箱: ${event.detail?.user?.email || '未知'}`, 'info');
                     showNotification('Google 登入成功', 'success');
+                    
+                    // 手動保存使用者資料到 Cookie
+                    if (authManager && authManager.userDataCookieManager && event.detail?.user) {
+                        addLog('保存使用者資料到 Cookie...', 'info');
+                        authManager.userDataCookieManager.saveUserDataToCookie(event.detail.user, 'manual_save');
+                        addLog('使用者資料已保存到 Cookie', 'success');
+                    }
+                    
                     updateStatus();
                     
                     // 移除事件監聽器
@@ -1127,6 +1148,61 @@
             } catch (error) {
                 addLog(`Token 驗證錯誤: ${error.message}`, 'error');
                 showNotification('Token 驗證錯誤', 'error');
+            }
+        }
+
+        async function saveToCookie() {
+            addLog('手動保存使用者資料到 Cookie...', 'info');
+            
+            try {
+                // 先嘗試從 JWT 提取使用者資訊
+                const token = localStorage.getItem('google_access_token');
+                let userInfo = null;
+                
+                if (token && (token.startsWith('gid_') || token.includes('.'))) {
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        userInfo = {
+                            id: payload.sub,
+                            name: payload.name,
+                            email: payload.email,
+                            picture: payload.picture,
+                            email_verified: payload.email_verified,
+                            given_name: payload.given_name,
+                            family_name: payload.family_name,
+                            locale: payload.locale
+                        };
+                        addLog('從 JWT 提取使用者資訊成功', 'success');
+                    }
+                }
+                
+                if (!userInfo) {
+                    // 如果 JWT 提取失敗，嘗試從整合管理器獲取
+                    const authStatus = authManager ? authManager.getAuthStatus() : null;
+                    userInfo = authStatus?.user;
+                }
+                
+                if (!userInfo) {
+                    addLog('沒有可用的使用者資訊', 'error');
+                    showNotification('沒有可用的使用者資訊', 'error');
+                    return;
+                }
+                
+                // 保存到 Cookie
+                if (authManager && authManager.userDataCookieManager) {
+                    await authManager.userDataCookieManager.saveUserDataToCookie(userInfo, 'manual_save');
+                    addLog('使用者資料已保存到 Cookie', 'success');
+                    showNotification('已保存到 Cookie', 'success');
+                    updateStatus();
+                } else {
+                    addLog('Cookie 管理器未初始化', 'error');
+                    showNotification('Cookie 管理器未初始化', 'error');
+                }
+                
+            } catch (error) {
+                addLog(`保存 Cookie 失敗: ${error.message}`, 'error');
+                showNotification('保存 Cookie 失敗', 'error');
             }
         }
 
