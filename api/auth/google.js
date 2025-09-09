@@ -43,20 +43,93 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
     
-    // 只允許 POST 請求
-    if (req.method !== 'POST') {
+    // 允許 GET 和 POST 請求
+    if (req.method !== 'POST' && req.method !== 'GET') {
         return res.status(405).json({
             success: false,
             error: 'Method not allowed',
-            message: '只允許 POST 請求'
+            message: '只允許 GET 和 POST 請求'
         });
     }
     
     try {
         console.log('🚀 開始處理 Google OAuth 請求');
         
-        // 驗證請求參數
-        const { code, state, redirect_uri } = req.body;
+        // 從 GET 或 POST 請求中獲取參數
+        let code, state, redirect_uri;
+        
+        if (req.method === 'GET') {
+            // 處理重定向回調
+            code = req.query.code;
+            state = req.query.state;
+            redirect_uri = req.query.redirect_uri || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/api/auth/google`;
+            
+            // 如果是 GET 請求且有授權碼，返回一個頁面來處理回調
+            if (code) {
+                return res.status(200).send(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Google 授權處理中...</title>
+                        <script>
+                            // 發送 POST 請求處理授權碼
+                            fetch('/api/auth/google', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    code: '${code}',
+                                    state: '${state}',
+                                    redirect_uri: '${redirect_uri}'
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // 保存 tokens 到 localStorage
+                                    localStorage.setItem('google_access_token', data.access_token);
+                                    if (data.refresh_token) {
+                                        localStorage.setItem('google_refresh_token', data.refresh_token);
+                                    }
+                                    localStorage.setItem('google_token_expires_at', Date.now() + (data.expires_in * 1000));
+                                    localStorage.setItem('google_user_info', JSON.stringify(data.user));
+                                    
+                                    // 觸發登入成功事件
+                                    window.dispatchEvent(new CustomEvent('google-login-success', {
+                                        detail: {
+                                            user: data.user,
+                                            access_token: data.access_token,
+                                            refresh_token: data.refresh_token
+                                        }
+                                    }));
+                                    
+                                    // 重定向回原頁面
+                                    window.location.href = '/';
+                                } else {
+                                    console.error('OAuth 失敗:', data.message);
+                                    window.location.href = '/?error=oauth_failed';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('處理授權碼失敗:', error);
+                                window.location.href = '/?error=auth_processing_failed';
+                            });
+                        </script>
+                    </head>
+                    <body>
+                        <h2>正在處理 Google 授權...</h2>
+                        <p>請稍候，系統正在完成登入流程。</p>
+                    </body>
+                    </html>
+                `);
+            }
+        } else {
+            // POST 請求
+            code = req.body.code;
+            state = req.body.state;
+            redirect_uri = req.body.redirect_uri;
+        }
         
         if (!code) {
             return res.status(400).json({
@@ -68,6 +141,7 @@ export default async function handler(req, res) {
         
         // 交換授權碼獲取 tokens
         console.log('🔄 交換授權碼獲取 tokens...');
+        // 交換授權碼獲取 access token 和 refresh token
         const tokenResponse = await exchangeCodeForTokens(code, redirect_uri);
         
         if (!tokenResponse.access_token) {
@@ -148,7 +222,8 @@ async function exchangeCodeForTokens(code, redirectUri = null) {
             client_secret: clientSecret,
             code: code,
             grant_type: 'authorization_code',
-            redirect_uri: redirectUri || defaultRedirectUri
+            redirect_uri: redirectUri || defaultRedirectUri,
+            access_type: 'offline'  // 確保獲取 refresh token
         });
         
         console.log('🔗 調用 Google Token API...');

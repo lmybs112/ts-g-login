@@ -4516,38 +4516,33 @@ class InfGoogleLoginComponent extends HTMLElement {
 
     // 觸發 Google 登入
     triggerGoogleSignIn() {
-        if (window.google && window.google.accounts) {
+        // 直接使用 OAuth2 流程獲取 refresh token
+        this.initiateOAuth2Flow();
+    }
 
-            // 在無痕瀏覽器中，直接使用標準登入按鈕
-            if (this.isIncognitoMode) {
-                this.createStandardGoogleSignInButton();
-                return;
-            }
+    // 啟動 OAuth2 授權流程
+    initiateOAuth2Flow() {
+        const authUrl = 'https://accounts.google.com/oauth/authorize';
+        const redirectUri = window.location.origin + '/api/auth/google';
+        const state = 'oauth2_flow_' + Date.now();
+        
+        const params = new URLSearchParams({
+            client_id: this.clientId,
+            response_type: 'code',
+            scope: 'openid email profile',
+            access_type: 'offline',
+            prompt: 'consent',
+            redirect_uri: redirectUri,
+            state: state,
+            include_granted_scopes: 'true'
+        });
 
-            // 檢查是否有活躍的 Google 會話
-            const hasActiveSession = this.checkGoogleSession();
-
-            try {
-                // 使用標準的 prompt 方法
-                window.google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed()) {
-
-                        // 針對空會話問題，直接使用 OAuth2 方法
-                        if (notification.getNotDisplayedReason() === 'no_session' ||
-                            notification.getNotDisplayedReason() === 'browser_not_supported' ||
-                            notification.getNotDisplayedReason() === 'invalid_client') {
-                            this.triggerDirectGoogleSignIn();
-                        } else {
-                            // 如果無法顯示，嘗試其他方式
-                            this.fallbackGoogleSignIn();
-                        }
-                    } else if (notification.isSkippedMoment()) {} else if (notification.isDismissedMoment()) {}
-                });
-            } catch (error) {
-                this.fallbackGoogleSignIn();
-            }
-        } else {
-        }
+        // 記錄狀態用於驗證
+        localStorage.setItem('google_oauth_state', state);
+        localStorage.setItem('google_oauth_redirect_uri', redirectUri);
+        
+        // 直接重定向到 Google 授權頁面
+        window.location.href = `${authUrl}?${params.toString()}`;
     }
 
     // 檢查 Google 會話狀態
@@ -5836,7 +5831,7 @@ class InfGoogleLoginComponent extends HTMLElement {
         }
 
         try {
-            // 根據是否為無痕瀏覽器調整配置
+            // 使用標準 OAuth2 流程獲取 refresh token
             const config = {
                 client_id: this.clientId,
                 callback: this.handleCredentialResponse.bind(this),
@@ -5847,9 +5842,11 @@ class InfGoogleLoginComponent extends HTMLElement {
                 prompt: 'select_account',
                 auto_prompt: false,
                 state: 'google_signin',
+                // 請求 offline access 以獲得 refresh token
+                scope: 'openid email profile',
+                access_type: 'offline',
+                include_granted_scopes: true,
                 // 使用完整的 scope 請求，確保能獲得更長時間的 token
-                scope: 'openid email profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-                // Google Identity Services 的長期會話配置
                 use_fedcm_for_prompt: true,
                 // 啟用自動重新驗證和 token 延長
                 intermediate_iframe_close_callback: () => {
