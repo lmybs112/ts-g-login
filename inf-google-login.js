@@ -7811,38 +7811,13 @@ class InfGoogleLoginComponent extends HTMLElement {
                     originalConsoleError.apply(console, args);
                 };
                 
-                const gsiWarnHandler = (...args) => {
-                    const message = args.join(' ');
-                    if (message.includes('GSI_LOGGER') || 
-                        message.includes('FedCM') || 
-                        message.includes('Google One Tap') ||
-                        message.includes('fedcm-migration')) {
-                        return;
-                    }
-                    originalConsoleWarn.apply(console, args);
-                };
-                
-                const gsiLogHandler = (...args) => {
-                    const message = args.join(' ');
-                    if (message.includes('GSI_LOGGER') || 
-                        message.includes('FedCM') || 
-                        message.includes('Google One Tap') ||
-                        message.includes('fedcm-migration')) {
-                        return;
-                    }
-                    originalConsoleLog.apply(console, args);
-                };
                 
                 // 劫持所有 console 方法
-                console.error = gsiErrorHandler;
-                console.warn = gsiWarnHandler;
-                console.log = gsiLogHandler;
+                console.error = fedcmErrorHandler;
                 
                 // 3秒後恢復原始 console 方法
                 setTimeout(() => {
                     console.error = originalConsoleError;
-                    console.warn = originalConsoleWarn;
-                    console.log = originalConsoleLog;
                 }, 3000);
                 
                 // 安全的撤銷憑證方式
