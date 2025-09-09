@@ -87,6 +87,10 @@ export default async function handler(req, res) {
                     <head>
                         <title>Google 授權處理中...</title>
                         <script>
+                            console.log('開始處理 Google OAuth 回調...');
+                            console.log('授權碼:', ${JSON.stringify(code)});
+                            console.log('狀態:', ${JSON.stringify(state || '')});
+                            
                             // 發送 POST 請求處理授權碼
                             fetch('/api/auth/google', {
                                 method: 'POST',
@@ -94,21 +98,39 @@ export default async function handler(req, res) {
                                     'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                    code: '${code}',
-                                    state: '${state}',
-                                    redirect_uri: '${redirect_uri}'
+                                    code: ${JSON.stringify(code)},
+                                    state: ${JSON.stringify(state || '')},
+                                    redirect_uri: ${JSON.stringify(redirect_uri)}
                                 })
                             })
-                            .then(response => response.json())
+                            .then(response => {
+                                console.log('API 響應狀態:', response.status);
+                                return response.json();
+                            })
                             .then(data => {
+                                console.log('API 響應資料:', data);
                                 if (data.success) {
-                                    // 保存 tokens 到 localStorage
-                                    localStorage.setItem('google_access_token', data.access_token);
+                                    // 保存認證資訊到 localStorage（使用與測試頁面一致的格式）
+                                    if (data.credential) {
+                                        localStorage.setItem('google_auth_credential', data.credential);
+                                        console.log('✅ 憑證已保存');
+                                    }
+                                    
+                                    if (data.user) {
+                                        localStorage.setItem('google_user_info', JSON.stringify(data.user));
+                                        console.log('✅ 用戶資訊已保存');
+                                    }
+                                    
+                                    // 相容舊格式的 token 保存
+                                    if (data.access_token) {
+                                        localStorage.setItem('google_access_token', data.access_token);
+                                    }
                                     if (data.refresh_token) {
                                         localStorage.setItem('google_refresh_token', data.refresh_token);
                                     }
-                                    localStorage.setItem('google_token_expires_at', Date.now() + (data.expires_in * 1000));
-                                    localStorage.setItem('google_user_info', JSON.stringify(data.user));
+                                    if (data.expires_in) {
+                                        localStorage.setItem('google_token_expires_at', Date.now() + (data.expires_in * 1000));
+                                    }
                                     
                                     // 觸發登入成功事件
                                     window.dispatchEvent(new CustomEvent('google-login-success', {
@@ -119,22 +141,36 @@ export default async function handler(req, res) {
                                         }
                                     }));
                                     
+                                    console.log('✅ Google 登入成功，準備重定向...');
+                                    
                                     // 重定向回測試頁面
-                                    window.location.href = '/auth-test.html';
+                                    window.location.href = '/auth-test.html?login=success';
                                 } else {
-                                    console.error('OAuth 失敗:', data.message);
-                                    window.location.href = '/?error=oauth_failed';
+                                    console.error('❌ OAuth 失敗:', data.message || data.error);
+                                    alert('登入失敗: ' + (data.message || data.error));
+                                    window.location.href = '/auth-test.html?error=oauth_failed';
                                 }
                             })
                             .catch(error => {
-                                console.error('處理授權碼失敗:', error);
-                                window.location.href = '/?error=auth_processing_failed';
+                                console.error('❌ 處理授權碼失敗:', error);
+                                alert('處理授權碼失敗: ' + error.message);
+                                window.location.href = '/auth-test.html?error=auth_processing_failed';
                             });
                         </script>
                     </head>
                     <body>
-                        <h2>正在處理 Google 授權...</h2>
-                        <p>請稍候，系統正在完成登入流程。</p>
+                        <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+                            <h2>🔐 Google 授權處理中...</h2>
+                            <p>請稍候，正在處理您的登入資訊...</p>
+                            <div style="width: 50px; height: 50px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto;"></div>
+                            <p style="color: #666; font-size: 14px;">如果頁面長時間沒有響應，請檢查瀏覽器控制台</p>
+                        </div>
+                        <style>
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        </style>
                     </body>
                     </html>
                 `);
@@ -410,3 +446,4 @@ if (typeof process !== 'undefined' && process.env) {
         console.error('❌ Google OAuth 環境變數驗證失敗:', error.message);
     }
 }
+
