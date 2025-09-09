@@ -7283,11 +7283,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                     const userInfo = JSON.parse(userInfoStr);
                     sub = userInfo.sub || '';
                 } catch (e) {
+                    console.error('❌ 解析用戶資訊失敗:', e);
                 }
             }
             
             if (!credential) {
-                // console statement removed
+                console.error('❌ 沒有憑證，無法調用 API');
                 return;
             }
             
@@ -7386,10 +7387,12 @@ class InfGoogleLoginComponent extends HTMLElement {
                 ensureBodyIDFootSizeHasTS();
                 
             } else {
-                // console statement removed
+                console.error('❌ API 調用失敗:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('❌ 錯誤詳情:', errorText);
             }
         } catch (error) {
-            // console statement removed
+            console.error('❌ uploadFootMeasurementData 發生錯誤:', error);
         }
     }
 
