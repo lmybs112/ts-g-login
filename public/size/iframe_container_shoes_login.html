@@ -1,0 +1,654 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>infFITS_iframe</title>
+    <link
+        href="https://fonts.googleapis.com/css?family=Montserrat:100,100i,200,200i,300,300i,400,400i,500,500i,600&display=swap"
+        rel="stylesheet">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="robots" content="noindex">
+    <link href="
+    https://inffits.com/webDesign/HTML/infFITS_shoes_AI/css/iframe_style.min.css" rel="stylesheet" type="text/css" />
+    <style>
+        .inputselectHW{
+            padding:0 16px;
+            height: 100%;
+            width: 100%;
+            color:black;
+            text-align: center;
+            text-align-last:center;
+            -moz-text-align-last: center;
+        }
+        .subcon_split{
+            height:17.5%;
+        }
+        #ReText{
+            margin-top:8px;
+        }
+        .axd_img {
+            width: 75% !important;
+            padding: 12px;
+            background-size: cover;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            overflow: hidden;
+            border-radius: 8px !important;
+            border: 1px solid var(--black-101-e-1-e-1910, rgba(30, 30, 25, 0.10));
+            background: #FFF;
+            box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.08);
+        }
+        .abs_center{
+            position: absolute;
+            margin: auto;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            top: 0;
+        }
+        #Product_Review_Pattern:after{
+            content:none !important; 
+        }
+    </style>
+</head>
+
+<body>
+    <!--  Initial Loading  -->
+    <div class="loadingbar" id="loadingbar">
+        <div class="spinner spinner-circle"></div>
+        <img class="abs_center" src="/img/shoes_loading.svg" height="20px">
+    </div>
+
+    <!-- container -->
+    <div class='container back' id='containerback'></div>
+    <div class='container mbinfo animX' id="container_BF_mbinfo">
+        <div class="c_header" id="header_BF">智慧尺寸推薦
+            <p>輸入您的身材資訊</p>
+        </div>
+
+        <div class="subcon">
+            <div class="subcon_HW">
+                <div class="title_BF">腳長</div>
+                <div class="subcon_split">
+                    <span class="inputbox_BF">
+                        <select class="inputselectHW inputselectorfootlength_BF" id='FootLength_input_PS_mbinfo'
+                            placeholder="-"></select>
+
+                    </span><span class="unit_c1_BF"> 公分 </span>
+                </div>
+                <div class="title_BF">腳寬</div>
+                <div class="subcon_split">
+
+                    <span class="inputbox_BF">
+                        <select class="inputselectHW inputselectorfootwidth_BF" id='FootWidth_input_PS_mbinfo'
+                            placeholder="-"></select>
+                    </span>
+                    <span class="unit_c1_BF"> 公分 </span>
+                </div>
+                <div class="title_BF">腳圍（選填）</div>
+                <div class="subcon_split">
+
+                    <span class="inputbox_BF">
+                        <select class="inputselectHW inputselectorfootCircu_BF" id='FootCircu_input_PS_mbinfo'
+                            placeholder="-"></select>
+                    </span>
+                    <span class="unit_c1_BF"> 公分 </span>
+                </div>
+            </div>
+        </div>
+        <div class="footer" id="footer_BF">
+            <img class="type_backarrow" id="BF_backarrow" src="/img/left-arrow.png" width="100%" height="100%"
+                style='display:none'>
+            <button class='disable' id="confirm-button_BF_mbinfo" type="button">下一步</button>
+        </div>
+        <div class='privacy2' id='privacy_terms_hw' style='left:10px;right:auto;bottom:10px;opacity:0.75'>
+            <img src='/img/info.png' height='15px'>
+        </div>
+        <div id='Privacy_text_terms_hw'>
+            <a href="https://www.inffits.com" target="_blank"
+                style='color:black;text-decoration:none;font-weight:600'>infFITS</a>
+            為您提供相關產品及服務，服務條款適用於所有網站使用者，同時具備各項資訊安全設備及必要的安全防護措施，加以保護網站內所有收集到的個人識別資料，若您同意以下條款，請安心使用服務內容。<a
+                href="https://www.inffits.com/Terms.html" target="_blank" style='color:black'> 使用條款</a> 及<a
+                href="https://www.inffits.com/Privacy.html" target="_blank" style='color:black'> 隱私權政策</a>
+        </div>
+
+        <!-- <div class='privacy2 toggle_settings'>
+            <img src='/img/002-preferences.png' height='15px'>
+        </div> -->
+    </div>
+    <div class='container mbinfo animX' id="container-x">
+        <div class="c_header" id="container-x-header">
+            <span></span>
+            <p></p>
+        </div>
+        <div class="selection_scroll">
+            <div class="selection">
+                <div class="axd_selection">
+                    <img class="axd_img c-x" id="container-x-0" data-item=0>
+                    <p>窄腳版</p>
+                </div>
+                <div class="axd_selection">
+                    <img class="axd_img c-x" id="container-x-1" data-item=1>
+                    <p>一般</p>
+                </div>
+                <div class="axd_selection">
+                    <img class="axd_img c-x" id="container-x-2" data-item=2>
+                    <p>寬腳版</p>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <img class="type_backarrow" id="container-x-backarrow" src="/img/left-arrow.png" width="100%"
+                height="100%">
+            <a class='c-x' data-item=1>略過</a>
+        </div>
+    </div>
+    <div class='container mbinfo animX' id="container-x2">
+        <div class="c_header" id="container-x2-header">
+            <span></span>
+            <p></p>
+        </div>
+        <div class="selection_scroll">
+            <div class="selection">
+                <div class="axd_selection">
+                    <img class="axd_img c-x2" id="container-x2-0" data-item=0>
+                    <p>扁平</p>
+                </div>
+                <div class="axd_selection">
+                    <img class="axd_img c-x2" id="container-x2-1" data-item=1>
+                    <p>高腳背</p>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <img class="type_backarrow" id="container-x2-backarrow" src="/img/left-arrow.png" width="100%"
+                height="100%">
+            <a class='c-x2' data-item=0>略過</a>
+        </div>
+    </div>
+    <!-- Size Recom-->
+    <div class='SizeBox animation' id='Sizebox_cart'>
+        <div id='SBpimgdiv'
+            style='display:absolute;left:5px;top:5px;width:40px;height:40px;margin-right:5px;display:none'>
+            <span class='SB_Pimg'>
+                <img src='' height="150%" width="auto">
+            </span>
+        </div>
+        <div class='SB_header' id='SB_Prod_cart'>
+            <span style='overflow:scroll;width:100%'>
+                <p>infFITS 鞋類尺寸推薦</p>
+                <span id='ReText'><span id='MultiCloText'></span>智慧尺寸建議
+                    <!-- <div style='display:inherit;transform: scale(0.8);color:gray' class='Humaninfo'>
+                        |&nbsp;<span></span>&nbsp;<span></span>/<span></span></div> -->
+                </span>
+                <!-- <span id='DataTryon' data-type=0>
+                    <span style='line-height:15px'>&nbsp;顯示長度資訊&nbsp;</span>
+                    <img src='/img/arrow-point-to-right.png' height="10px"
+                        style='display: inline-block;margin: 0px 3px;transform: rotate(270deg);'>
+                    <img src='/img/001-minus_black.png' height="10px" style='display:none'>
+                </span> -->
+            </span>
+        </div>
+
+        <div class='SB_DT'>
+            <!-- <div class='DataBody'>
+                <div id="info_block">
+                    <div id="sizeinfo">尺寸資訊</div>
+                </div>
+                <div
+                    style="position:absolute;height:100%;width:80%;z-index:10;background:#fff;display:none;padding:0 10%;">
+                    <div id='table_close' width='15px' height='15px;'><img class="type_backarrow"
+                            src="/img/go-back-left-arrow.png" width="100%" height="100%"
+                            style='left: 10%;top:0;background:none;opacity: 0.5'></div>
+                    <div
+                        style="position: absolute;left: 0;right: 0;top: 0;bottom: 0;margin: auto;width: 80%;height: 75%;overflow:scroll">
+                        <div style="text-align: left;color:#71748d;font-size:12px">單位:<span id='sizeinfo_punit'></span>
+                        </div>
+                        <table id="demo">
+                            <thead>
+                                <tr id="th_tr_size"></tr>
+                            </thead>
+                            <tbody id="tbody_size"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <img class='DataBodyimg' src='/img/DataBody.svg' height="100%">
+                <div class='datapoint dp1'>
+                    <div class='datapointcore'></div>
+                </div>
+                <div class='pointline pl1' data-content='手肘'></div>
+                <div class='datapoint dp2'>
+                    <div class='datapointcore'></div>
+                </div>
+                <div class='pointline pl2' data-content='腰圍'></div>
+                <div class='datapoint dp3'>
+                    <div class='datapointcore'></div>
+                </div>
+                <div class='pointline pl3' data-content='腳踝'>
+                    <span id='ProductDetail_WT'><img src='/img/inffits_black_logo.svg' height="8px">
+                        <h1>衣著配件<img src="/img/arrow-point-to-right.png"
+                                style='height: 8px;width: 8px;filter: none;border: none;'></h1>
+                        <p>建議搭配腰帶會更加合適&nbsp;</p></a>
+                    </span>
+                    <span id='ProductDetail'><img src='/img/inffits_black_logo.svg' height="8px">
+                        <h1></h1>
+                        <p></p>
+                    </span>
+                </div>
+                <div id='SizeLMDExpan' data-type=0>
+                    <h1>
+                        <span id='SizeLMDText'>尺寸</span>
+                        <span id='SizeLMDSelect' style="font-weight: 600;padding:0">S</span>
+                        <img src="/img/caret-down.png">
+                    </h1>
+
+                </div>
+
+
+            </div> -->
+        </div>
+        <div class='SB_body'>
+            <div class='SB_body_section selected'>
+                <div
+                    style='position: absolute;margin: auto;display: block;top: 0;bottom: 0;right: 0;left: 0;height: 60px;'>
+                    <h1 id='recomSize'></h1>
+                    <h2 class='SB_body_text' id='recomText'>
+                        <span id='first_recomtext'>穿著偏好</span>
+                        <span id='first_FTEXT' style='font-size:12px;font-weight:600'>適中</span>
+                        <img src='/img/002-star.png' height="12px" style='position:relative;top:1px'>
+                        <span id='firstPer' style='font-size:12px;'></span>
+                    </h2>
+                </div>
+                <img src='/img/002-checked-symbol.png' height="16px" style='position:absolute;top:5px;right:5px'>
+            </div>
+            <div class='SB_body_section'>
+                <div
+                    style='position: absolute;margin: auto;display: block;top: 0;bottom: 0;right: 0;left: 0;height: 60px;'>
+                    <h1 id='recomSize_sec'>8.5</h1>
+                    <h2 class='SB_body_text' id='recomText_sec'>
+                        <span id='sec_recomtext'>穿著偏好</span>
+                        <span id='sec_FTEXT' style='font-size:12px;font-weight:600'>舒適</span>
+                        <img src='/img/002-star.png' height="12px" style='position:relative;top:1px;display:none'>
+                        <span id='SecPer' style='font-size:12px;'></span>
+                    </h2>
+                </div>
+                <img src='/img/002-checked-symbol.png' height="16px"
+                    style='position:absolute;top:5px;right:5px;display:none'>
+            </div>
+            <div class='SB_body_section' id='nosize_section'>
+                <div>本商品款式版型偏小<br>建議您選購其他商品</div>
+            </div>
+            <div class='SB_body_section' id='Hnosize_section'>
+                <div>目前沒有合適的尺寸<br>建議您選購其他商品</div>
+            </div>
+        </div>
+
+        <div class="footer footer-tobot" id="footer_cart">
+
+            <!-- <p id='SizeAI_text'
+                style='font-size:12px;opacity:1;font-weight:400;margin:1%;text-align:center;color:gray;position:absolute;width:100%;top:-27.5px;letter-spacing:1px'>
+                infFITS 智慧尺寸AI 找到您的合適尺寸
+            </p> -->
+
+            <!-- <button class='enabled' id="findmysize"
+                style="display:block; margin:auto; margin-bottom:10px">找找我的尺寸</button> -->
+            <button class="enabled" id="contactLine" style="display: none; margin: auto auto 10px">聯絡 LINE 線上客服</button>
+            <button class='enabled' id="confirm-button_cart" style="margin:auto;">選取尺寸</button>
+
+            <button id='startover' class='startover enabled' style='width:auto;margin-bottom:5px'>重新輸入
+            </button>
+
+        </div>
+
+        <div class='privacy2' id='privacy'>
+            <img src='/img/infFITS_Logo_2019_center.png' height='35px'>
+        </div>
+        <div id='Privacy_text'>infFITS 根據 3D人體資料庫，藉由使用者輸入資訊精準預測個人數據，同時運用 Machine Learning
+            分析大量試穿資訊及交易資料，推薦您各種商品最合適的個人化尺寸。相關資訊請參閱<a href="https://www.inffits.com" target="_blank"
+                style='color:black'>此處</a></div>
+        <div class='privacy2' id='privacy_terms' style='left:10px;right:auto;bottom:10px;opacity:0.75'>
+            <img src='/img/info.png' height='15px'>
+        </div>
+        <div id='Privacy_text_terms'>
+            <a href="https://www.inffits.com" target="_blank"
+                style='color:black;text-decoration:none;font-weight:600'>infFITS</a>
+            為您提供相關產品及服務，服務條款適用於所有網站使用者，同時具備各項資訊安全設備及必要的安全防護措施，加以保護網站內所有收集到的個人識別資料，若您同意以下條款，請安心使用服務內容。<a
+                href="https://www.inffits.com/Terms.html" target="_blank" style='color:black'> 使用條款</a> 及<a
+                href="https://www.inffits.com/Privacy.html" target="_blank" style='color:black'> 隱私權政策</a>
+        </div>
+
+        <!-- <div class='privacy2 toggle_settings'>
+            <img src='/img/002-preferences.png' height='15px'>
+        </div> -->
+
+        <!--        <div style="bottom: 8px;position: absolute;font-size: 12px;left: 0;right: 0;text-align: center;transform: scale(0.7);color: gray;">實際尺寸以個人穿著感受為準</div>     -->
+    </div>
+
+    <!-- background -->
+    <div id='pback' style="z-index:0;background-position-y: -50%"></div>
+    <div class='container' style="display:block;z-index:1">
+        <div
+            style='position:absolute;width:100%;align-items: center;width: 100%;justify-content: space-evenly;top:-50px;display:none;opacity:0.8'>
+            <img src="/img/001-profile-user.png" height="30px">
+            <div id='Product_Review_Pattern'>建議您可以搭配鞋墊一起選購哦</div>
+        </div>
+    </div>
+
+
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.243.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/pep/0.4.1/pep.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://inffits.com/webDesign/HTML/infFITS_shoes_AI/js/iframe.min.js"></script>
+
+    <script>
+    $('#contactLine').click(function(){
+       const newWindow = window.open('https://page.line.me/greenpine?openQrModal=true','_blank');
+    })
+    
+    function isntAllFit(list) {
+        return list.every(item => item === "不建議");
+    }
+    window.addEventListener("message",  function(event){
+        if(event.data["MsgHeader"]=="onload_Done"){
+            //if(document.location.href.includes('SalePage/2218026')){
+            if(document.location.href.includes('SalePage/')){
+            //HW adustment
+            var Hv = $('.inputselectorfootlength_BF').val();
+            
+            var select = '<option></option>';
+            for (i = 22; i <= 27.1; i = i + 0.1) {
+                select += '<option val=' + i.toFixed(1) + '>' + i.toFixed(1) + '</option>';
+            }
+            $('.inputselectorfootlength_BF').html(select)
+
+            $('.inputselectorfootlength_BF').val(Hv)
+          }
+
+          if (document.location.href.includes('SalePage')) {
+                // $('#pback').css("background-position-y", "0")
+                // $('#pback').css("background-image", "url('/img/GREENPINE.JPG')")
+            }
+        }
+
+       else if(event.data["MsgHeader"]=="FML_Done"){
+           $("#nosize_section").find("div")[0].innerHTML="建議您可以聯繫線上客服，進一步確認商品尺寸。"
+           $("#nosize_section").find("div").css({"width":"auto","height":"auto",'font-size':'12px','text-align':'left'})
+           $("#nosize_section").css({'border':'none'})
+
+           //TEXT check
+           if($('#first_FTEXT').text() == '不建議'){ $('#first_FTEXT').parent().parent().parent().hide()} 
+           else{$('#first_FTEXT').parent().parent().parent().show()}
+           if($('#sec_FTEXT').text() == '不建議'){$('#sec_FTEXT').parent().parent().parent().hide()}
+           else{$('#sec_FTEXT').parent().parent().parent().show()}
+           if(Object.keys(JSON.parse(GLOpR['ITEM'])).length == 1){
+                    $($('.SB_body_section')[1]).hide();
+           }
+              if(GLOpR.DP_CODE == '-1min'){
+                    //Section Display
+                    $('.SB_body_section').hide();
+                    $('.SB_body_section.selected').show();
+                    $('#nosize_section').show();
+                    $('#Hnosize_section').hide();
+                    $('#confirm-button_cart').hide();
+    
+                    $('#recomText').hide()
+                    let arr = SizeStringList.split(',')
+                    let MinSize = arr[0]
+                    $('#recomSize').text(MinSize)
+
+                    $('#recomSize').parent().find(".SB_body_text.add").remove();
+                    if($('#recomSize').parent().find(".SB_body_text.add").length == 0){
+                       $('#recomSize').parent().append('<h2 class="SB_body_text add"><span>最小尺寸</span></h2>')
+                    }
+                    $('#checked-symbol-first').css('opacity','0')
+      
+                    $('#contactLine').show()
+    
+                    
+              }
+ 
+
+              else if(GLOpR.DP_CODE == '4_2' || GLOpR.DP_CODE == '-1' || isntAllFit(GLOpR.PREDICT_FTEXT)){
+                    //Section Display
+                    $('.SB_body_section').hide();
+                    $('.SB_body_section.selected').show();
+                    $('#nosize_section').show();
+                    $('#Hnosize_section').hide();
+                    $('#confirm-button_cart').hide();
+    
+                    $('#recomText').hide()
+                    let arr = SizeStringList.split(',')
+                    let MaxSize = arr[arr.length-1]
+                    $('#recomSize').text(MaxSize)
+                     
+                    $('#recomSize').parent().find(".SB_body_text.add").remove();
+                    if($('#recomSize').parent().find(".SB_body_text.add").length == 0){
+                       $('#recomSize').parent().append('<h2 class="SB_body_text add"><span>最大尺寸</span></h2>')
+                    }
+                    $('#checked-symbol-first').css('opacity','0')
+      
+                    $('#contactLine').show()
+    
+                    
+              }
+
+              else{
+                    $('#recomText').show();
+                    $('#nosize_section').hide();
+                    $('#recomSize').parent().find(".SB_body_text.add").remove();
+                    $('#contactLine').hide()
+                    $('#checked-symbol-first').css('opacity','1')
+                    $('#confirm-button_cart').show();
+              }
+            }
+    })    
+    </script>
+
+    <script>
+        // 設置 AWS Lambda 錯誤監聽器
+        window.addEventListener('error', function(event) {
+            if (event.error && event.error.message && event.error.message.includes('DP_CODE')) {
+                // 找到 inf-google-login 組件並調用錯誤處理方法
+                const infGoogleLoginElement = document.querySelector('inf-google-login');
+                if (infGoogleLoginElement && infGoogleLoginElement.handleAWSLambdaError) {
+                    infGoogleLoginElement.handleAWSLambdaError();
+                } else {
+                    // 如果找不到組件，直接處理錯誤
+                    localStorage.removeItem('BodyID_size');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+        });
+        
+        // 監聽未處理的 Promise 錯誤
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && event.reason.message && event.reason.message.includes('DP_CODE')) {
+                // 找到 inf-google-login 組件並調用錯誤處理方法
+                const infGoogleLoginElement = document.querySelector('inf-google-login');
+                if (infGoogleLoginElement && infGoogleLoginElement.handleAWSLambdaError) {
+                    infGoogleLoginElement.handleAWSLambdaError();
+                } else {
+                    // 如果找不到組件，直接處理錯誤
+                    localStorage.removeItem('BodyID_size');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+        });
+        
+        // 監聽 console.error 中的 DP_CODE 錯誤
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            const errorString = args.join(' ');
+            if (errorString.includes('DP_CODE')) {
+                window.handleAWSLambdaErrorGlobal();
+            }
+            // 調用原始方法
+            originalConsoleError.apply(console, args);
+        };
+        
+        // 監聽網絡錯誤（AWS Lambda 400 錯誤）
+        window.addEventListener('load', function() {
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const originalXHRSend = XMLHttpRequest.prototype.send;
+            
+            XMLHttpRequest.prototype.open = function(method, url, ...args) {
+                this._url = url;
+                return originalXHROpen.apply(this, [method, url, ...args]);
+            };
+            
+            XMLHttpRequest.prototype.send = function(...args) {
+                this.addEventListener('error', function() {
+                    if (this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
+                        window.handleAWSLambdaErrorGlobal();
+                    }
+                });
+                
+                this.addEventListener('load', function() {
+                    if (this.status >= 400 && this._url && this._url.includes('lambda.ap-northeast-1.amazonaws.com')) {
+                        window.handleAWSLambdaErrorGlobal();
+                    }
+                });
+                
+                return originalXHRSend.apply(this, args);
+            };
+        });
+        
+        // 全局錯誤處理函數
+        window.handleAWSLambdaErrorGlobal = function() {
+            localStorage.removeItem('BodyID_size');
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const script = document.createElement('script');
+            script.src = '/inf-google-login.js';
+            script.sync = true;
+            script.onload = () => {
+                window.createGoogleLoginComponentsByType('shoes');
+                // 監聽返回按鈕的點擊事件
+                // 使用 MutationObserver 監聽 DOM 變化，當返回按鈕出現時綁定事件
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'childList') {
+                            mutation.addedNodes.forEach((node) => {
+                                if (node.nodeType === Node.ELEMENT_NODE) {
+                                    // 檢查新增的節點是否是返回按鈕
+                                    const backArrow = node.querySelector('#modal-profile-back-arrow');
+                                    if (backArrow) {
+                                        backArrow.addEventListener('click', function() {
+                                            // 檢查是否有資料修改標記
+                                            const hasDataModified = localStorage.getItem('data_modified_flag');
+                                            if (hasDataModified === 'true') {
+                                                // 有修改資料，執行頁面重新整理
+                                                localStorage.removeItem('data_modified_flag'); // 清除標記
+                                                window.location.reload();
+                                            } else {
+                                                // 沒有修改資料，不執行重新整理
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                });
+                
+                // 開始監聽
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+                
+            };
+            document.body.appendChild(script);
+        });
+    </script>
+
+<script>
+window.addEventListener("message",function(e){
+  if(e.data["MsgHeader"]=="FML_Done"){
+            const messageData = {
+             header: 'bid',
+             value: {
+                    "FH": "22.5",
+                    "FW": "6.4",
+                    "FCir": "18.3",
+                    "DataItem": "0010"
+                }
+            }
+            console.log('FML_Done value', messageData.value)
+            
+            // 同時調用 update_bodydata API
+            // 找到 inf-google-login 組件並調用其方法
+            const infGoogleLoginElement = document.querySelector('inf-google-login');
+            if (infGoogleLoginElement && infGoogleLoginElement.updateBodyDataAPI) {
+                // FML_Done 事件不需要自動觸發 Find My Size，傳入 false 參數
+                infGoogleLoginElement.updateBodyDataAPI(messageData.value, false);
+            } else {
+                console.error('❌ 找不到 inf-google-login 組件或 updateBodyDataAPI 方法');
+            }
+            
+             window.postMessage(messageData, "*");
+         }
+})
+</script>
+
+<script>
+// 初始化腳寬和腳圍選單選項
+document.addEventListener('DOMContentLoaded', function() {
+    // 腳寬選單選項：6.0 到 15.0，間隔 0.1
+    const footWidthSelect = document.getElementById('FootWidth_input_PS_mbinfo');
+    if (footWidthSelect) {
+        // 清空現有選項
+        footWidthSelect.innerHTML = '';
+        
+        // 添加預設選項
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-';
+        footWidthSelect.appendChild(defaultOption);
+        
+        // 生成腳寬選項 (6.0~15.0, 間隔0.1)
+        for (let i = 60; i <= 150; i++) {
+            const value = (i / 10).toFixed(1);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            footWidthSelect.appendChild(option);
+        }
+    }
+    
+    // 腳圍選單選項：18.0 到 39.9，間隔 0.1
+    const footCircumSelect = document.getElementById('FootCircu_input_PS_mbinfo');
+    if (footCircumSelect) {
+        // 清空現有選項
+        footCircumSelect.innerHTML = '';
+        
+        // 添加預設選項
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-';
+        footCircumSelect.appendChild(defaultOption);
+        
+        // 生成腳圍選項 (18.0~39.9, 間隔0.1)
+        for (let i = 180; i <= 399; i++) {
+            const value = (i / 10).toFixed(1);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            footCircumSelect.appendChild(option);
+        }
+    }
+});
+</script>
+
+</body>
+
+</html>
