@@ -375,28 +375,6 @@
            $("#nosize_section").find("div")[0].innerHTML="建議您可以聯繫線上客服，進一步確認商品尺寸。"
            $("#nosize_section").find("div").css({"width":"auto","height":"auto",'font-size':'12px','text-align':'left'})
            $("#nosize_section").css({'border':'none'})
-           const footLengthElement = $('#FootLength_input_PS_mbinfo');
-const footWidthElement = $('#FootWidth_input_PS_mbinfo');
-const footCircuElement = $('#FootCircu_input_PS_mbinfo');
-
-console.log('元素檢查：', {
-    footLength: footLengthElement.length > 0,
-    footWidth: footWidthElement.length > 0,
-    footCircu: footCircuElement.length > 0
-});
-           const messageData = {
-             header: 'bid',
-             value: {
-                    "FH": $('FootLength_input_PS_mbinfo').val(),
-                    "FW": $('FootWidth_input_PS_mbinfo').val(),
-                    "FCir": $('FootCircu_input_PS_mbinfo').val(),
-                    DataItem: "0010",
-                }
-            }
-            console.log('FML_Done xxxvalue', messageData.value)
-            console.log('FML_Done xxx----',event.data)
-            console.error('FML_Done xxx----',event.data)
-
            //TEXT check
            if($('#first_FTEXT').text() == '不建議'){ $('#first_FTEXT').parent().parent().parent().hide()} 
            else{$('#first_FTEXT').parent().parent().parent().show()}
@@ -598,14 +576,13 @@ window.addEventListener("message",function(e){
             const messageData = {
              header: 'bid',
              value: {
-                    "FH": $('FootLength_input_PS_mbinfo').val(),
-                    "FW": $('FootWidth_input_PS_mbinfo').val(),
-                    "FCir": $('FootCircu_input_PS_mbinfo').val(),
+                "FH": $('#FootLength_input_PS_mbinfo').val(),
+                    "FW": $('#FootWidth_input_PS_mbinfo').val(),
+                    "FCir": $('#FootCircu_input_PS_mbinfo').val(),
                     DataItem: "0010",
                 }
             }
             console.log('FML_Done value', messageData.value)
-            console.log('FML_Done ----',e.data)
             console.error('FML_Done ----',e.data)
             
             // 同時調用 update_bodydata API
