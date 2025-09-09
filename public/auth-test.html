@@ -428,9 +428,116 @@
         let authManager = null;
         let updateInterval = null;
 
+        // 處理 OAuth2 回調
+        function handleOAuth2Callback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+            
+            if (error) {
+                addLog(`❌ OAuth2 授權失敗: ${error}`, 'error');
+                const errorDescription = urlParams.get('error_description');
+                if (errorDescription) {
+                    addLog(`錯誤描述: ${errorDescription}`, 'error');
+                }
+                showNotification('Google 授權失敗', 'error');
+                // 清理 URL 參數
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+            
+            if (code && state) {
+                addLog('🎉 收到 Google 授權回調！', 'success');
+                addLog(`授權碼: ${code.substring(0, 20)}...`, 'info');
+                addLog(`狀態: ${state}`, 'info');
+                
+                // 驗證狀態參數
+                const savedState = localStorage.getItem('google_oauth_state');
+                if (savedState && savedState === state) {
+                    addLog('✅ 狀態驗證成功', 'success');
+                    processAuthorizationCode(code, state);
+                } else {
+                    addLog('❌ 狀態驗證失敗，可能的安全風險', 'error');
+                    showNotification('OAuth2 狀態驗證失敗', 'error');
+                }
+                
+                // 清理 URL 參數和本地儲存
+                window.history.replaceState({}, document.title, window.location.pathname);
+                localStorage.removeItem('google_oauth_state');
+                localStorage.removeItem('google_oauth_redirect_uri');
+            }
+        }
+        
+        // 處理授權碼交換 Token
+        async function processAuthorizationCode(code, state) {
+            try {
+                addLog('🔄 交換授權碼獲取 Token...', 'info');
+                
+                const response = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        state: state
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API 請求失敗 (${response.status}): ${errorText}`);
+                }
+                
+                const result = await response.json();
+                addLog('✅ Token 交換成功！', 'success');
+                addLog(`用戶資訊: ${result.user?.name} (${result.user?.email})`, 'info');
+                
+                // 保存憑證和用戶資訊
+                if (result.credential) {
+                    localStorage.setItem('google_auth_credential', result.credential);
+                    addLog('🔑 憑證已保存', 'success');
+                }
+                
+                if (result.user) {
+                    localStorage.setItem('google_user_info', JSON.stringify(result.user));
+                    addLog('👤 用戶資訊已保存', 'success');
+                }
+                
+                // 觸發登入成功事件
+                const loginEvent = new CustomEvent('google-login-success', {
+                    detail: {
+                        user: result.user,
+                        credential: result.credential
+                    }
+                });
+                document.dispatchEvent(loginEvent);
+                
+                showNotification('Google 登入成功！', 'success');
+                updateStatus();
+                
+            } catch (error) {
+                addLog(`❌ Token 交換失敗: ${error.message}`, 'error');
+                showNotification('Token 交換失敗', 'error');
+                
+                // 觸發登入失敗事件
+                const errorEvent = new CustomEvent('google-login-error', {
+                    detail: {
+                        error: error.message,
+                        details: error
+                    }
+                });
+                document.dispatchEvent(errorEvent);
+            }
+        }
+
         // 頁面載入完成後初始化
         document.addEventListener('DOMContentLoaded', async function() {
             addLog('系統初始化開始...', 'info');
+            
+            // 首先檢查是否是 OAuth2 回調
+            handleOAuth2Callback();
             
             try {
                 // 等待一下確保所有模組載入完成
