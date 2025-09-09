@@ -355,6 +355,7 @@
             <h2>🎮 操作控制</h2>
             <div style="margin-bottom: 20px;">
                 <button class="btn success" onclick="testGoogleLogin()">🔐 Google 登入測試</button>
+                <button class="btn" onclick="debugComponent()">🔍 組件除錯</button>
                 <button class="btn" onclick="checkAuthStatus()">🔍 檢查認證狀態</button>
                 <button class="btn" onclick="refreshToken()">🔄 刷新 Token</button>
                 <button class="btn secondary" onclick="clearUserData()">🗑️ 清理使用者資料</button>
@@ -690,19 +691,69 @@
                 new Date(stats.lastActivity).toLocaleString('zh-TW') : '-';
         }
 
+        // 除錯函數
+        function debugComponent() {
+            addLog('開始組件除錯...', 'info');
+            
+            // 檢查組件是否已定義
+            if (customElements.get('inf-google-login')) {
+                addLog('✅ inf-google-login 組件已註冊', 'success');
+            } else {
+                addLog('❌ inf-google-login 組件未註冊', 'error');
+            }
+            
+            // 檢查現有組件
+            const existingComponent = document.querySelector('inf-google-login');
+            if (existingComponent) {
+                addLog('✅ 找到現有組件', 'success');
+                
+                // 檢查組件狀態
+                addLog(`組件 isConnected: ${existingComponent.isConnected}`, 'info');
+                addLog(`組件 clientId: ${existingComponent.clientId || '未設定'}`, 'info');
+                
+                // 檢查方法
+                const methods = ['signIn', 'triggerGoogleSignIn', 'signOut', 'connectedCallback'];
+                methods.forEach(method => {
+                    const exists = typeof existingComponent[method] === 'function';
+                    addLog(`方法 ${method}: ${exists ? '✅' : '❌'}`, exists ? 'success' : 'error');
+                });
+                
+                // 檢查所有可用的方法
+                const allMethods = Object.getOwnPropertyNames(Object.getPrototypeOf(existingComponent))
+                    .filter(name => typeof existingComponent[name] === 'function')
+                    .slice(0, 10); // 只顯示前10個
+                addLog(`可用方法: ${allMethods.join(', ')}`, 'info');
+                
+            } else {
+                addLog('❌ 沒有找到現有組件', 'error');
+            }
+            
+            // 檢查 Google Services
+            if (window.google) {
+                addLog('✅ window.google 存在', 'success');
+                if (window.google.accounts) {
+                    addLog('✅ Google Identity Services 已載入', 'success');
+                } else {
+                    addLog('❌ Google Identity Services 未載入', 'error');
+                }
+            } else {
+                addLog('❌ window.google 不存在', 'error');
+            }
+        }
+
         // 操作函數
         async function testGoogleLogin() {
             addLog('開始 Google 登入測試...', 'info');
             
             try {
                 // 檢查是否有現有的 Google 登入組件
-                let googleComponent = document.querySelector('inf-google-login-component');
+                let googleComponent = document.querySelector('inf-google-login');
                 
                 if (!googleComponent) {
                     // 如果沒有組件，創建一個
                     addLog('創建 Google 登入組件...', 'info');
                     
-                    googleComponent = document.createElement('inf-google-login-component');
+                    googleComponent = document.createElement('inf-google-login');
                     googleComponent.setAttribute('client-id', '265821704236-fkdt4rrvpmuhf442c7r2dfg16i71c6qg.apps.googleusercontent.com');
                     googleComponent.setAttribute('avatar-container-id', 'google-login-container');
                     googleComponent.setAttribute('modal-container-id', 'google-modal-container');
@@ -711,6 +762,11 @@
                     googleComponent.style.display = 'none';
                     document.body.appendChild(googleComponent);
                     
+                    addLog('組件已添加到 DOM，等待初始化...', 'info');
+                    
+                    // 等待組件的 connectedCallback 執行
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
                     addLog('等待 Google 組件初始化...', 'info');
                     
                     // 等待組件初始化，最多等待 10 秒
@@ -718,10 +774,30 @@
                     const maxAttempts = 20; // 10 秒 (20 x 500ms)
                     
                     while (attempts < maxAttempts) {
-                        if (typeof googleComponent.signIn === 'function' || 
-                            typeof googleComponent.triggerGoogleSignIn === 'function') {
+                        // 檢查組件是否已連接並初始化
+                        const isConnected = googleComponent.isConnected;
+                        const hasSignIn = typeof googleComponent.signIn === 'function';
+                        const hasTriggerGoogleSignIn = typeof googleComponent.triggerGoogleSignIn === 'function';
+                        const hasConnectedCallback = typeof googleComponent.connectedCallback === 'function';
+                        
+                        // 調試信息
+                        if (attempts === 0) {
+                            addLog(`組件狀態檢查: isConnected=${isConnected}, hasSignIn=${hasSignIn}, hasTriggerGoogleSignIn=${hasTriggerGoogleSignIn}`, 'info');
+                        }
+                        
+                        if (isConnected && (hasSignIn || hasTriggerGoogleSignIn)) {
                             addLog('Google 組件初始化完成', 'success');
                             break;
+                        }
+                        
+                        // 如果組件還沒連接，嘗試手動觸發 connectedCallback
+                        if (!isConnected && hasConnectedCallback && attempts === 2) {
+                            addLog('嘗試手動觸發組件連接...', 'info');
+                            try {
+                                googleComponent.connectedCallback();
+                            } catch (e) {
+                                addLog(`手動連接失敗: ${e.message}`, 'warning');
+                            }
                         }
                         
                         await new Promise(resolve => setTimeout(resolve, 500));
@@ -733,6 +809,14 @@
                     }
                     
                     if (attempts >= maxAttempts) {
+                        // 提供更詳細的錯誤信息
+                        const errorDetails = {
+                            isConnected: googleComponent.isConnected,
+                            hasSignIn: typeof googleComponent.signIn === 'function',
+                            hasTriggerGoogleSignIn: typeof googleComponent.triggerGoogleSignIn === 'function',
+                            availableMethods: Object.getOwnPropertyNames(googleComponent).filter(name => typeof googleComponent[name] === 'function')
+                        };
+                        addLog(`組件狀態詳情: ${JSON.stringify(errorDetails)}`, 'error');
                         throw new Error('Google 組件初始化超時');
                     }
                 }
@@ -869,7 +953,7 @@
                 }
                 
                 // 方法 2: 直接調用 Google 登入組件登出
-                const googleComponent = document.querySelector('inf-google-login-component');
+                const googleComponent = document.querySelector('inf-google-login');
                 if (googleComponent && typeof googleComponent.signOut === 'function') {
                     addLog('調用 Google 組件登出...', 'info');
                     googleComponent.signOut();
