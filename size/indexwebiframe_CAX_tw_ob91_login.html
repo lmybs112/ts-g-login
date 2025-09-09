@@ -1073,7 +1073,8 @@ window.addEventListener("message",function(e){
              value: {
                     HV: $('#HTxixPS_mbinfo').val(),
                     WV: $('#wTxixPS_mbinfo').val(),
-                    CC: (Bra_value+Cuxv).length > 2 ? Bra_value+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val(),
+                    CC: Cup_Length !== '' ? Cup_Length+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val(),
+                    // CC: (Bra_value+Cuxv).length > 2 ? Bra_value+Cuxv : $('#UpChest_input_PS_mbinfo').val()+'_'+$('#DnChest_input_PS_mbinfo').val(),
                     DataItem: Wdtype_data_item.toString() + avg_item.toString() + Uptype_data_item.toString() + Dntype_data_item.toString(),
                     Shoulder: '',
                     UpChest: '',
