@@ -442,6 +442,17 @@
                     });
                     
                     addLog('AuthIntegrationManager 已初始化', 'success');
+                    
+                    // 等待一下，然後嘗試連接現有的 Google 組件
+                    setTimeout(() => {
+                        const existingGoogleComponent = document.querySelector('inf-google-login');
+                        if (existingGoogleComponent) {
+                            addLog('找到現有 Google 組件，正在連接...', 'info');
+                            authManager.setGoogleLoginComponent(existingGoogleComponent);
+                            addLog('Google 組件已連接到整合管理器', 'success');
+                        }
+                    }, 500);
+                    
                 } else {
                     addLog('AuthIntegrationManager 模組未載入', 'error');
                     return;
@@ -819,6 +830,13 @@
                         addLog(`組件狀態詳情: ${JSON.stringify(errorDetails)}`, 'error');
                         throw new Error('Google 組件初始化超時');
                     }
+                    
+                    // 連接組件到整合管理器
+                    if (authManager) {
+                        addLog('連接 Google 組件到整合管理器...', 'info');
+                        authManager.setGoogleLoginComponent(googleComponent);
+                        addLog('Google 組件已連接', 'success');
+                    }
                 }
                 
                 // 監聽登入成功事件
@@ -1024,6 +1042,34 @@
                 return;
             }
             
+            // 檢查 Token 格式
+            addLog(`Token 前綴: ${accessToken.substring(0, 20)}...`, 'info');
+            addLog(`Token 長度: ${accessToken.length}`, 'info');
+            
+            // 如果是 JWT credential，需要解析
+            let tokenToVerify = accessToken;
+            if (accessToken.startsWith('gid_') || accessToken.includes('.')) {
+                addLog('檢測到可能是 Google Credential，嘗試解析...', 'info');
+                
+                // 嘗試解析 JWT
+                try {
+                    const parts = accessToken.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        addLog(`JWT Payload: ${JSON.stringify(payload, null, 2)}`, 'info');
+                        
+                        // 提取使用者資訊
+                        if (payload.sub) {
+                            addLog(`使用者 ID: ${payload.sub}`, 'success');
+                            addLog(`使用者姓名: ${payload.name || '未知'}`, 'success');
+                            addLog(`使用者郵箱: ${payload.email || '未知'}`, 'success');
+                        }
+                    }
+                } catch (e) {
+                    addLog(`JWT 解析失敗: ${e.message}`, 'warning');
+                }
+            }
+            
             try {
                 const response = await fetch('/api/auth/verify', {
                     method: 'POST',
@@ -1031,7 +1077,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        access_token: accessToken
+                        access_token: tokenToVerify
                     })
                 });
                 
