@@ -597,22 +597,20 @@ window.addEventListener("message",function(e){
             // 同時調用 update_bodydata API - 處理鞋類數據
             // 找到 inf-google-login 組件並調用其方法
             const infGoogleLoginElement = document.querySelector('inf-google-login');
-            if (infGoogleLoginElement && infGoogleLoginElement.updateBodyDataAPI) {
-                // 準備鞋類數據格式，包含性別資訊
+            if (infGoogleLoginElement && infGoogleLoginElement.uploadFootMeasurementData) {
+                // 準備鞋類數據格式
                 const shoesData = {
                     FH: footLength,
                     FW: footWidth,
                     FCir: footCircu,
                     DataItem: "0010",
-                    // 從 URL 或 localStorage 檢測性別
                     Gender: getGenderForShoes()
                 };
                 
-                
-                // FML_Done 事件不需要自動觸發 Find My Size，傳入 false 參數
-                infGoogleLoginElement.updateBodyDataAPI(shoesData, false);
+                // 調用專門的鞋類數據上傳方法
+                infGoogleLoginElement.uploadFootMeasurementData(shoesData, getGenderForShoes(), false);
             } else {
-                console.error('❌ 找不到 inf-google-login 組件或 updateBodyDataAPI 方法');
+                console.error('❌ 找不到 inf-google-login 組件或 uploadFootMeasurementData 方法');
             }
             
              window.postMessage(messageData, "*");
