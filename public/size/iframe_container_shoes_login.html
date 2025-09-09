@@ -372,6 +372,8 @@
         }
 
        else if(event.data["MsgHeader"]=="FML_Done"){
+        console.error('FML_Donexxx ----',JSON.stringify(event))
+        console.error('FML_Done ----',event.data)
            $("#nosize_section").find("div")[0].innerHTML="建議您可以聯繫線上客服，進一步確認商品尺寸。"
            $("#nosize_section").find("div").css({"width":"auto","height":"auto",'font-size':'12px','text-align':'left'})
            $("#nosize_section").css({'border':'none'})
@@ -583,7 +585,6 @@ window.addEventListener("message",function(e){
                 }
             }
             console.log('FML_Done value', messageData.value)
-            console.error('FML_Done ----',e.data)
             
             // 同時調用 update_bodydata API
             // 找到 inf-google-login 組件並調用其方法
